@@ -1,0 +1,2200 @@
+/* =========================================================
+   KochiCraft 基本スタイル
+   方針：小学生が直感的に使えるよう「大きく・はっきり・色分け」
+   ========================================================= */
+
+:root {
+  --kc-accent: #1d9e75;        /* 高知の自然＝緑のアクセント */
+  --kc-accent-dark: #0f6e56;
+  --kc-ink: #2c2c2a;
+  --kc-paper: #ffffff;
+  --kc-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  --kc-radius: 14px;
+  /* タブレットやスマホの下端（ホームバー等）にかからないための余白 */
+  --kc-safe-b: env(safe-area-inset-bottom, 0px);
+  font-family: "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI",
+    system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0a1024;
+  color: var(--kc-ink);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#app {
+  position: relative;
+  width: 100vw;
+  /* 100vh はタブレットのブラウザのバーの下に隠れる分まで含んでしまい、
+     画面下の操作ボタンが見切れる。dvh は今見えている高さだけを指す */
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* 3Dキャンバスは画面全体 */
+canvas.kc-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------- HUD（画面の上に重ねる情報） ---------- */
+#hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none; /* HUD自体はクリックを透過。ボタンだけ個別に有効化 */
+  z-index: 10;
+}
+
+/* 照準（画面中央の＋） */
+.crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 26px;
+  height: 26px;
+  transform: translate(-50%, -50%);
+  opacity: 0.85;
+}
+.crosshair::before,
+.crosshair::after {
+  content: "";
+  position: absolute;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.6);
+}
+.crosshair::before {
+  left: 50%;
+  top: 3px;
+  width: 2px;
+  height: 20px;
+  transform: translateX(-50%);
+}
+.crosshair::after {
+  top: 50%;
+  left: 3px;
+  height: 2px;
+  width: 20px;
+  transform: translateY(-50%);
+}
+
+/* 左上のボタン列（全体操作：モード・もどす・昼夜など） */
+.hud-buttons {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 20;
+}
+
+.kc-btn {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 10px 16px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--kc-paper);
+  background: var(--kc-accent);
+  border: none;
+  border-radius: var(--kc-radius);
+  box-shadow: var(--kc-shadow);
+  cursor: pointer;
+  transition: transform 0.08s ease, background 0.15s ease;
+}
+.kc-btn:hover {
+  background: var(--kc-accent-dark);
+}
+.kc-btn:active {
+  transform: scale(0.95);
+}
+.kc-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+  background: var(--kc-accent);
+}
+.kc-btn.is-active {
+  background: var(--kc-accent-dark);
+  box-shadow: 0 0 0 3px #fff, var(--kc-shadow);
+}
+.kc-btn .kc-btn__icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+/* 左下の操作ガイド */
+.hud-help {
+  position: absolute;
+  left: 16px;
+  bottom: calc(16px + var(--kc-safe-b));
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.7;
+  backdrop-filter: blur(4px);
+}
+.hud-help b {
+  display: inline-block;
+  min-width: 64px;
+  color: #aef0d6;
+}
+
+/* 右下のFPS等の小さな情報 */
+.hud-stats {
+  position: absolute;
+  right: 16px;
+  bottom: calc(16px + var(--kc-safe-b));
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(0, 0, 0, 0.35);
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* クリック開始のオーバーレイ（ポインタ未ロック時）
+   pointer-events:none にして、クリックは下のキャンバスが受け取りロックを開始する。
+   これにより上のボタン類は未ロック時でも普通に押せる。 */
+.click-start {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  z-index: 5;
+}
+.click-start__big {
+  font-size: 28px;
+  font-weight: 800;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+.click-start__sub {
+  font-size: 15px;
+  opacity: 0.9;
+}
+.click-start.hidden {
+  display: none;
+}
+
+/* ---------- ローディング ---------- */
+.loading {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: linear-gradient(180deg, #0a1024 0%, #123 100%);
+  color: #fff;
+  transition: opacity 0.5s ease;
+}
+.loading.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+.loading__title {
+  font-size: 40px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: #aef0d6;
+}
+.loading__sub {
+  font-size: 16px;
+  opacity: 0.85;
+}
+.loading__bar {
+  width: 240px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.loading__fill {
+  width: 30%;
+  height: 100%;
+  background: var(--kc-accent);
+  border-radius: 999px;
+  animation: kc-load 1.1s ease-in-out infinite;
+}
+@keyframes kc-load {
+  0% {
+    margin-left: -30%;
+  }
+  100% {
+    margin-left: 100%;
+  }
+}
+
+/* 情報表示もオーバーレイの上に重ねる */
+.hud-help,
+.hud-stats {
+  z-index: 20;
+}
+
+/* ---------- ブロックパレット（画面下） ---------- */
+.block-palette {
+  position: absolute;
+  left: 50%;
+  bottom: calc(14px + var(--kc-safe-b));
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  max-width: 92vw;
+  overflow-x: auto;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 16px;
+  backdrop-filter: blur(4px);
+  pointer-events: auto;
+  z-index: 20;
+  scrollbar-width: thin;
+}
+.block-palette.hidden {
+  display: none;
+}
+.palette-item {
+  position: relative;
+  flex: 0 0 auto;
+  width: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid transparent;
+  border-radius: 10px;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.12s ease, transform 0.08s ease;
+}
+.palette-item:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+.palette-item:active {
+  transform: scale(0.94);
+}
+.palette-item.is-selected {
+  border-color: #fff;
+  background: rgba(255, 255, 255, 0.28);
+}
+.palette-swatch {
+  width: 36px;
+  height: 36px;
+  border-radius: 7px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+.palette-swatch.is-transparent {
+  opacity: 0.7;
+}
+.palette-name {
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+}
+.palette-key {
+  position: absolute;
+  top: 3px;
+  right: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffe;
+  opacity: 0.85;
+}
+
+/* ---------- 右パネル（編集ツール） ---------- */
+.right-panel {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 156px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 16px;
+  backdrop-filter: blur(4px);
+  pointer-events: auto;
+  z-index: 20;
+}
+.panel-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  opacity: 0.85;
+  padding-left: 2px;
+}
+.tool-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.tool-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid transparent;
+  border-radius: 10px;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.12s ease, transform 0.08s ease;
+}
+.tool-item:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+.tool-item:active {
+  transform: scale(0.94);
+}
+.tool-item.is-active {
+  border-color: #fff;
+  background: var(--kc-accent);
+}
+.tool-item__icon {
+  font-size: 20px;
+  line-height: 1;
+}
+.tool-item__name {
+  font-size: 11px;
+}
+
+.tool-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.opt-label {
+  font-size: 12px;
+  color: #fff;
+  opacity: 0.9;
+}
+.opt-brush input[type='range'] {
+  width: 100%;
+  accent-color: var(--kc-accent);
+}
+.opt-grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+/* 小さめボタン（パネル内用） */
+.kc-mini {
+  pointer-events: auto;
+  padding: 7px 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background 0.12s ease, transform 0.08s ease;
+}
+.kc-mini:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+.kc-mini:active {
+  transform: scale(0.94);
+}
+.kc-mini:disabled {
+  opacity: 0.35;
+  cursor: default;
+  background: rgba(255, 255, 255, 0.12);
+}
+.kc-mini--wide {
+  width: 100%;
+}
+.kc-mini.is-active {
+  background: var(--kc-accent);
+}
+
+/* ---------- 観光ポップアップ ---------- */
+.tourism-popup {
+  position: absolute;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(420px, 86vw);
+  padding: 16px 18px 14px;
+  background: rgba(20, 24, 28, 0.92);
+  color: #fff;
+  border-radius: 18px;
+  box-shadow: var(--kc-shadow);
+  backdrop-filter: blur(6px);
+  pointer-events: auto;
+  z-index: 30;
+}
+.tourism-popup.hidden {
+  display: none;
+}
+.tourism-popup__close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+.tourism-popup__close:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+.tourism-popup__lang {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.lang-btn {
+  padding: 5px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.lang-btn.is-active {
+  background: var(--kc-accent);
+}
+.tourism-popup__img {
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+.tourism-popup__title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #aef0d6;
+}
+.tourism-popup__sub {
+  font-size: 13px;
+  opacity: 0.75;
+  margin-bottom: 8px;
+}
+.tourism-popup__desc {
+  font-size: 15px;
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+.tourism-line {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+.tourism-line__label {
+  flex: 0 0 76px;
+  padding: 3px 6px;
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+  color: #0a1024;
+  background: #aef0d6;
+  border-radius: 6px;
+}
+.tourism-line__text {
+  flex: 1;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.tourism-popup__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ---------- モーダル（観光地エディタ） ---------- */
+.modal {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+}
+.modal.hidden {
+  display: none;
+}
+.modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+.modal__card {
+  position: relative;
+  width: min(560px, 92vw);
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 20px;
+  background: var(--kc-paper);
+  color: var(--kc-ink);
+  border-radius: 18px;
+  box-shadow: var(--kc-shadow);
+}
+.modal__title {
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: 14px;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #555;
+}
+.form-grid label.full {
+  grid-column: 1 / -1;
+}
+.form-grid input[type='text'],
+.form-grid input:not([type]),
+.form-grid textarea {
+  padding: 8px 10px;
+  font-size: 14px;
+  border: 2px solid #d7d4cc;
+  border-radius: 10px;
+  font-family: inherit;
+}
+.form-grid input:focus,
+.form-grid textarea:focus {
+  outline: none;
+  border-color: var(--kc-accent);
+}
+.form-grid input[type='range'] {
+  accent-color: var(--kc-accent);
+}
+.modal__preview {
+  margin: 12px 0;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 13px;
+}
+.modal__preview img {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 12px;
+}
+.modal__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+/* ---------- 外国語学習パネル ---------- */
+.learn-card {
+  width: min(560px, 92vw);
+}
+.learn-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.learn-head .tourism-popup__close {
+  position: static;
+  background: #eee;
+  color: #333;
+}
+.learn-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 14px;
+}
+.learn-tab {
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--kc-ink);
+  background: #efece4;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.learn-tab.is-active {
+  background: var(--kc-accent);
+  color: #fff;
+}
+.learn-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--kc-accent-dark);
+}
+.learn-sub {
+  font-size: 14px;
+  color: #777;
+  margin-bottom: 8px;
+}
+.learn-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 16px 0 8px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #555;
+}
+.learn-sentences {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.learn-sentence {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: #f6f4ee;
+  border-radius: 10px;
+}
+.learn-sentence__text {
+  flex: 1;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.learn-sentence__btns {
+  display: flex;
+  gap: 6px;
+}
+.learn-sentence__btns .kc-mini {
+  color: var(--kc-ink);
+  background: #e4e0d6;
+  font-size: 15px;
+  padding: 6px 10px;
+}
+.learn-sentence__btns .kc-mini:hover {
+  background: #d6d1c4;
+}
+.learn-translation {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: #eef7f2;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #2c4c40;
+}
+.learn-phrases {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.learn-phrase {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 12px;
+  background: #f6f4ee;
+  border: 2px solid #e4e0d6;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+.learn-phrase:hover {
+  background: #eceae2;
+  border-color: var(--kc-accent);
+}
+.learn-phrase__en {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--kc-ink);
+}
+.learn-phrase__ja {
+  font-size: 12px;
+  color: #888;
+}
+.learn-empty {
+  padding: 20px;
+  text-align: center;
+  color: #888;
+}
+
+/* 学習項目（紹介・できること・おすすめ） */
+.learn-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.learn-item {
+  padding: 10px 12px;
+  background: #f6f4ee;
+  border-radius: 10px;
+}
+.learn-item__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.learn-item__label {
+  font-size: 12px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--kc-accent);
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+.learn-item__btns {
+  display: flex;
+  gap: 6px;
+}
+.learn-item__btns .kc-mini {
+  color: var(--kc-ink);
+  background: #e4e0d6;
+  font-size: 15px;
+  padding: 6px 10px;
+}
+.learn-item__en {
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--kc-ink);
+}
+.learn-item__ja {
+  font-size: 13px;
+  color: #777;
+  margin-top: 2px;
+}
+
+/* 観光地リスト（ワープ） */
+.place-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
+}
+.place-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 14px;
+  background: #f6f4ee;
+  border: 2px solid #e4e0d6;
+  border-radius: 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.08s ease, border-color 0.12s ease;
+}
+.place-card:hover {
+  border-color: var(--kc-accent);
+  background: #eceae2;
+}
+.place-card:active {
+  transform: scale(0.96);
+}
+.place-card__name {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--kc-ink);
+}
+.place-card__en {
+  font-size: 12px;
+  color: #888;
+}
+.place-card__go {
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--kc-accent-dark);
+}
+
+/* ---------- 教師ダッシュボード ---------- */
+.admin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.admin-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #f6f4ee;
+  border-radius: 10px;
+}
+.admin-row__name {
+  flex: 1;
+  font-size: 14px;
+  color: var(--kc-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.admin-row__name small {
+  color: #999;
+}
+.admin-row__btns {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.admin-row__btns .kc-mini {
+  color: var(--kc-ink);
+  background: #e4e0d6;
+}
+.badge {
+  display: inline-block;
+  padding: 1px 7px;
+  margin-right: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--kc-accent);
+  border-radius: 999px;
+}
+
+/* ---------- クイズ作成（QuizEditor） ---------- */
+.form-grid select {
+  padding: 8px 10px;
+  font-size: 14px;
+  border: 2px solid #d7d4cc;
+  border-radius: 10px;
+  font-family: inherit;
+  background: #fff;
+}
+.type-toggle {
+  display: flex;
+  gap: 8px;
+}
+.type-btn {
+  flex: 1;
+  padding: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--kc-ink);
+  background: #efece4;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.type-btn.is-active {
+  background: var(--kc-accent);
+  color: #fff;
+}
+.choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+.choice-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.choice-row input[type='radio'] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--kc-accent);
+  flex: 0 0 auto;
+}
+.choice-row input[type='text'] {
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 14px;
+  border: 2px solid #d7d4cc;
+  border-radius: 10px;
+  font-family: inherit;
+}
+.choice-fixed {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* ---------- クイズ出題（QuizPlay） ---------- */
+.quiz-picks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+.quiz-pick {
+  padding: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--kc-ink);
+  background: #f6f4ee;
+  border: 2px solid #e4e0d6;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+.quiz-pick:hover {
+  border-color: var(--kc-accent);
+  background: #eceae2;
+}
+.quiz-progress {
+  font-size: 14px;
+  font-weight: 700;
+  color: #888;
+}
+.quiz-question {
+  font-size: 20px;
+  font-weight: 800;
+  margin: 14px 0;
+  line-height: 1.5;
+}
+.quiz-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.quiz-choice {
+  padding: 14px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--kc-ink);
+  background: #f3f1ea;
+  border: 2px solid #e4e0d6;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+.quiz-choice:hover:not(:disabled) {
+  border-color: var(--kc-accent);
+}
+.quiz-choice:disabled {
+  cursor: default;
+  opacity: 0.9;
+}
+.quiz-choice.is-correct {
+  background: #d8f3e4;
+  border-color: #1d9e75;
+  color: #0f6e56;
+}
+.quiz-choice.is-wrong {
+  background: #fbe0e0;
+  border-color: #e24b4a;
+  color: #a32d2d;
+}
+.quiz-feedback {
+  margin: 12px 0;
+}
+.quiz-result-mark {
+  font-size: 22px;
+  font-weight: 800;
+}
+.quiz-result-mark.ok {
+  color: #1d9e75;
+}
+.quiz-result-mark.ng {
+  color: #e24b4a;
+}
+.quiz-explanation {
+  margin-top: 6px;
+  padding: 10px 12px;
+  background: #eef7f2;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #2c4c40;
+}
+.quiz-result {
+  text-align: center;
+}
+.quiz-score {
+  font-size: 20px;
+  margin: 16px 0;
+}
+.quiz-score b {
+  font-size: 28px;
+  color: var(--kc-accent-dark);
+}
+.quiz-result .modal__actions {
+  justify-content: center;
+}
+
+/* ---------- 保存パネル ---------- */
+.save-newrow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.save-newrow input {
+  flex: 1;
+  padding: 10px 12px;
+  font-size: 15px;
+  border: 2px solid #d7d4cc;
+  border-radius: 10px;
+  font-family: inherit;
+}
+.save-newrow input:focus {
+  outline: none;
+  border-color: var(--kc-accent);
+}
+.save-msg {
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  background: #eef7f2;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #2c4c40;
+}
+
+/* ---------- ハブ（観光地一覧） ---------- */
+.hub-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  pointer-events: auto;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 32px 20px 40px;
+  background: linear-gradient(180deg, #0a1024 0%, #14324a 60%, #1d6e56 140%);
+}
+.hub-screen.hidden {
+  display: none;
+}
+.hub-screen__head {
+  text-align: center;
+  margin-top: 8px;
+}
+.hub-screen__title {
+  font-size: 40px;
+  font-weight: 900;
+  color: #aef0d6;
+  letter-spacing: 0.02em;
+}
+.hub-screen__sub {
+  font-size: 16px;
+  color: #fff;
+  opacity: 0.85;
+}
+.spot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 14px;
+  width: 100%;
+  max-width: 760px;
+}
+.spot-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 16px 10px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.08s ease, background 0.15s ease, border-color 0.15s ease;
+  backdrop-filter: blur(4px);
+}
+.spot-card:hover:not(.is-soon) {
+  background: rgba(29, 158, 117, 0.4);
+  border-color: var(--kc-accent);
+  transform: translateY(-2px);
+}
+.spot-card:active:not(.is-soon) {
+  transform: scale(0.97);
+}
+.spot-card.is-soon {
+  opacity: 0.45;
+  cursor: default;
+}
+.spot-card__emoji {
+  font-size: 40px;
+  line-height: 1.1;
+}
+.spot-card__name {
+  font-size: 15px;
+  font-weight: 800;
+  text-align: center;
+}
+.spot-card__ja {
+  font-size: 12px;
+  opacity: 0.7;
+}
+.spot-card__status {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #aef0d6;
+}
+.spot-card.is-soon .spot-card__status {
+  color: #ddd;
+}
+
+/* ---------- 観光地内の操作バー ---------- */
+.spot-toolbar {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  /* 画面の右端をはみ出さないよう幅を制限し、入り切らなければ次の行に折り返す */
+  right: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+  z-index: 20;
+}
+.spot-toolbar.hidden {
+  display: none;
+}
+.spot-toolbar .kc-btn {
+  pointer-events: auto;
+}
+.spot-toolbar__hint {
+  pointer-events: none;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 10px;
+}
+
+/* ---------- 近づくと出る英語名バナー ---------- */
+.name-banner {
+  position: absolute;
+  top: 78px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 26px;
+  font-size: 24px;
+  font-weight: 800;
+  color: #fff;
+  background: rgba(29, 158, 117, 0.92);
+  border-radius: 999px;
+  box-shadow: var(--kc-shadow);
+  cursor: pointer;
+  pointer-events: auto;
+  z-index: 28;
+  white-space: nowrap;
+  animation: kc-fadein 0.3s ease;
+}
+
+.name-banner:hover {
+  background: rgba(29, 158, 117, 1);
+}
+.name-banner.hidden {
+  display: none;
+}
+
+/* ---------- 歩行：方向ボタン＆照準 ---------- */
+/* 矢印（移動）ボタンは画面の右下。ジャンプは左下に置き、右手＝移動／左手＝ジャンプにする */
+.move-pad {
+  position: absolute;
+  right: 18px;
+  bottom: calc(18px + var(--kc-safe-b));
+  width: 168px;
+  height: 168px;
+  pointer-events: none;
+  z-index: 25;
+}
+.move-pad.hidden {
+  display: none;
+}
+.move-btn {
+  position: absolute;
+  width: 52px;
+  height: 52px;
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+  background: rgba(29, 158, 117, 0.82);
+  border: none;
+  border-radius: 12px;
+  box-shadow: var(--kc-shadow);
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+}
+.move-btn:active {
+  background: var(--kc-accent-dark);
+  transform: scale(0.94);
+}
+.move-btn--up {
+  left: 58px;
+  top: 0;
+}
+.move-btn--left {
+  left: 0;
+  top: 58px;
+}
+.move-btn--down {
+  left: 58px;
+  top: 58px;
+}
+.move-btn--right {
+  left: 116px;
+  top: 58px;
+}
+/* ジャンプは左下の大きな丸ボタン（右手＝移動／左手＝ジャンプの2本指操作） */
+.jump-btn {
+  position: absolute;
+  left: 26px;
+  bottom: calc(28px + var(--kc-safe-b));
+  width: 96px;
+  height: 96px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+  background: rgba(55, 138, 212, 0.9);
+  border: none;
+  border-radius: 50%;
+  box-shadow: var(--kc-shadow);
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  z-index: 26;
+}
+.jump-btn:active {
+  background: var(--kc-accent-dark);
+  transform: scale(0.94);
+}
+.jump-btn.hidden {
+  display: none;
+}
+
+/* ---------- 編集（Build）モードのUI ---------- */
+/* ホットバー（下中央・横並び。Minecraft風：番号＋色、選択中の名前を上に表示） */
+.build-hotbar {
+  position: absolute;
+  left: 50%;
+  bottom: calc(16px + var(--kc-safe-b));
+  transform: translateX(-50%);
+  /* 左のD-pad・右のボタンを避けた中央幅。足りなければ折り返してスクロールさせない */
+  max-width: min(700px, calc(100vw - 360px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+  z-index: 25;
+}
+.build-hotbar.hidden {
+  display: none;
+}
+/* 置き方の英語説明（小5レベル） */
+.hotbar-help {
+  padding: 4px 14px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 14px;
+  text-align: center;
+}
+.hotbar-slots {
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px;
+  max-width: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 12px;
+  pointer-events: auto;
+}
+.hotbar-slot {
+  position: relative;
+  flex: none;
+  width: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 2px 3px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.hotbar-slot.is-active {
+  border-color: #ffd24a;
+  background: rgba(255, 255, 255, 0.2);
+}
+.hotbar-swatch {
+  width: 30px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+}
+.hotbar-label {
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.2px;
+}
+.hotbar-num {
+  position: absolute;
+  top: 1px;
+  left: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+  z-index: 1;
+}
+
+/* 置く／消すボタン（右下・ジャンプの上に横並び。押しっぱなしで連続） */
+/* 置く／消すボタンは、右下の矢印ボタン（move-pad）の上に置いて重ならないようにする */
+.build-actions {
+  position: absolute;
+  right: 22px;
+  bottom: calc(200px + var(--kc-safe-b));
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  pointer-events: none;
+  z-index: 26;
+}
+.build-actions.hidden {
+  display: none;
+}
+.kc-round {
+  width: 76px;
+  height: 76px;
+  border: none;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #fff;
+  box-shadow: var(--kc-shadow);
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  pointer-events: auto;
+}
+.kc-round--place {
+  background: rgba(76, 175, 80, 0.95);
+}
+.kc-round--remove {
+  background: rgba(217, 92, 92, 0.95);
+}
+.kc-round:active {
+  transform: scale(0.94);
+}
+
+/* 保存バー（右上：書き出し／読み込み） */
+.save-bar {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  display: flex;
+  gap: 8px;
+  pointer-events: none;
+  z-index: 22;
+}
+.save-bar.hidden {
+  display: none;
+}
+.save-bar .kc-btn {
+  pointer-events: auto;
+}
+
+/* 保存トースト */
+.kc-toast {
+  position: absolute;
+  bottom: calc(30px + var(--kc-safe-b));
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 20px;
+  background: rgba(29, 158, 117, 0.95);
+  color: #fff;
+  font-weight: 800;
+  border-radius: 999px;
+  box-shadow: var(--kc-shadow);
+  z-index: 40;
+  pointer-events: none;
+  animation: kc-fadein 0.2s ease;
+}
+.kc-toast.hidden {
+  display: none;
+}
+
+.walk-crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 22px;
+  height: 22px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 15;
+}
+.walk-crosshair.hidden {
+  display: none;
+}
+.walk-crosshair::before,
+.walk-crosshair::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.7);
+}
+.walk-crosshair::before {
+  left: 50%;
+  top: 2px;
+  width: 2px;
+  height: 18px;
+  transform: translateX(-50%);
+}
+.walk-crosshair::after {
+  top: 50%;
+  left: 2px;
+  height: 2px;
+  width: 18px;
+  transform: translateY(-50%);
+}
+
+/* ---------- 情報パネル（右） ---------- */
+.info-panel {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  bottom: calc(16px + var(--kc-safe-b));
+  width: min(320px, 84vw);
+  overflow-y: auto;
+  padding: 16px 18px;
+  background: rgba(20, 24, 28, 0.94);
+  color: #fff;
+  border-radius: 16px;
+  box-shadow: var(--kc-shadow);
+  backdrop-filter: blur(6px);
+  pointer-events: auto;
+  z-index: 30;
+}
+.info-panel.hidden {
+  display: none;
+}
+.info-panel__close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.info-panel__close:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Listen ボタン（大きく目立つ） */
+.info-listen {
+  width: 100%;
+  justify-content: center;
+  margin: 6px 0 12px;
+  font-size: 17px;
+}
+.info-voice-tag {
+  margin-left: 8px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0a1024;
+  background: #aef0d6;
+  border-radius: 999px;
+}
+/* 写真・音声のアップロード */
+.info-uploads {
+  display: flex;
+  gap: 10px;
+}
+.info-upload {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: center;
+}
+.info-upload:hover {
+  background: rgba(255, 255, 255, 0.26);
+}
+.info-panel__name {
+  font-size: 22px;
+  font-weight: 800;
+  color: #aef0d6;
+  padding-right: 28px;
+}
+.info-panel__ja {
+  font-size: 13px;
+  opacity: 0.7;
+  margin-bottom: 10px;
+}
+.info-panel__img {
+  width: 100%;
+  max-height: 170px;
+  object-fit: cover;
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+.info-panel__noimg {
+  width: 100%;
+  padding: 18px;
+  text-align: center;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+.info-block {
+  margin-bottom: 12px;
+}
+.info-block__label {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 800;
+  color: #0a1024;
+  background: #aef0d6;
+  padding: 2px 10px;
+  border-radius: 999px;
+  margin-bottom: 4px;
+}
+.info-block__text {
+  font-size: 15px;
+  line-height: 1.55;
+}
+.info-panel__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 8px;
+  flex-wrap: wrap;
+}
+.info-panel__photo {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+.info-panel__nav {
+  display: flex;
+  gap: 10px;
+}
+.info-panel__nav .kc-mini {
+  flex: 1;
+}
+
+/* ---------- タイトル画面 ---------- */
+.title-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  background: radial-gradient(ellipse at center, rgba(10, 16, 36, 0.35), rgba(10, 16, 36, 0.7));
+}
+.title-screen.hidden {
+  display: none;
+}
+.title-screen__inner {
+  text-align: center;
+  animation: kc-fadein 0.6s ease;
+}
+.title-screen__logo {
+  font-size: 64px;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  color: #aef0d6;
+  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
+}
+.title-screen__sub {
+  font-size: 18px;
+  color: #fff;
+  opacity: 0.9;
+  margin-bottom: 32px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+.title-screen__menu {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+}
+.title-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  width: 280px;
+  padding: 16px 24px;
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.16);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: transform 0.08s ease, background 0.15s ease;
+  backdrop-filter: blur(4px);
+}
+.title-btn:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+.title-btn:active {
+  transform: scale(0.96);
+}
+.title-btn--primary {
+  background: var(--kc-accent);
+  border-color: var(--kc-accent);
+}
+.title-btn--primary:hover {
+  background: var(--kc-accent-dark);
+}
+.title-btn__icon {
+  font-size: 26px;
+}
+@keyframes kc-fadein {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---------- あそびかた ---------- */
+.howto-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 6px 0 12px;
+}
+.howto-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+  color: var(--kc-ink);
+}
+.howto-key {
+  flex: 0 0 110px;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+  color: #fff;
+  background: var(--kc-accent);
+  border-radius: 8px;
+}
+
+/* ---------- オンボーディング トースト ---------- */
+.onboard-toast {
+  position: absolute;
+  top: 76px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 20px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(29, 158, 117, 0.95);
+  border-radius: 999px;
+  box-shadow: var(--kc-shadow);
+  z-index: 25;
+  animation: kc-fadein 0.4s ease;
+}
+.onboard-toast.hidden {
+  display: none;
+}
+
+/* ---------- 操作フィードバック ---------- */
+.crosshair.pulse {
+  animation: kc-cross-pulse 0.22s ease;
+}
+@keyframes kc-cross-pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  40% {
+    transform: translate(-50%, -50%) scale(1.6);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+.quiz-result-mark {
+  animation: kc-pop 0.34s ease;
+}
+@keyframes kc-pop {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ---------- レスポンシブ（小さい画面・タブレット） ---------- */
+@media (max-width: 760px) {
+  .kc-btn {
+    min-height: 42px;
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+  .hud-buttons {
+    gap: 7px;
+    top: 10px;
+    left: 10px;
+  }
+  .right-panel {
+    width: 132px;
+    top: 10px;
+    right: 10px;
+    padding: 8px;
+  }
+  .tool-item__name {
+    font-size: 10px;
+  }
+  .hud-help {
+    font-size: 12px;
+    padding: 8px 10px;
+  }
+  .block-palette {
+    bottom: 8px;
+    padding: 6px;
+  }
+  .palette-item {
+    width: 52px;
+  }
+  .title-screen__logo {
+    font-size: 44px;
+  }
+  .title-btn {
+    width: 240px;
+    font-size: 18px;
+  }
+  .modal__card {
+    width: 94vw;
+    padding: 16px;
+  }
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===== 行ける場所の一覧（Map。選ぶとその場所へ移動して説明が出る） ===== */
+.places-panel {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 60;
+  width: min(460px, 92vw);
+  max-height: 78vh;
+  overflow-y: auto;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.97);
+  color: #0a1024;
+  box-shadow: var(--kc-shadow);
+  pointer-events: auto;
+}
+.places-panel.hidden {
+  display: none;
+}
+.places-panel__title {
+  font-size: 20px;
+  font-weight: 800;
+}
+.places-panel__sub {
+  margin-top: 2px;
+  font-size: 14px;
+  opacity: 0.75;
+}
+.places-panel__keys {
+  margin: 8px 0 12px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+.places-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.place-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid #d7e6df;
+  border-radius: 12px;
+  background: #f4fbf8;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.place-card:hover {
+  background: #e6f7ef;
+}
+.place-card__pin {
+  font-size: 20px;
+}
+.place-card__text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.place-card__name {
+  font-size: 15px;
+  font-weight: 800;
+}
+.place-card__ja {
+  font-size: 12px;
+  opacity: 0.7;
+}
+.place-card__go {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0e7a63;
+}
+
+/* ===== キー案内（進む・振り向く・見上げるの操作を画面に常時表示） ===== */
+.key-guide {
+  position: absolute;
+  left: 18px;
+  bottom: 200px;
+  z-index: 25;
+  pointer-events: none;
+  padding: 6px 8px;
+  border-radius: 12px;
+  background: rgba(10, 16, 36, 0.58);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.5;
+  box-shadow: var(--kc-shadow);
+  transition: opacity 0.2s;
+}
+/* 開いているときは少し透け、近づけると（マウス/フォーカス）はっきり見える */
+.key-guide:not(.is-closed) {
+  opacity: 0.82;
+}
+.key-guide:hover,
+.key-guide:focus-within {
+  opacity: 1;
+}
+/* 閉じているときは小さなボタンだけ＝画面をほとんど隠さない */
+.key-guide.is-closed {
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.key-guide.hidden {
+  display: none;
+}
+.key-guide__toggle {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 9px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(10, 16, 36, 0.72);
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.key-guide:not(.is-closed) .key-guide__toggle {
+  margin-bottom: 4px;
+  background: transparent;
+  padding: 2px 2px 0;
+}
+.key-guide__x {
+  margin-left: 2px;
+  opacity: 0.7;
+}
+.key-guide__body {
+  padding: 0 2px 2px;
+  /* 画面が低くても必ず収まるように（はみ出す分はスクロール） */
+  max-height: calc(100vh - 260px);
+  overflow-y: auto;
+  pointer-events: auto;
+}
+.key-guide__head {
+  margin-top: 5px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #aef0d6;
+}
+.key-guide__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.key-guide__keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 104px;
+}
+.key-guide__what {
+  opacity: 0.95;
+}
+.key-guide kbd {
+  display: inline-block;
+  min-width: 16px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #0a1024;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+}
+
+/* せまい画面では小さめに表示する（開けば必ず一覧が出る＝隠さない） */
+@media (max-width: 900px), (max-height: 620px) {
+  .key-guide {
+    font-size: 11px;
+    line-height: 1.4;
+  }
+  .key-guide__keys {
+    min-width: 84px;
+  }
+  .key-guide__row {
+    gap: 4px;
+  }
+}
+
+/* ===== ボタンに書くキー表示（マウス無しでも押し方が分かるように） ===== */
+.kc-btn kbd,
+.kc-round kbd,
+.info-panel kbd,
+.hub-screen kbd,
+.spot-toolbar__hint kbd,
+.info-keyhint kbd {
+  display: inline-block;
+  min-width: 15px;
+  margin-left: 5px;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: rgba(10, 16, 36, 0.14);
+  color: inherit;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+  vertical-align: middle;
+}
+.kc-round kbd {
+  margin-left: 0;
+  background: rgba(255, 255, 255, 0.28);
+  color: #fff;
+}
+.hub-screen kbd,
+.spot-toolbar__hint kbd {
+  margin-left: 2px;
+  margin-right: 2px;
+  background: rgba(255, 255, 255, 0.85);
+  color: #0a1024;
+}
+.info-keyhint {
+  margin-top: 8px;
+  font-size: 12px;
+  opacity: 0.75;
+  text-align: center;
+}
+.hub-screen__keys {
+  margin-top: 8px;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+/* キーボードで選んでいる場所をはっきり見せる（マウス不使用のため必須） */
+.spot-card:focus-visible,
+.kc-btn:focus-visible,
+.kc-round:focus-visible,
+.info-add:focus-visible,
+.info-upload:focus-visible,
+.palette-slot:focus-visible {
+  outline: 4px solid #ffd76a;
+  outline-offset: 2px;
+}
+
+/* ===== 情報パネル：文の付け足し（＋ボタンで編集。基本文は消えない） ===== */
+.info-add {
+  pointer-events: auto;
+  margin-left: 6px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: #16a085;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  vertical-align: middle;
+}
+.info-add:hover {
+  background: #128a72;
+}
+.info-added {
+  color: #0e7a63;
+  font-weight: 700;
+}
+.info-edit {
+  margin-top: 6px;
+}
+.info-edit__text {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 14px;
+  padding: 6px 8px;
+  border: 2px solid #aef0d6;
+  border-radius: 8px;
+  resize: vertical;
+}
+.info-edit__row {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+.info-edit__btn {
+  min-height: 34px;
+  padding: 4px 12px;
+  font-size: 13px;
+}
+.info-edit__btn--clear {
+  background: #e9e4d6;
+  color: #5a4632;
+}
+
+/* ===== 画面の縦が短いとき（タブレットの横向きなど）＝操作ボタンを縮めて収める ===== */
+@media (max-height: 560px) {
+  .spot-toolbar {
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    gap: 8px;
+  }
+  .spot-toolbar .kc-btn {
+    min-height: 40px;
+    padding: 7px 11px;
+    font-size: 14px;
+  }
+  .move-pad {
+    width: 132px;
+    height: 132px;
+    right: 12px;
+    bottom: calc(12px + var(--kc-safe-b));
+  }
+  .move-btn {
+    width: 42px;
+    height: 42px;
+    font-size: 16px;
+  }
+  .move-btn--up {
+    left: 45px;
+    top: 0;
+  }
+  .move-btn--left {
+    left: 0;
+    top: 45px;
+  }
+  .move-btn--down {
+    left: 45px;
+    top: 45px;
+  }
+  .move-btn--right {
+    left: 90px;
+    top: 45px;
+  }
+  .jump-btn {
+    width: 76px;
+    height: 76px;
+    left: 16px;
+    bottom: calc(16px + var(--kc-safe-b));
+    font-size: 14px;
+  }
+  .build-actions {
+    bottom: calc(156px + var(--kc-safe-b));
+  }
+  /* 左下の操作ガイドはジャンプボタンと重なるので、短い画面では出さない */
+  .hud-help {
+    display: none;
+  }
+}

@@ -1,0 +1,19 @@
+node_modules/
+dist/
+*.local
+.DS_Store
+.vite/
+
+# 写真生成時の下書き置き場（アプリでは public/photos の方を使う。270MB超あるため対象外）
+Cape Ashizuri/
+Cape Muroto/
+Harimaya Bridge/
+Hirome Market/
+Katsurahama Beach/
+Kochi Castle/
+Makino Botanical Garden/
+Nikobuchi Pond/
+Noichi Zoo/
+Ryugado Cave/
+Shimanto River/
+Statue of Sakamoto Ryoma/

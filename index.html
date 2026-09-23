@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>KochiCraft — 高知県バーチャル観光ワールド</title>
+    <!-- スタイルは main.ts から import する（Vite がバンドル） -->
+  </head>
+  <body>
+    <!-- 3D描画のキャンバスはここに自動挿入される -->
+    <div id="app">
+      <!-- HUD（画面表示）はここに自動挿入される -->
+      <div id="hud"></div>
+
+      <!-- ローディング画面（起動時のみ表示） -->
+      <div id="loading" class="loading">
+        <div class="loading__title">KochiCraft</div>
+        <div class="loading__sub">Loading Kochi tourist worlds…</div>
+        <div class="loading__bar"><div class="loading__fill"></div></div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
