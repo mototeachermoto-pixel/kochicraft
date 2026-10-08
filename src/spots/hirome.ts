@@ -236,7 +236,7 @@ export const hirome: SpotDefinition = {
       guide: {
         canDo: 'You can read about this place.',
         feature: 'It is about Hirome Market.',
-        about: 'This is a sign. It helps you learn about Hirome Market.',
+        about: 'Let\'s read the sign!',
       },
     },
   ],

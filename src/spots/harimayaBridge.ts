@@ -302,7 +302,7 @@ export const harimayaBridge: SpotDefinition = {
       guide: {
         canDo: 'You can read about this place.',
         feature: 'It is about Harimaya Bridge.',
-        about: 'This is a sign. It helps you learn about Harimaya Bridge.',
+        about: 'Let\'s read the sign!',
       },
     },
   ],

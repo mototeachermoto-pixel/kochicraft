@@ -78,7 +78,9 @@ export class Engine {
 
   constructor(container: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // タッチで操作する端末（iPad など）は描く量を減らして、ボタンの反応と動きを軽くする
+    const touchDevice = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, touchDevice ? 1.5 : 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     const canvas = this.renderer.domElement;
     canvas.classList.add('kc-canvas');
@@ -121,17 +123,20 @@ export class Engine {
     if (!hudRoot) throw new Error('HUD要素(#hud)が見つかりません');
     this.hudRoot = hudRoot;
 
+    // 以前の版で大きいまま保存された写真を、縮めて保存し直す（空き容量を作る）
+    void PhotoStore.shrinkSavedPhotos();
+
     this.infoPanel = new InfoPanel(this.hudRoot, this.speech, {
       onClose: () => this.worldManager.clearSelection(),
       onPhoto: (obj, dataUrl) => {
         obj.image = dataUrl;
         const sid = this.worldManager.currentSpot?.id;
-        if (sid) PhotoStore.setPhoto(sid, obj.id, dataUrl); // 実物写真を保存
+        return sid ? PhotoStore.setPhoto(sid, obj.id, dataUrl) : false; // 実物写真を保存
       },
       onAudio: (obj, dataUrl) => {
         obj.audio = dataUrl;
         const sid = this.worldManager.currentSpot?.id;
-        if (sid) PhotoStore.setAudio(sid, obj.id, dataUrl); // 英語音声を保存
+        return sid ? PhotoStore.setAudio(sid, obj.id, dataUrl) : false; // 英語音声を保存
       },
     });
     this.worldManager.onSelect = (obj) => {

@@ -32,6 +32,8 @@ export interface SceneObject {
   guide: ObjectGuide;
   /** 写真（dataURL。アップロードで差し込み） */
   image?: string;
+  /** 同梱の元の写真（アップロード写真が表示できないときに戻す先） */
+  imageDefault?: string;
   /** 英語音声（dataURL。先生が録音/アップロードした音声。あれば読み上げより優先） */
   audio?: string;
 }

@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import { fileURLToPath, URL } from 'node:url';
 import basicSsl from '@vitejs/plugin-basic-ssl';
+import { viteSingleFile } from 'vite-plugin-singlefile';
 
 /**
  * Vite 設定。
@@ -13,7 +14,28 @@ import basicSsl from '@vitejs/plugin-basic-ssl';
  */
 const useHttps = process.env.HTTPS === '1';
 
-export default defineConfig({
+/**
+ * GAS 用（`npm run build:gas`）：Google Apps Script はファイルを1つずつしか配信できないため、
+ * プログラムと見た目を index.html 1枚に詰め込み、gas/ に出力する。写真（public）は含めない。
+ */
+const gasBuild = defineConfig({
+  base: './',
+  plugins: [viteSingleFile()],
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
+  build: {
+    target: 'es2020',
+    outDir: 'gas',
+    emptyOutDir: false,
+    copyPublicDir: false,
+    sourcemap: false,
+  },
+});
+
+export default defineConfig(({ mode }) => mode === 'gas' ? gasBuild : {
   base: './',
   plugins: useHttps ? [basicSsl()] : [],
   resolve: {

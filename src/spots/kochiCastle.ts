@@ -303,7 +303,7 @@ export const kochiCastle: SpotDefinition = {
       guide: {
         canDo: 'You can look up at the tall castle tower.',
         feature: 'It is white and has gray roofs.',
-        about: 'It is 300 years old. People in Kochi love it.',
+        about: 'It is very old. People in Kochi love it.',
       },
     },
     {
@@ -316,7 +316,7 @@ export const kochiCastle: SpotDefinition = {
       guide: {
         canDo: 'You can see an old palace next to the tower.',
         feature: 'It is low and white.',
-        about: 'It is a big old house. Only Kochi Castle has it now.',
+        about: 'It is a big old house. The old tower and the old palace are both here. Only Kochi Castle has both!',
       },
     },
     {
@@ -407,7 +407,7 @@ export const kochiCastle: SpotDefinition = {
       guide: {
         canDo: 'You can read about this place.',
         feature: 'It is about Kochi Castle.',
-        about: 'This is a sign. It helps you learn about Kochi Castle.',
+        about: 'Let\'s read the sign!',
       },
     },
   ],

@@ -134,7 +134,7 @@ export const ryomaStatue: SpotDefinition = {
       guide: {
         canDo: 'You can look up at the huge Ryoma statue.',
         feature: 'He is very, very tall.',
-        about: 'Young people of Kochi made it in 1928.',
+        about: 'Young people of Kochi made it about 100 years ago.',
       },
     },
     {
@@ -147,7 +147,7 @@ export const ryomaStatue: SpotDefinition = {
       guide: {
         canDo: 'You can climb the big steps to his face.',
         feature: 'His face is right there!',
-        about: 'In fall, people make a real tower like this!',
+        about: 'In spring and fall, you can go up and see his face!',
       },
     },
     {
@@ -173,7 +173,7 @@ export const ryomaStatue: SpotDefinition = {
       guide: {
         canDo: 'You can find a stone with words.',
         feature: 'It is a stone with words.',
-        about: 'It is about Ryoma.',
+        about: 'Let\'s read the words on it!',
       },
     },
     {
@@ -186,7 +186,7 @@ export const ryomaStatue: SpotDefinition = {
       guide: {
         canDo: 'You can read about this place.',
         feature: 'It is about Sakamoto Ryoma.',
-        about: 'This is a sign. It helps you learn about Sakamoto Ryoma.',
+        about: 'Let\'s read the sign!',
       },
     },
   ],

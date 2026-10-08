@@ -230,7 +230,7 @@ export const noichi: SpotDefinition = {
       guide: {
         canDo: 'You can watch the chimpanzee play.',
         feature: 'It goes up the wood tower.',
-        about: 'They are very smart. They can do many things!',
+        about: 'It is very smart. It can do many things!',
       },
     },
     {
@@ -243,7 +243,7 @@ export const noichi: SpotDefinition = {
       guide: {
         canDo: 'You can see capybaras by the water.',
         feature: 'They are big and round.',
-        about: 'They love water. They eat bamboo!',
+        about: 'They love water. They eat grass!',
       },
     },
     {
@@ -282,7 +282,7 @@ export const noichi: SpotDefinition = {
       guide: {
         canDo: 'You can read about this place.',
         feature: 'It is about Noichi Zoo.',
-        about: 'This is a sign. It helps you learn about Noichi Zoo.',
+        about: 'Let\'s read the sign!',
       },
     },
   ],

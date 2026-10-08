@@ -193,7 +193,7 @@ export const ashizuri: SpotDefinition = {
       guide: {
         canDo: 'You can stand over the sea.',
         feature: 'It has glass. You can see down!',
-        about: 'Look far. The sea is round!',
+        about: 'Look far. The sea looks round!',
       },
     },
     {
@@ -245,7 +245,7 @@ export const ashizuri: SpotDefinition = {
       guide: {
         canDo: 'You can see a bronze statue.',
         feature: 'He looks at the sea.',
-        about: 'He went to America at 14. He learned English and helped Japan.',
+        about: 'He lived in America. He learned English and helped Japan.',
       },
     },
     {
@@ -270,7 +270,7 @@ export const ashizuri: SpotDefinition = {
       image: './photos/ashizuri/camellia.jpg',
       guide: {
         canDo: 'You can walk under the flower tunnel.',
-        feature: 'Pink flowers are over your head.',
+        feature: 'Red flowers are over your head.',
         about: 'About 60,000 flower trees are here!',
       },
     },
@@ -284,7 +284,7 @@ export const ashizuri: SpotDefinition = {
       guide: {
         canDo: 'You can read about this place.',
         feature: 'It is about Cape Ashizuri.',
-        about: 'This is a sign. It helps you learn about Cape Ashizuri.',
+        about: 'Let\'s read the sign!',
       },
     },
   ],

@@ -1575,6 +1575,15 @@ canvas.kc-canvas {
 .info-upload:hover {
   background: rgba(255, 255, 255, 0.26);
 }
+.info-notice {
+  margin-top: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #3a2a00;
+  background: #ffd76a;
+  border-radius: 8px;
+}
 .info-panel__name {
   font-size: 22px;
   font-weight: 800;

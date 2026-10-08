@@ -197,7 +197,7 @@ export const makino: SpotDefinition = {
       guide: {
         canDo: 'You can find many kinds of plants.',
         feature: 'There are trees, flowers, and bamboo.',
-        about: 'About 3,000 plants live here!',
+        about: 'About 3,000 kinds of plants are here!',
       },
     },
     {
@@ -236,7 +236,7 @@ export const makino: SpotDefinition = {
       guide: {
         canDo: 'You can find a small bamboo grass.',
         feature: 'It is short and green.',
-        about: 'Dr. Makino loved Sueko. This plant has her name.',
+        about: 'Sueko was his wife. This plant has her name.',
       },
     },
     {
@@ -249,7 +249,7 @@ export const makino: SpotDefinition = {
       guide: {
         canDo: 'You can read about this place.',
         feature: 'It is about this garden.',
-        about: 'This is a sign. It helps you learn about Makino Botanical Garden.',
+        about: 'Let\'s read the sign!',
       },
     },
   ],

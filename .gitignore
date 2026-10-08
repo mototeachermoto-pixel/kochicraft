@@ -17,3 +17,7 @@ Noichi Zoo/
 Ryugado Cave/
 Shimanto River/
 Statue of Sakamoto Ryoma/
+
+# GAS用にビルドしたページ（npm run build:gas で毎回作り直す）
+gas/index.html
+gas/photos_*.html

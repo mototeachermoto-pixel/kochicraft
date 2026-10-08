@@ -1,13 +1,14 @@
 import type { SpeechService } from '@/features/language/SpeechService';
 import type { SceneObject } from '@/spots/SpotDefinition';
 import { GuideStore, type GuideField } from '@/data/GuideStore';
-
+import { PhotoStore } from '@/data/PhotoStore';
+import { isGasPhoto, loadGasPhoto } from '@/data/GasPhotos';
 export interface InfoPanelHandlers {
   onClose: () => void;
-  /** 写真をアップロードした */
-  onPhoto: (obj: SceneObject, dataUrl: string) => void;
-  /** 英語音声をアップロードした */
-  onAudio: (obj: SceneObject, dataUrl: string) => void;
+  /** 写真をアップロードした（端末に保存できたら true） */
+  onPhoto: (obj: SceneObject, dataUrl: string) => boolean;
+  /** 英語音声をアップロードした（端末に保存できたら true） */
+  onAudio: (obj: SceneObject, dataUrl: string) => boolean;
 }
 
 /**
@@ -23,6 +24,8 @@ export class InfoPanel {
   private spotId = '';
   /** いま編集中の欄（null なら編集していない） */
   private editing: GuideField | null = null;
+  /** 写真・音声を保存できなかったときの知らせ（空なら出さない） */
+  private notice = '';
   private readonly audioEl = new Audio();
 
   constructor(
@@ -39,6 +42,7 @@ export class InfoPanel {
     this.current = obj;
     this.spotId = spotId;
     this.editing = null;
+    this.notice = '';
     this.render();
     this.root.classList.remove('hidden');
   }
@@ -67,14 +71,17 @@ export class InfoPanel {
     if (this.current) this.listen(this.current);
   }
 
-  /** Listen：録音があれば録音を、なければ自動音声で英語（About＋付け足し）を再生 */
+  /** Listen：録音があれば録音を、なければ端末の自動音声で英語（About＋付け足し）を再生 */
   private listen(obj: SceneObject): void {
     this.stopAudio();
     const text = this.fullText(obj, 'about');
     if (obj.audio) {
       this.audioEl.src = obj.audio;
       this.audioEl.currentTime = 0;
-      void this.audioEl.play().catch(() => this.speech.speak(text, 'en'));
+      // AbortError＝連打などで次の再生に切り替わっただけ（失敗ではない）。自動音声を重ねない
+      void this.audioEl.play().catch((e: unknown) => {
+        if ((e as DOMException)?.name !== 'AbortError') this.speech.speak(text, 'en');
+      });
     } else {
       this.speech.speak(text, 'en');
     }
@@ -118,7 +125,7 @@ export class InfoPanel {
       <div class="info-panel__ja">${this.esc(o.nameJa ?? '')}</div>
       ${
         o.image
-          ? `<img class="info-panel__img" src="${o.image}" alt="${this.esc(o.name)}" />`
+          ? `<img class="info-panel__img" ${isGasPhoto(o.image) ? '' : `src="${o.image}"`} alt="${this.esc(o.name)}" />`
           : `<div class="info-panel__noimg">📷 No photo yet</div>`
       }
       ${this.blockHtml('You can', 'canDo')}
@@ -138,10 +145,21 @@ export class InfoPanel {
           <input type="file" accept="audio/*" data-role="audio" hidden />
         </label>
       </div>
+      ${this.notice ? `<div class="info-notice" role="alert">⚠ ${this.esc(this.notice)}</div>` : ''}
     `;
 
     const q = <T extends HTMLElement>(s: string) => this.root.querySelector(s) as T;
     q('[data-role="close"]').addEventListener('click', () => this.handlers.onClose());
+
+    // アップロード写真が表示できない（壊れている・HEIC など）ときは、同梱の元の写真に戻す
+    const img = this.root.querySelector<HTMLImageElement>('.info-panel__img');
+    if (img && o.imageDefault && o.image !== o.imageDefault) {
+      img.addEventListener('error', () => {
+        o.image = o.imageDefault;
+        this.setImage(img, o.imageDefault!);
+      }, { once: true });
+    }
+    if (img && isGasPhoto(o.image)) this.setImage(img, o.image);
     q('[data-role="listen"]').addEventListener('click', () => this.listen(o));
 
     // 「＋」＝付け足しの編集を開く／閉じる
@@ -173,14 +191,21 @@ export class InfoPanel {
     });
 
     const photo = q<HTMLInputElement>('[data-role="photo"]');
-    photo.addEventListener('change', () => this.readFile(photo, (url) => {
-      this.handlers.onPhoto(o, url);
+    const spotAtUpload = this.spotId;
+    photo.addEventListener('change', () => this.readFile(photo, async (url) => {
+      const small = await PhotoStore.shrinkPhoto(url);
+      // 縮めている間に別の観光地へ移っていたら、取り違えないよう保存しない
+      if (this.spotId !== spotAtUpload) return;
+      const saved = this.handlers.onPhoto(o, small);
+      if (this.current !== o) return;
+      this.notice = saved ? '' : 'This photo could not be saved. The storage is full.';
       this.render();
     }));
 
     const audio = q<HTMLInputElement>('[data-role="audio"]');
     audio.addEventListener('change', () => this.readFile(audio, (url) => {
-      this.handlers.onAudio(o, url);
+      const saved = this.handlers.onAudio(o, url);
+      this.notice = saved ? '' : 'This voice could not be saved. The storage is full.';
       this.render();
     }));
   }
@@ -191,6 +216,21 @@ export class InfoPanel {
     const reader = new FileReader();
     reader.onload = () => done(reader.result as string);
     reader.readAsDataURL(f);
+  }
+
+  /** 写真を表示する。GAS で動いているときの同梱写真は、サーバーから受け取ってから表示する */
+  private setImage(img: HTMLImageElement, src: string): void {
+    if (!isGasPhoto(src)) {
+      img.src = src;
+      return;
+    }
+    loadGasPhoto(src)
+      .then((url) => {
+        if (img.isConnected) img.src = url;
+      })
+      .catch(() => {
+        // 受け取れなかったときは空欄のまま（次に開いたときにもう一度頼む）
+      });
   }
 
   private esc(s: string): string {

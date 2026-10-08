@@ -147,7 +147,7 @@ export const nikobuchi: SpotDefinition = {
       image: './photos/nikobuchi/pond.jpg',
       guide: {
         canDo: 'You can look into the clear blue water.',
-        feature: 'It is very blue. Its name is Niyodo Blue.',
+        feature: 'It is very blue. We call this blue "Niyodo Blue."',
         about: 'People say a big snake lives here. Be quiet, please.',
       },
     },
@@ -187,7 +187,7 @@ export const nikobuchi: SpotDefinition = {
       guide: {
         canDo: 'You can read about this place.',
         feature: 'It is about Nikobuchi.',
-        about: 'This is a sign. It helps you learn about Nikobuchi.',
+        about: 'Let\'s read the sign!',
       },
     },
   ],

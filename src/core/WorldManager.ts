@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { World } from '@/world/World';
 import type { SceneObject, SpotDefinition } from '@/spots/SpotDefinition';
 import { PhotoStore } from '@/data/PhotoStore';
+import { prefetchGasPhotos } from '@/data/GasPhotos';
 import { EditStore, type EditCell } from '@/data/EditStore';
 import type { OrbitCameraController } from './OrbitCameraController';
 
@@ -70,11 +71,14 @@ export class WorldManager {
     this.objects = spot.objects ?? [];
     // 保存済みの写真・音声（先生がアップロードした実物写真／録音）を反映
     for (const o of this.objects) {
+      o.imageDefault ??= o.image;
       const photo = PhotoStore.getPhoto(spot.id, o.id);
       if (photo) o.image = photo;
       const audio = PhotoStore.getAudio(spot.id, o.id);
       if (audio) o.audio = audio;
     }
+    // GAS で動いているときは、この観光地の写真を今のうちにまとめて取り寄せておく
+    prefetchGasPhotos(this.objects.map((o) => o.image));
     this.currentSpot = spot;
     this.orbit.setTarget(spot.center.x, spot.center.y, spot.center.z, spot.viewDistance);
     this.nearId = null;

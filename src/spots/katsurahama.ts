@@ -250,7 +250,7 @@ export const katsurahama: SpotDefinition = {
       guide: {
         canDo: 'You can read about this place.',
         feature: 'It is about Katsurahama.',
-        about: 'This is a sign. It helps you learn about this place.',
+        about: 'Let\'s read the sign!',
       },
     },
   ],

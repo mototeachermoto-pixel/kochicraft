@@ -20,10 +20,17 @@ const CANCEL_GAP_MS = 130;
 /** 文と文のあいだの間（ミリ秒） */
 const SENTENCE_GAP_MS = 260;
 
+/** iPad / iPhone か（iPadOS の Safari はパソコン（Mac）のふりをするので、タッチの有無でも見分ける） */
+const IS_IOS = typeof navigator !== 'undefined' && (
+  /iP(hone|ad|od)/.test(navigator.userAgent) ||
+  (navigator.userAgent.includes('Macintosh') && navigator.maxTouchPoints > 1)
+);
+
 export class SpeechService {
   private synth: SpeechSynthesis | null;
   private voices: SpeechSynthesisVoice[] = [];
   private voicesReady: Promise<void>;
+  private voicesLoaded = false;
   /** 今読み上げている一連の処理を識別する番号。cancel() で無効化する */
   private runId = 0;
   private keepAliveTimer = 0;
@@ -36,7 +43,9 @@ export class SpeechService {
     this.synth = typeof window !== 'undefined' && 'speechSynthesis' in window
       ? window.speechSynthesis
       : null;
-    this.voicesReady = this.waitForVoices();
+    this.voicesReady = this.waitForVoices().then(() => {
+      this.voicesLoaded = true;
+    });
   }
 
   /** この環境で読み上げが使えるか */
@@ -158,7 +167,7 @@ export class SpeechService {
     this.cancel();
     const myRun = this.runId;
 
-    void this.voicesReady.then(() => {
+    const start = (): void => {
       // 待っているあいだに別の読み上げが始まっていたら、こちらは捨てる
       if (myRun !== this.runId) return;
 
@@ -204,13 +213,23 @@ export class SpeechService {
         }
       };
 
-      // cancel() の直後に speak すると最初の語が欠けるので、少しだけ待つ
+      // iPad はボタンを押したその流れの中で話し始めないと、遅れたり鳴らなかったりする。
+      // また Chrome 用の「止まらないための仕掛け」は iPad では要らない
+      if (IS_IOS) {
+        next(0);
+        return;
+      }
+      // パソコンの Chrome は cancel() の直後に speak すると最初の語が欠けるので、少しだけ待つ
       window.setTimeout(() => {
         if (myRun !== this.runId) return;
         this.startKeepAlive();
         next(0);
       }, CANCEL_GAP_MS);
-    });
+    };
+
+    // 声の一覧がもう届いていれば、待たずにすぐ始める（ボタンを押した流れのまま話し始める）
+    if (this.voicesLoaded) start();
+    else void this.voicesReady.then(start);
   }
 
   /**

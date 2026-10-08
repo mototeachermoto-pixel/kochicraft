@@ -141,7 +141,7 @@ export const shimanto: SpotDefinition = {
       guide: {
         canDo: 'You can see a wide, clear river.',
         feature: 'The water is very clean.',
-        about: 'It is the No.1 clean river of Japan. Many fish live here.',
+        about: 'It is a famous clean river. People call it "the last clear river."',
       },
     },
     {
@@ -154,7 +154,7 @@ export const shimanto: SpotDefinition = {
       guide: {
         canDo: 'You can walk across the low bridge.',
         feature: 'It is low and flat.',
-        about: 'Big water goes over this bridge. But the bridge is OK!',
+        about: 'It rains a lot. Then the water goes over the bridge. But the bridge is OK!',
       },
     },
     {
@@ -206,7 +206,7 @@ export const shimanto: SpotDefinition = {
       guide: {
         canDo: 'You can read about this place.',
         feature: 'It is about the Shimanto River.',
-        about: 'This is a sign. It helps you learn about the Shimanto River.',
+        about: 'Let\'s read the sign!',
       },
     },
   ],

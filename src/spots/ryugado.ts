@@ -120,7 +120,7 @@ export const ryugado: SpotDefinition = {
       image: './photos/ryugado/stalactites.jpg',
       guide: {
         canDo: 'You can see rock spikes from the roof and floor.',
-        feature: 'They grow from the roof and the floor.',
+        feature: 'Some go down. Some go up.',
         about: 'Drip, drip... They grow very, very slowly.',
       },
     },
@@ -147,7 +147,7 @@ export const ryugado: SpotDefinition = {
       guide: {
         canDo: 'You can find a waterfall in the cave.',
         feature: 'The water falls down, down!',
-        about: 'A big cave is behind this water. People saw it in 1931!',
+        about: 'A big cave is behind this water. People went deep into the cave about 100 years ago.',
       },
     },
     {
@@ -172,7 +172,7 @@ export const ryugado: SpotDefinition = {
       image: './photos/ryugado/cave.jpg',
       guide: {
         canDo: 'You can walk inside a big cave.',
-        feature: 'It is one of the three big caves of Japan.',
+        feature: 'It is a famous big cave in Japan.',
         about: 'Water made this cave. It is very, very old!',
       },
     },
@@ -186,7 +186,7 @@ export const ryugado: SpotDefinition = {
       guide: {
         canDo: 'You can read about this place.',
         feature: 'It is about Ryugado Cave.',
-        about: 'This is a sign. It helps you learn about Ryugado Cave.',
+        about: 'Let\'s read the sign!',
       },
     },
   ],

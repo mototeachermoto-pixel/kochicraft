@@ -215,7 +215,7 @@ export const muroto: SpotDefinition = {
       guide: {
         canDo: 'You can walk on the wild rocks.',
         feature: 'They are big and dark.',
-        about: 'The land here goes up very slowly. The sea made these rocks.',
+        about: 'Long ago, these rocks were under the sea!',
       },
     },
     {
@@ -228,7 +228,7 @@ export const muroto: SpotDefinition = {
       guide: {
         canDo: 'You can climb the hill to the lighthouse.',
         feature: 'It is white. It is on a hill.',
-        about: 'Its light is No.1 strong in Japan. It helps ships at night.',
+        about: 'Its light is very, very strong. It helps ships at night.',
       },
     },
     {
@@ -306,7 +306,7 @@ export const muroto: SpotDefinition = {
       guide: {
         canDo: 'You can read about this place.',
         feature: 'It is about Cape Muroto.',
-        about: 'This is a sign. It helps you learn about Cape Muroto.',
+        about: 'Let\'s read the sign!',
       },
     },
   ],
