@@ -16,8 +16,8 @@ GitHub版（https://mototeachermoto-pixel.github.io/kochicraft/）は、記録�
 |---|---|
 | Googleアカウント | ryusaku@g.kochi-u.ac.jp（大学） |
 | GASプロジェクト | scriptId `13hNtUZ1eQlSRsVvjzJfNiK5_cyDIns_mqsM8QULX9Z-Ut9g21WFdE6at`（ドライブの「KochiCraft」フォルダの中） |
-| 公開デプロイ | `AKfycbz_y2f_vQIULz7J1wfkzhlVnbGoYOtnNO_JWY1FO9nokDkFWnS3jq3N2QXqQWuUcPk`（2026-10-09時点で版4。版3＝子どもごとの保存を入れる前） |
-| 子どもの作品の保存先 | ドライブの「KochiCraft」フォルダ →「子どもの保存データ」フォルダ（1人2ファイル：`5A12.json`＝ブロック・付け足し文、`5A12.media.json`＝写真・声） |
+| 公開デプロイ | `AKfycbz_y2f_vQIULz7J1wfkzhlVnbGoYOtnNO_JWY1FO9nokDkFWnS3jq3N2QXqQWuUcPk`（2026-10-09時点で版5。版4＝年度別にする前、版3＝子どもごとの保存を入れる前） |
+| 子どもの作品の保存先 | ドライブの「KochiCraft」フォルダ →「子どもの保存データ」→「2026年度」のような**年度ごとのフォルダ**（1人2ファイル：`5A12.json`＝ブロック・付け足し文、`5A12.media.json`＝写真・声） |
 | テスト用（先生だけ） | https://script.google.com/a/macros/g.kochi-u.ac.jp/s/AKfycbwZDvQcfuqYZpP3L1tM0O9Mxy-SHOIbHpnUL8zEUQ/dev |
 | 手元のGAS用フォルダ | `gas/`（Code.js・appsscript.json・.clasp.json は記録済み。index.html と photos_*.html はビルドで毎回作る） |
 
@@ -37,6 +37,8 @@ GitHub版（https://mototeachermoto-pixel.github.io/kochicraft/）は、記録�
 - GAS 版では Save file / Open file は出さない。手元・GitHub 版は今までどおり端末に保存（番号の画面も出ない）。
 - 手元で試すときは `http://localhost:5192/?cloud=fake`（にせの保存先。公開版には入らない）。
 - ドライブへの許可は、先生が GAS の編集画面で `setupSaves` を1回実行して出した（2026-10-09）。保存先フォルダの ID はスクリプトのプロパティ `SAVES_FOLDER_ID` に入っている。
+- **年度（4月〜3月）ごとにフォルダを分けている**（`gas/Code.js` の `yearFolder_`）。番号は毎年くり返し使われるので、4月になると新しい年度のフォルダが自動ででき、まっさらから始まる。前の年度の作品はそのフォルダに残るので、いらなくなったら先生がその年度のフォルダを消す。年度フォルダの ID はスクリプトのプロパティ `SAVES_YEAR_FOLDER_ID_<年>` に入る。
+- 容量の目安：ブロックと英文だけなら1人0.1MB未満、写真10枚で約0.5MB、声も入れると1人約1〜3MB。100人で1年およそ100〜300MB。自動では消えない。
 - 試し用の番号は「6Z99」など（子どもの番号と混ざらないもの）。2026-10-09 に 6Z99 で、公開版で保存→開き直しで戻ることを確認済み。
 
 ## 直したあと、公開版に反映する手順

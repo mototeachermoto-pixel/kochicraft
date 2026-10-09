@@ -39,6 +39,9 @@ function getPhotos(paths) {
 // そこで、子どもの番号（例：5A12）ごとに、先生の大学ドライブの「KochiCraft」フォルダの中へ保存する。
 // 1人につき2つのファイル：<番号>.json（ブロック・付け足し文）と <番号>.media.json（写真・声）。
 // 写真・声は大きいので分けておき、ブロックを置くたびに大きなファイルを書き直さないようにする。
+// 年度（4月〜3月）ごとにフォルダを分ける（例：子どもの保存データ/2026年度）。
+// 番号は毎年くり返し使われるので、4月になると新しい年度のフォルダで、まっさらから始まる。
+// 前の年度の作品はそのフォルダに残る。いらなくなったら、先生がその年度のフォルダを消せばよい。
 
 var KOCHICRAFT_FOLDER_ID = '1hOZOv2EGd2BBORztgPRWmx2E2zLzBk0p';
 var SAVES_FOLDER_NAME = '子どもの保存データ';
@@ -47,27 +50,69 @@ var SAVE_KEY = /^kc\.(edits|guide|photo|audio)\.[A-Za-z0-9_.-]+$/;
 /** 1つのファイルの上限（ドライブに1回で書ける大きさより少し小さく） */
 var MAX_FILE_CHARS = 9 * 1024 * 1024;
 
-/** 保存用フォルダ（無ければ KochiCraft フォルダの中に作る） */
+/** 覚えておいたフォルダ ID のフォルダ（無い・ゴミ箱に入っているときは null） */
+function folderById_(id) {
+  if (!id) return null;
+  try {
+    var f = DriveApp.getFolderById(id);
+    return f.isTrashed() ? null : f;
+  } catch (e) {
+    return null;
+  }
+}
+
+/** 保存用フォルダ「子どもの保存データ」（無ければ KochiCraft フォルダの中に作る） */
 function savesFolder_() {
   var props = PropertiesService.getScriptProperties();
-  var id = props.getProperty('SAVES_FOLDER_ID');
-  if (id) {
-    try {
-      return DriveApp.getFolderById(id);
-    } catch (e) {
-      // 消されていたら作り直す
-    }
-  }
+  var folder = folderById_(props.getProperty('SAVES_FOLDER_ID'));
+  if (folder) return folder;
   var parent = DriveApp.getFolderById(KOCHICRAFT_FOLDER_ID);
   var it = parent.getFoldersByName(SAVES_FOLDER_NAME);
-  var folder = it.hasNext() ? it.next() : parent.createFolder(SAVES_FOLDER_NAME);
+  folder = it.hasNext() ? it.next() : parent.createFolder(SAVES_FOLDER_NAME);
   props.setProperty('SAVES_FOLDER_ID', folder.getId());
   return folder;
 }
 
+/** 今の年度（4月〜3月）。2027年3月なら 2026 */
+function schoolYear_() {
+  var now = new Date();
+  var y = Number(Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy'));
+  var m = Number(Utilities.formatDate(now, 'Asia/Tokyo', 'M'));
+  return m >= 4 ? y : y - 1;
+}
+
+/**
+ * 今の年度の保存フォルダ（例：子どもの保存データ/2026年度）。無ければ作る。
+ * 年度別にする前に「子どもの保存データ」の中へ直接できたファイルは、作るときにこの中へ移す。
+ */
+function yearFolder_() {
+  var year = schoolYear_();
+  var key = 'SAVES_YEAR_FOLDER_ID_' + year;
+  var props = PropertiesService.getScriptProperties();
+  var folder = folderById_(props.getProperty(key));
+  if (folder) return folder;
+  // 何人かが同時に開いても、年度のフォルダが2つできないように順番に作る
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    folder = folderById_(props.getProperty(key));
+    if (folder) return folder;
+    var root = savesFolder_();
+    var name = year + '年度';
+    var it = root.getFoldersByName(name);
+    folder = it.hasNext() ? it.next() : root.createFolder(name);
+    var loose = root.getFiles();
+    while (loose.hasNext()) loose.next().moveTo(folder);
+    props.setProperty(key, folder.getId());
+    return folder;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 /** 先生が最初に1回だけ実行する：ドライブへ保存する許可を出し、保存用フォルダを作る */
 function setupSaves() {
-  var url = savesFolder_().getUrl();
+  var url = yearFolder_().getUrl();
   Logger.log('保存用フォルダ: ' + url);
   return url;
 }
@@ -103,7 +148,7 @@ function readPart_(folder, id, part) {
 /** アプリから呼ばれる：その子の保存をすべて { キー: 値 } で返す（まだ無ければ空） */
 function loadSave(id) {
   checkId_(id);
-  var folder = savesFolder_();
+  var folder = yearFolder_();
   var items = readPart_(folder, id, 'main');
   var media = readPart_(folder, id, 'media');
   Object.keys(media).forEach(function (k) {
@@ -120,7 +165,7 @@ function loadSave(id) {
 function saveItems(id, changes) {
   checkId_(id);
   if (!changes || typeof changes !== 'object') throw new Error('保存する中身が正しくありません');
-  var folder = savesFolder_();
+  var folder = yearFolder_();
   var parts = {};
   Object.keys(changes).forEach(function (key) {
     if (!SAVE_KEY.test(key)) return;
