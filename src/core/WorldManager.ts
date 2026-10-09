@@ -69,13 +69,13 @@ export class WorldManager {
     this.editCells = EditStore.load(spot.id);
     if (this.editCells.length > 0) this.world.setBlocksBatch(this.editCells);
     this.objects = spot.objects ?? [];
-    // 保存済みの写真・音声（先生がアップロードした実物写真／録音）を反映
+    // 保存済みの写真・音声（アップロードした実物写真／録音）を反映。
+    // 無ければ最初の写真・音声に戻す（別の子の作品を開いたとき、前の子の写真が残らないように）
     for (const o of this.objects) {
-      o.imageDefault ??= o.image;
-      const photo = PhotoStore.getPhoto(spot.id, o.id);
-      if (photo) o.image = photo;
-      const audio = PhotoStore.getAudio(spot.id, o.id);
-      if (audio) o.audio = audio;
+      if (!('imageDefault' in o)) o.imageDefault = o.image;
+      if (!('audioDefault' in o)) o.audioDefault = o.audio;
+      o.image = PhotoStore.getPhoto(spot.id, o.id) ?? o.imageDefault;
+      o.audio = PhotoStore.getAudio(spot.id, o.id) ?? o.audioDefault;
     }
     // GAS で動いているときは、この観光地の写真を今のうちにまとめて取り寄せておく
     prefetchGasPhotos(this.objects.map((o) => o.image));

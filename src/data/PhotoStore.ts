@@ -1,7 +1,9 @@
+import { SaveStorage } from './SaveStorage';
+
 /**
- * 観光地オブジェクトの「写真」「英語音声」を localStorage に保存・取得する。
- * 先生がアップロードした実物写真・録音音声を、再読み込み後も使えるようにする。
- * いずれも dataURL（ローカル保存・外部送信なし）。
+ * 観光地オブジェクトの「写真」「英語音声」を保存・取得する（保存先は SaveStorage が決める）。
+ * 子どもや先生がアップロードした写真・録音を、再読み込み後も使えるようにする。いずれも dataURL。
+ * GAS 版は大学の Google に子どもの番号ごと、それ以外は端末内 localStorage。
  * localStorage は端末・URLごとに約5MBしかないため、写真は保存前に小さく縮める。
  */
 const PHOTO = 'kc.photo.';
@@ -12,21 +14,12 @@ const MAX_SIDE = 480;
 const JPEG_QUALITY = 0.6;
 
 function read(prefix: string, spotId: string, objectId: string): string | undefined {
-  try {
-    return localStorage.getItem(`${prefix}${spotId}.${objectId}`) ?? undefined;
-  } catch {
-    return undefined;
-  }
+  return SaveStorage.get(`${prefix}${spotId}.${objectId}`) ?? undefined;
 }
 
-/** 保存できたら true。容量超過などで保存できなければ false */
+/** 保存できたら true。容量超過・大きすぎ・見るだけのときは false */
 function write(prefix: string, spotId: string, objectId: string, dataUrl: string): boolean {
-  try {
-    localStorage.setItem(`${prefix}${spotId}.${objectId}`, dataUrl);
-    return true;
-  } catch {
-    return false;
-  }
+  return SaveStorage.set(`${prefix}${spotId}.${objectId}`, dataUrl);
 }
 
 /** 写真を小さな JPEG に縮める。読めない画像や、縮めても小さくならない場合は元のまま返す */
@@ -80,8 +73,10 @@ export const PhotoStore = {
   /**
    * 以前の版で縮めずに保存された写真を、縮めて保存し直す（空き容量を作る）。
    * 縮められなかった写真は元のまま残す（消さない）。
+   * 大学の Google に保存する版（GAS）では、写真は保存前に縮めてあるので何もしない。
    */
   async shrinkSavedPhotos(): Promise<void> {
+    if (SaveStorage.cloud) return;
     for (const key of savedPhotoKeys()) {
       let original: string | null = null;
       try {

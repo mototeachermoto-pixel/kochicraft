@@ -27,6 +27,7 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
+  overscroll-behavior: none; /* 端までなぞってもページがびよんと動かないように */
   background: #0a1024;
   color: var(--kc-ink);
   -webkit-user-select: none;
@@ -49,6 +50,9 @@ canvas.kc-canvas {
   display: block;
   width: 100%;
   height: 100%;
+  /* iPad で画面をなぞったとき、ページが動いたり拡大したりしないようにする
+     （ページが動くと画面が見切れ、指の操作も途中で打ち切られて向きがずれる） */
+  touch-action: none;
 }
 
 /* ---------- HUD（画面の上に重ねる情報） ---------- */
@@ -1190,6 +1194,10 @@ canvas.kc-canvas {
 .spot-toolbar .kc-btn {
   pointer-events: auto;
 }
+/* 友だちの作品を見ているとき（見るだけ）は、Build ボタンを出さない */
+.spot-toolbar .kc-btn[data-role="build"].hidden {
+  display: none;
+}
 .spot-toolbar__hint {
   pointer-events: none;
   padding: 8px 12px;
@@ -1456,12 +1464,121 @@ canvas.kc-canvas {
   font-weight: 800;
   border-radius: 999px;
   box-shadow: var(--kc-shadow);
-  z-index: 40;
+  z-index: 95; /* 「保存できていない」知らせは、一覧や番号の画面の上にも出す */
   pointer-events: none;
   animation: kc-fadein 0.2s ease;
 }
 .kc-toast.hidden {
   display: none;
+}
+
+/* ---------- 番号を入れる画面（GAS 版：大学の Google に保存） ---------- */
+.num-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 90; /* 観光地一覧（80）より上 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(6, 12, 28, 0.72);
+  pointer-events: auto;
+}
+.num-panel.hidden {
+  display: none;
+}
+.num-panel__box {
+  width: min(420px, 100%);
+  padding: 24px 22px 20px;
+  background: var(--kc-paper);
+  color: var(--kc-ink);
+  border-radius: var(--kc-radius);
+  box-shadow: var(--kc-shadow);
+  text-align: center;
+}
+.num-panel__title {
+  font-size: 24px;
+  font-weight: 900;
+}
+.num-panel__sub {
+  margin-top: 6px;
+  font-size: 15px;
+}
+.num-panel__ja {
+  font-size: 13px;
+  color: #666;
+}
+.num-panel__input {
+  display: block;
+  width: 100%;
+  margin: 14px 0 6px;
+  padding: 12px;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-align: center;
+  text-transform: uppercase;
+  border: 3px solid var(--kc-accent);
+  border-radius: 12px;
+  outline: none;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.num-panel__msg {
+  min-height: 1.4em;
+  font-size: 15px;
+  font-weight: 700;
+  color: #c0392b;
+}
+.num-panel.is-busy .num-panel__msg {
+  color: var(--kc-accent-dark);
+}
+.num-panel.is-busy .num-panel__ok {
+  opacity: 0.6;
+}
+.num-panel__row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 8px;
+}
+.num-panel__ok {
+  font-size: 18px;
+  padding: 10px 26px;
+}
+.num-panel__cancel {
+  background: #8a8f98;
+}
+.num-panel__note {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #666;
+}
+
+/* 一覧の一番上：だれの作品か（自分／友だち）と切りかえボタン */
+.hub-who {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+}
+.hub-who.hidden {
+  display: none;
+}
+.hub-who__name {
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 16px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+}
+.hub-who__name.is-friend {
+  background: rgba(240, 160, 40, 0.9);
+}
+.hub-who__me b,
+.hub-who__name b {
+  letter-spacing: 0.06em;
 }
 
 .walk-crosshair {

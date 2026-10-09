@@ -16,7 +16,8 @@ GitHub版（https://mototeachermoto-pixel.github.io/kochicraft/）は、記録�
 |---|---|
 | Googleアカウント | ryusaku@g.kochi-u.ac.jp（大学） |
 | GASプロジェクト | scriptId `13hNtUZ1eQlSRsVvjzJfNiK5_cyDIns_mqsM8QULX9Z-Ut9g21WFdE6at`（ドライブの「KochiCraft」フォルダの中） |
-| 公開デプロイ | `AKfycbz_y2f_vQIULz7J1wfkzhlVnbGoYOtnNO_JWY1FO9nokDkFWnS3jq3N2QXqQWuUcPk`（2026-10-08時点で版3） |
+| 公開デプロイ | `AKfycbz_y2f_vQIULz7J1wfkzhlVnbGoYOtnNO_JWY1FO9nokDkFWnS3jq3N2QXqQWuUcPk`（2026-10-09時点で版4。版3＝子どもごとの保存を入れる前） |
+| 子どもの作品の保存先 | ドライブの「KochiCraft」フォルダ →「子どもの保存データ」フォルダ（1人2ファイル：`5A12.json`＝ブロック・付け足し文、`5A12.media.json`＝写真・声） |
 | テスト用（先生だけ） | https://script.google.com/a/macros/g.kochi-u.ac.jp/s/AKfycbwZDvQcfuqYZpP3L1tM0O9Mxy-SHOIbHpnUL8zEUQ/dev |
 | 手元のGAS用フォルダ | `gas/`（Code.js・appsscript.json・.clasp.json は記録済み。index.html と photos_*.html はビルドで毎回作る） |
 
@@ -25,6 +26,18 @@ GitHub版（https://mototeachermoto-pixel.github.io/kochicraft/）は、記録�
   - `gas/photos_<観光地>.html`：写真を長い辺640pxに縮め、観光地ごとにまとめたもの（`scripts/gas_photos.py`）
 - 写真は、GASの `getPhotos()` がこのファイルから返す。アプリ側（`src/data/GasPhotos.ts`）は、観光地に入った時点で、その観光地の写真をまとめて先読みする。
 - **GAS以外（手元・GitHub）では、今までどおり `public/photos` を直接読む。**
+
+## 子どもの作品の保存（2026-10-09〜）
+- iPad の Safari は、GAS のページの中の保存（localStorage）を **Safari を閉じると消してしまう**（先生が iPad で確認済み）。
+  「Save file / Open file」も GAS の中では使いにくい。そこで、**子どもの番号ごとに大学の Google（ドライブ）へ保存**するようにした。
+- アプリを開くと最初に「What is your number?」と聞く。番号は **学年＋組＋番号（例：5A12）**。全角・小文字・「5A01」も受け付ける。
+- ブロック・付け足した英文・写真・声を、変えてから約2.5秒後に、変えた分だけ送る（`src/data/SaveStorage.ts` → `gas/Code.js` の `saveItems`）。読み込みは `loadSave`。
+- **「👀 See a friend's world」で友だちの番号を入れると、見るだけ**（Build・＋・写真や声の追加は出ない）。「🏠 Back to my world」で戻る。
+- 合言葉はない。最初の「番号は？」で友だちの番号を入れると、その子の作品を作り変えられる（必要なら4けたの合言葉を足す案あり）。ドライブにはファイルの変更履歴が残る。
+- GAS 版では Save file / Open file は出さない。手元・GitHub 版は今までどおり端末に保存（番号の画面も出ない）。
+- 手元で試すときは `http://localhost:5192/?cloud=fake`（にせの保存先。公開版には入らない）。
+- ドライブへの許可は、先生が GAS の編集画面で `setupSaves` を1回実行して出した（2026-10-09）。保存先フォルダの ID はスクリプトのプロパティ `SAVES_FOLDER_ID` に入っている。
+- 試し用の番号は「6Z99」など（子どもの番号と混ざらないもの）。2026-10-09 に 6Z99 で、公開版で保存→開き直しで戻ることを確認済み。
 
 ## 直したあと、公開版に反映する手順
 すべて `マインクラフト風アプリ` フォルダで行う。このPCでは証明書のエラーが出るので、clasp には `NODE_OPTIONS=--use-system-ca` を付ける。
@@ -53,7 +66,12 @@ NODE_OPTIONS=--use-system-ca clasp update-deployment --user univ AKfycbz_y2f_vQI
 - ドライブの「KochiCraft」フォルダの中の「photos」フォルダ：今は使っていない（消しても動く）。
 - デスクトップの `GASテスト` フォルダと、ドライブの「GASテスト」：最初の接続テスト用。消してもよい。
 
+## 2026-10-09 に直したこと（版4）
+- ジャンプのときの画面の乱れ：3D画面に `touch-action: none`（iPadでページが動かないように）、画面をなぞる指と JUMP・方向ボタンの指を区別、うしろ／遠く視点でカメラが壁や天井に入らないように（`WalkController.ts`）。12か所すべてで自動試験し、カメラがブロックに入る回数は0回。
+- 子どもごとの保存（上の「子どもの作品の保存」）。
+
 ## 残っている宿題
-- GAS版で、先生が入れた写真・声・書き足した英文や、子どもが建てたブロックが、iPadで開き直しても残っているか（念のため確認）。
-- 先生が「Add a voice」で入れる声のファイルは縮めていない。大きいと保存できず、黄色い知らせが出る。
+- iPad で、子どもごとの保存を確かめる（6Z99 などでブロックを置く → Safari を完全に閉じる → 開き直して番号を入れる）。2本の指の件も iPad で確かめる。
+- 「Add a voice」の声は縮めていない。長すぎる声（約1.5MBより大きいもの）は保存できず、知らせが出る。
+- 上のボタンを隠す設定（`.hidden`）が、もともと `spot-toolbar` の中のボタンには効いていない（作る画面でも Map・視点・キャラクターのボタンが出たまま）。今は Build ボタンだけ隠れるようにした。ほかも直すかは先生に聞いてから。
 - 前から持ち越し：高知城天守(38.6°)・足摺岬白山洞門(-56°)の見上げ角、ジャンプが3ブロックになったことで意図しない場所に登れる可能性（どちらも実害が出たら対処）。

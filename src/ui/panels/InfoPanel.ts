@@ -27,6 +27,8 @@ export class InfoPanel {
   /** 写真・音声を保存できなかったときの知らせ（空なら出さない） */
   private notice = '';
   private readonly audioEl = new Audio();
+  /** 見るだけ（友だちの作品を見ているとき）。付け足し・写真・声の追加を出さない */
+  readOnly = false;
 
   constructor(
     parent: HTMLElement,
@@ -105,7 +107,7 @@ export class InfoPanel {
     return `
       <div class="info-block">
         <div class="info-block__label">${label}
-          <button class="info-add" data-add="${field}" title="Add words">＋</button>
+          ${this.readOnly ? '' : `<button class="info-add" data-add="${field}" title="Add words">＋</button>`}
         </div>
         <div class="info-block__text">${this.esc(o.guide[field])}${
           added ? ` <span class="info-added">${this.esc(added)}</span>` : ''
@@ -137,14 +139,14 @@ export class InfoPanel {
       </button>
       <div class="info-keyhint">Press <kbd>Tab</kbd> to move, <kbd>Enter</kbd> to push a button.</div>
 
-      <div class="info-uploads">
+      ${this.readOnly ? '' : `<div class="info-uploads">
         <label class="info-upload">📷 Add a photo
           <input type="file" accept="image/*" data-role="photo" hidden />
         </label>
         <label class="info-upload">🎤 Add a voice
           <input type="file" accept="audio/*" data-role="audio" hidden />
         </label>
-      </div>
+      </div>`}
       ${this.notice ? `<div class="info-notice" role="alert">⚠ ${this.esc(this.notice)}</div>` : ''}
     `;
 
@@ -190,6 +192,7 @@ export class InfoPanel {
       });
     });
 
+    if (this.readOnly) return;
     const photo = q<HTMLInputElement>('[data-role="photo"]');
     const spotAtUpload = this.spotId;
     photo.addEventListener('change', () => this.readFile(photo, async (url) => {
@@ -198,14 +201,14 @@ export class InfoPanel {
       if (this.spotId !== spotAtUpload) return;
       const saved = this.handlers.onPhoto(o, small);
       if (this.current !== o) return;
-      this.notice = saved ? '' : 'This photo could not be saved. The storage is full.';
+      this.notice = saved ? '' : 'This photo could not be saved.';
       this.render();
     }));
 
     const audio = q<HTMLInputElement>('[data-role="audio"]');
     audio.addEventListener('change', () => this.readFile(audio, (url) => {
       const saved = this.handlers.onAudio(o, url);
-      this.notice = saved ? '' : 'This voice could not be saved. The storage is full.';
+      this.notice = saved ? '' : 'This voice could not be saved. It may be too long. Try a short one.';
       this.render();
     }));
   }

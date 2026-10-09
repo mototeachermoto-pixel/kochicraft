@@ -11,6 +11,8 @@ import { PlacesPanel } from '@/ui/PlacesPanel';
 import { BuildPalette } from '@/ui/BuildPalette';
 import { PhotoStore } from '@/data/PhotoStore';
 import { EditStore } from '@/data/EditStore';
+import { SaveStorage } from '@/data/SaveStorage';
+import { NumberPanel, type NumberMode } from '@/ui/NumberPanel';
 import { Avatar, SKIN_LABEL, type SkinKind } from '@/player/Avatar';
 import { SceneManager } from './SceneManager';
 import { OrbitCameraController } from './OrbitCameraController';
@@ -71,6 +73,8 @@ export class Engine {
   private fileInput!: HTMLInputElement;
   private toast!: HTMLElement;
   private toastTimer = 0;
+  /** 番号（例：5A12）を入れる画面（GAS 版だけ） */
+  private readonly numberPanel: NumberPanel;
 
   private mode: Mode = 'walk';
   private lastTime = 0;
@@ -160,6 +164,19 @@ export class Engine {
 
     this.hub = new HubScreen(this.hudRoot, SPOTS, (spot) => this.enterSpot(spot));
     this.buildSpotUI();
+
+    // GAS 版：子どもの番号ごとに大学の Google へ保存する（Safari を閉じても残るように）
+    this.numberPanel = new NumberPanel(
+      this.hudRoot,
+      (raw) => SaveStorage.normalizeId(raw),
+      (id, mode) => this.openWorks(id, mode),
+    );
+    SaveStorage.onError = (reason) => {
+      this.showToast(
+        reason === 'too-big' ? '⚠ This is too big to save.' : '⚠ Not saved yet. Check the internet.',
+        4000,
+      );
+    };
 
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('resize', this.onResize);
@@ -306,6 +323,8 @@ export class Engine {
   async start(): Promise<void> {
     document.getElementById('loading')?.classList.add('hidden');
     this.hub.show();
+    // GAS 版は、最初に自分の番号を入れてもらう（入れるまで閉じられない）
+    if (SaveStorage.cloud) this.numberPanel.open('me', this.lastNumber(), false);
 
     if ((import.meta as { env?: { DEV?: boolean } }).env?.DEV) {
       (window as unknown as { kc: unknown }).kc = {
@@ -328,6 +347,11 @@ export class Engine {
 
   enterSpot(spot: SpotDefinition): void {
     if (!spot.available) return;
+    // GAS 版で番号をまだ入れていなければ、先に番号を聞く（入れないと作品が保存されないため）
+    if (SaveStorage.cloud && !SaveStorage.owner) {
+      if (!this.numberPanel.isOpen) this.numberPanel.open('me', this.lastNumber(), false);
+      return;
+    }
     this.worldManager.loadSpot(spot);
     // 編集の文脈（工作ひろば＋復元済みの編集差分）をセット
     this.build.setContext(spot.id, spot.field, this.worldManager.editCells);
@@ -630,8 +654,12 @@ export class Engine {
           head('Go'),
           row(k('D'), '<b>D</b>one (stop building)'),
           row(k('H'), '<b>H</b>ome (start)'),
-          row(`${k('Ctrl')}+${k('S')}`, '<b>S</b>ave file'),
-          row(`${k('Ctrl')}+${k('O')}`, '<b>O</b>pen file'),
+          ...(SaveStorage.cloud
+            ? []
+            : [
+                row(`${k('Ctrl')}+${k('S')}`, '<b>S</b>ave file'),
+                row(`${k('Ctrl')}+${k('O')}`, '<b>O</b>pen file'),
+              ]),
         ]
       : [
           head('Do'),
@@ -645,7 +673,7 @@ export class Engine {
           head('Go'),
           row(k('M'), '<b>M</b>ap: go to a place'),
           row(k('L'), '<b>L</b>ook from the sky'),
-          row(k('B'), '<b>B</b>uild blocks'),
+          ...(SaveStorage.readOnly ? [] : [row(k('B'), '<b>B</b>uild blocks')]),
           row(k('H'), '<b>H</b>ome (start)'),
           row(k('Esc'), 'Back to list'),
         ];
@@ -659,7 +687,8 @@ export class Engine {
    */
   private setMode(mode: Mode): void {
     const spot = this.worldManager.currentSpot;
-    if (mode === 'build' && !spot?.field) mode = 'walk'; // 建築できる範囲が無ければ歩行へ
+    // 建築できる範囲が無いとき・友だちの作品を見ているとき（見るだけ）は歩行へ
+    if (mode === 'build' && (!spot?.field || SaveStorage.readOnly)) mode = 'walk';
     this.mode = mode;
 
     const walkLike = mode === 'walk' || mode === 'build';
@@ -697,7 +726,8 @@ export class Engine {
 
     // 編集UI
     this.buildActions.classList.toggle('hidden', !building);
-    this.saveBar.classList.toggle('hidden', !building);
+    // 大学の Google に自動で保存する版（GAS）では、ファイルの保存・読み込みは使わない
+    this.saveBar.classList.toggle('hidden', !building || SaveStorage.cloud);
     if (building) {
       this.palette.show();
       this.build.show();
@@ -729,7 +759,7 @@ export class Engine {
     this.restartBtn.classList.toggle('hidden', mode !== 'walk');
 
     // 編集ボタン（建築できる範囲が無い観光地では隠す）
-    this.buildBtn.classList.toggle('hidden', !spot?.field);
+    this.buildBtn.classList.toggle('hidden', !spot?.field || SaveStorage.readOnly);
     this.buildBtn.classList.toggle('is-active', building);
     this.buildBtn.querySelector('[data-label="build"]')!.textContent = building ? 'Done' : 'Build';
     this.buildBtn.querySelector('.kc-btn__icon')!.textContent = building ? '✓' : '🧱';
@@ -739,7 +769,9 @@ export class Engine {
     const hint = this.toolbar.querySelector('[data-role="hint"]')!;
     hint.textContent = building
       ? '🧱 Make your own world here!'
-      : '👆 Tap a building to learn about it!';
+      : SaveStorage.readOnly
+        ? `👀 This is ${SaveStorage.viewing}'s world. You can only look.`
+        : '👆 Tap a building to learn about it!';
   }
 
   /**
@@ -773,6 +805,82 @@ export class Engine {
     btn.addEventListener('pointerup', end);
     btn.addEventListener('pointerleave', end);
     btn.addEventListener('pointercancel', end);
+  }
+
+  // ===== 子どもの作品の保存（GAS 版：大学の Google に番号ごと） =====
+
+  /** 前に入れた番号（同じ iPad で開き直したときに、入力欄へ先に入れておく） */
+  private lastNumber(): string {
+    try {
+      return localStorage.getItem('kc.me') ?? '';
+    } catch {
+      return '';
+    }
+  }
+
+  /**
+   * 番号で作品を開く。
+   * me＝自分の作品（作れる）／friend＝友だちの作品（見るだけ）。
+   * 失敗したら英文の Error を投げる（番号の画面に出る）。
+   */
+  private async openWorks(id: string, mode: NumberMode): Promise<void> {
+    try {
+      if (mode === 'me') {
+        await SaveStorage.openMine(id);
+        try {
+          localStorage.setItem('kc.me', id);
+        } catch {
+          // 覚えられなくても続ける
+        }
+      } else if (id === SaveStorage.owner) {
+        SaveStorage.backToMine(); // 自分の番号なら、自分の作品に戻るだけ
+      } else {
+        await SaveStorage.openFriend(id);
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message === 'not-saved') {
+        throw new Error('Your world is still saving. Check the internet and try again.');
+      }
+      throw new Error('Could not open. Check the internet and try again.');
+    }
+    this.afterWorksChanged();
+  }
+
+  /** 友だちの作品を見るのをやめて、自分の作品に戻る */
+  private backToMyWorks(): void {
+    SaveStorage.backToMine();
+    this.afterWorksChanged();
+    this.showToast(`Welcome back, ${SaveStorage.owner}!`);
+  }
+
+  /** 開いている作品（自分／友だち）が変わったら、画面を合わせる */
+  private afterWorksChanged(): void {
+    this.infoPanel.readOnly = SaveStorage.readOnly;
+    this.renderWho();
+    // 観光地の中にいたら、その作品で読み込み直す
+    const spot = this.worldManager.currentSpot;
+    if (spot) this.enterSpot(spot);
+  }
+
+  /** 一覧の一番上に「だれの作品か」と、切りかえのボタンを出す */
+  private renderWho(): void {
+    const bar = this.hub.whoBar;
+    if (!SaveStorage.cloud || !SaveStorage.owner) {
+      bar.classList.add('hidden');
+      return;
+    }
+    const friend = SaveStorage.viewing;
+    bar.innerHTML = friend
+      ? `<span class="hub-who__name is-friend">👀 <b>${friend}</b>'s world <small>(look only)</small></span>
+         <button class="kc-btn" data-role="mine">🏠 Back to my world</button>`
+      : `<button class="kc-btn hub-who__me" data-role="me" title="Change number">🙂 <b>${SaveStorage.owner}</b></button>
+         <button class="kc-btn" data-role="friend">👀 See a friend's world</button>`;
+    bar.classList.remove('hidden');
+    bar.querySelector('[data-role="mine"]')?.addEventListener('click', () => this.backToMyWorks());
+    bar.querySelector('[data-role="me"]')?.addEventListener('click', () =>
+      this.numberPanel.open('me', SaveStorage.owner ?? ''),
+    );
+    bar.querySelector('[data-role="friend"]')?.addEventListener('click', () => this.numberPanel.open('friend'));
   }
 
   /** 短いトーストを表示（保存通知など） */
@@ -860,6 +968,7 @@ export class Engine {
     // 編集モード：P=置く / T=消す / 数字=ブロック / W・Esc=歩行へ / Ctrl+S・Ctrl+O=保存・読込
     if (this.mode === 'build') {
       if (e.ctrlKey || e.metaKey) {
+        if (SaveStorage.cloud) return; // GAS 版は自動で保存するので、ファイルは使わない
         if (e.code === 'KeyS') {
           e.preventDefault();
           this.saveToFile();

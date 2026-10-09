@@ -7,6 +7,8 @@ import type { SpotDefinition } from '@/spots/SpotDefinition';
  */
 export class HubScreen {
   private readonly root: HTMLElement;
+  /** 一番上の「だれの作品か」を出す場所（GAS 版だけ Engine が中身を入れる） */
+  readonly whoBar: HTMLElement;
 
   constructor(
     parent: HTMLElement,
@@ -29,6 +31,7 @@ export class HubScreen {
       .join('');
 
     this.root.innerHTML = `
+      <div class="hub-who hidden"></div>
       <div class="hub-screen__head">
         <div class="hub-screen__title">Kochi Tourist Spots</div>
         <div class="hub-screen__sub">Choose a place to visit</div>
@@ -39,6 +42,7 @@ export class HubScreen {
       <div class="spot-grid">${cards}</div>
     `;
     parent.appendChild(this.root);
+    this.whoBar = this.root.querySelector('.hub-who') as HTMLElement;
 
     for (const btn of Array.from(this.root.querySelectorAll<HTMLButtonElement>('.spot-card'))) {
       if (btn.disabled) continue;

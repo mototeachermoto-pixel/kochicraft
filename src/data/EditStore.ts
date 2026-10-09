@@ -1,6 +1,9 @@
+import { SaveStorage } from './SaveStorage';
+
 /**
  * 子どもが「工作ひろば」で積んだ/消したブロックの差分を保存・復元する。
- * - 端末内 localStorage に**自動保存**（オフライン・外部送信なし）。
+ * - **自動保存**。保存先は SaveStorage が決める（GAS 版＝大学の Google に子どもの番号ごと、
+ *   それ以外＝端末内 localStorage）。
  * - さらに `.kcw` ファイル（JSON）として**書き出し/読み込み**できる。
  *   iPad では共有シート経由で「ファイル」/iCloud に保存でき、消えない・先生へ共有・他端末へ移せる。
  *
@@ -49,7 +52,7 @@ export const EditStore = {
   /** その観光地の編集差分を取得 */
   load(spotId: string): EditCell[] {
     try {
-      const raw = localStorage.getItem(PREFIX + spotId);
+      const raw = SaveStorage.get(PREFIX + spotId);
       if (!raw) return [];
       const data = JSON.parse(raw) as { cells?: CellTuple[] };
       return fromTuples(data.cells);
@@ -58,37 +61,20 @@ export const EditStore = {
     }
   },
 
-  /** その観光地の編集差分を保存（自動保存で都度呼ぶ） */
+  /** その観光地の編集差分を保存（自動保存で都度呼ぶ）。容量超過などは無視（その場の表示は継続） */
   save(spotId: string, cells: EditCell[]): void {
-    try {
-      const data = { v: 1, cells: toTuples(cells), updatedAt: new Date().toISOString() };
-      localStorage.setItem(PREFIX + spotId, JSON.stringify(data));
-    } catch {
-      // 容量超過などは無視（その場の表示は継続）
-    }
+    const data = { v: 1, cells: toTuples(cells), updatedAt: new Date().toISOString() };
+    SaveStorage.set(PREFIX + spotId, JSON.stringify(data));
   },
 
   /** その観光地の編集を消す */
   clear(spotId: string): void {
-    try {
-      localStorage.removeItem(PREFIX + spotId);
-    } catch {
-      // 無視
-    }
+    SaveStorage.remove(PREFIX + spotId);
   },
 
   /** 編集が保存されている観光地ID一覧 */
   listSpotIds(): string[] {
-    const ids: string[] = [];
-    try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith(PREFIX)) ids.push(key.slice(PREFIX.length));
-      }
-    } catch {
-      // 無視
-    }
-    return ids;
+    return SaveStorage.keys(PREFIX).map((key) => key.slice(PREFIX.length));
   },
 
   /** 全観光地の編集を1つの .kcw（JSON文字列）にまとめる */

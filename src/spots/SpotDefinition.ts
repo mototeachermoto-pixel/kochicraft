@@ -36,6 +36,8 @@ export interface SceneObject {
   imageDefault?: string;
   /** 英語音声（dataURL。先生が録音/アップロードした音声。あれば読み上げより優先） */
   audio?: string;
+  /** 最初から入っている音声（子どもを切りかえたとき、前の子の録音を残さず、ここへ戻す） */
+  audioDefault?: string;
 }
 
 /** 1つの観光地＝1つのコンパクトワールド */
