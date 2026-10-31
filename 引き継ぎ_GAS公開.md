@@ -16,7 +16,7 @@ GitHub版（https://mototeachermoto-pixel.github.io/kochicraft/）は、記録�
 |---|---|
 | Googleアカウント | ryusaku@g.kochi-u.ac.jp（大学） |
 | GASプロジェクト | scriptId `13hNtUZ1eQlSRsVvjzJfNiK5_cyDIns_mqsM8QULX9Z-Ut9g21WFdE6at`（ドライブの「KochiCraft」フォルダの中） |
-| 公開デプロイ | `AKfycbz_y2f_vQIULz7J1wfkzhlVnbGoYOtnNO_JWY1FO9nokDkFWnS3jq3N2QXqQWuUcPk`（2026-10-09時点で版5。版4＝年度別にする前、版3＝子どもごとの保存を入れる前） |
+| 公開デプロイ | `AKfycbz_y2f_vQIULz7J1wfkzhlVnbGoYOtnNO_JWY1FO9nokDkFWnS3jq3N2QXqQWuUcPk`（2026-11-01時点で版6。版5＝Esc→X・説明・龍馬像の前、版4＝年度別にする前、版3＝子どもごとの保存を入れる前） |
 | 子どもの作品の保存先 | ドライブの「KochiCraft」フォルダ →「子どもの保存データ」→「2026年度」のような**年度ごとのフォルダ**（1人2ファイル：`5A12.json`＝ブロック・付け足し文、`5A12.media.json`＝写真・声） |
 | テスト用（先生だけ） | https://script.google.com/a/macros/g.kochi-u.ac.jp/s/AKfycbwZDvQcfuqYZpP3L1tM0O9Mxy-SHOIbHpnUL8zEUQ/dev |
 | 手元のGAS用フォルダ | `gas/`（Code.js・appsscript.json・.clasp.json は記録済み。index.html と photos_*.html はビルドで毎回作る） |
@@ -71,6 +71,14 @@ NODE_OPTIONS=--use-system-ca clasp update-deployment --user univ AKfycbz_y2f_vQI
 ## 2026-10-09 に直したこと（版4）
 - ジャンプのときの画面の乱れ：3D画面に `touch-action: none`（iPadでページが動かないように）、画面をなぞる指と JUMP・方向ボタンの指を区別、うしろ／遠く視点でカメラが壁や天井に入らないように（`WalkController.ts`）。12か所すべてで自動試験し、カメラがブロックに入る回数は0回。
 - 子どもごとの保存（上の「子どもの作品の保存」）。
+
+## 2026-11-01 に直したこと（版6）：子どもに使ってもらった感想から
+- 学校の iPad のキーボードには **Esc キーがない** → **X キー**で「閉じる・一覧にもどる」ができるようにした（Esc も使える）。画面の表示も X にした。
+- 最初の画面に **「📖 How to play（せつめい）」** ボタン → 操作方法を「iPad でさわる操作」と「キーボード」で並べて見せる（`src/ui/HowToPlayPanel.ts`）。英語＋小さく日本語。
+- **龍馬像が十字架のように見えた** → 写真に合わせて、袴・着物・帯・懐手・長いそで・頭と髪のある高さ15マスの立ち姿に（`src/spots/ryomaFigure.ts`、桂浜と龍馬像の2か所で使う）。
+  - 銅像の色として、ブロックを2つ足した（`bronze`・`bronzedark`）。子どもの建築パレットには出ない。
+  - 龍馬像のスポットは、像が高くなったので、大階段とデッキを y29（顔の高さ）まで上げた。デッキの像側の柵は1段（顔がガラスでくもらないように）。
+- ほかの観光地も、写真に近づける作業を1か所ずつ進める予定（先生の了承を得ながら）。
 
 ## 残っている宿題
 - iPad で、子どもごとの保存を確かめる（6Z99 などでブロックを置く → Safari を完全に閉じる → 開き直して番号を入れる）。2本の指の件も iPad で確かめる。

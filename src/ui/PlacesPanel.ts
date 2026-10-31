@@ -3,7 +3,7 @@ import type { SceneObject } from '@/spots/SpotDefinition';
 /**
  * その観光地の「行ける場所」の一覧（Map）。
  * ボタン（またはMキー）で開き、選ぶとその場所へ移動して説明が出る。
- * マウス不使用：矢印キーで選び、Enter で決定、Esc で閉じる。
+ * マウス不使用：矢印キーで選び、Enter で決定、X（または Esc）で閉じる。
  */
 export class PlacesPanel {
   private readonly root: HTMLElement;
@@ -46,7 +46,7 @@ export class PlacesPanel {
         <div class="places-panel__title">🗺️ ${this.esc(spotName)}</div>
         <div class="places-panel__sub">Where do you want to go?</div>
         <div class="places-panel__keys">
-          <kbd>↑</kbd><kbd>↓</kbd> choose ・ <kbd>Enter</kbd> go ・ <kbd>Esc</kbd> close
+          <kbd>↑</kbd><kbd>↓</kbd> choose ・ <kbd>Enter</kbd> go ・ <kbd>X</kbd> close
         </div>
       </div>
       <div class="places-list">${items}</div>
@@ -82,10 +82,12 @@ export class PlacesPanel {
     return Array.from(this.root.querySelectorAll<HTMLButtonElement>('.place-card'));
   }
 
-  /** ↑↓ で選び、Esc で閉じる（Enter はボタンの既定動作） */
+  /** ↑↓ で選び、X（または Esc）で閉じる（Enter はボタンの既定動作） */
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.code === 'Escape') {
+    if (e.code === 'Escape' || e.code === 'KeyX') {
       e.preventDefault();
+      // 一覧を閉じるだけにする（観光地の一覧まで戻ってしまわないように）
+      e.stopPropagation();
       this.hide();
       return;
     }

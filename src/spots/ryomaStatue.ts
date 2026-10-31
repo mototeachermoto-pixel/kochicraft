@@ -1,5 +1,6 @@
 import type { World } from '@/world/World';
 import { Build } from './Build';
+import { ryomaFigure } from './ryomaFigure';
 import type { SpotDefinition } from './SpotDefinition';
 
 /**
@@ -14,26 +15,32 @@ import type { SpotDefinition } from './SpotDefinition';
  *   - 毎年秋（誕生日＝命日の11/15前後）に像の横へ本物の展望台が組まれる「龍馬に大接近」開催。
  *
  * 座標の目安：小さい z＝奥（像・海）／大きい z＝手前（入口・スポーン）。床 = G。
- *   海: z26〜32／像: z33〜39（cz36, +z＝手前を向く）／大階段: x44〜52, z42〜62／デッキ: z40〜41
+ *   海: z26〜32／像: z32〜40（cz36, +z＝手前を向く）／大階段: x44〜52, z42〜62／デッキ: z40〜41
+ * 像の顔は y31 ごろ。デッキ（y29。立つと目の高さが約 y31.6）から顔と向き合える。
  */
 
 const G = 10; // 広場・階段下の上面。立つのは G+1
 
-/** 大きな坂本龍馬像（高い台座＋懐手の立ち姿。顔は +z＝上ってくる人の方を向く）。 */
-function buildRyoma(b: Build, cx: number, cz: number, stoneW: number, bronze: number, dark: number): void {
-  b.box(cx - 3, G, cz - 3, cx + 3, G, cz + 3, stoneW); // 7x7 土台
-  b.box(cx - 2, G + 1, cz - 2, cx + 2, G + 1, cz + 2, stoneW); // 5x5
-  b.box(cx - 1, G + 2, cz - 1, cx + 1, G + 7, cz + 1, stoneW); // 3x3 の高い柱
-  b.box(cx - 2, G + 8, cz - 2, cx + 2, G + 8, cz + 2, stoneW); // 5x5 笠石
-  const py = G + 8; // 台座の上面（y18）
-  b.set(cx, py + 1, cz, dark); // ブーツ
-  b.box(cx - 1, py + 2, cz, cx + 1, py + 2, cz, bronze); // 袴（下が広い）
-  b.set(cx, py + 3, cz, bronze); // 胴
-  b.set(cx, py + 4, cz, bronze);
-  b.box(cx - 1, py + 5, cz, cx + 1, py + 5, cz, bronze); // 肩
-  b.set(cx, py + 6, cz, bronze); // 頭
-  b.set(cx, py + 7, cz, dark); // 髪
-  b.set(cx, py + 7, cz - 1, dark); // 後ろ髪（海側＝-z。顔は +z を向く）
+/**
+ * 大きな坂本龍馬像（写真に合わせて：2段の石の土台＋太い台座＋笠石＋立ち姿。顔は +z＝上ってくる人の方）。
+ * 台座の前には、写真と同じく濃い色の銘板をつける。
+ */
+function buildRyoma(
+  b: Build,
+  cx: number,
+  cz: number,
+  stoneW: number,
+  stone: number,
+  body: number,
+  dark: number,
+): void {
+  b.box(cx - 4, G, cz - 4, cx + 4, G, cz + 4, stoneW); // 9x9 土台（1段目）
+  b.box(cx - 3, G + 1, cz - 3, cx + 3, G + 1, cz + 3, stoneW); // 7x7 土台（2段目）
+  b.box(cx - 2, G + 2, cz - 2, cx + 2, G + 6, cz + 2, stoneW); // 5x5 の太い台座
+  b.box(cx, G + 3, cz + 2, cx, G + 5, cz + 2, dark); // 台座の前の銘板
+  b.box(cx - 3, G + 7, cz - 3, cx + 3, G + 7, cz + 3, stone); // 7x7 笠石（少し明るい石）
+  b.box(cx - 2, G + 8, cz - 2, cx + 2, G + 8, cz + 2, stoneW); // 5x5 像の足もとの台
+  ryomaFigure(b, cx, G + 8, cz, 1, body, dark); // 立ち姿（y19〜33）
 }
 
 /** 記念碑（石の台座＋石碑＋濃い色の文字） */
@@ -51,8 +58,9 @@ function build(world: World): void {
   const water = b.id('water');
   const grass = b.id('grass');
   const wood = b.id('wood'); // デッキ・看板・灯籠
-  const roof = b.id('roof'); // ブロンズ（像）
-  const tile = b.id('tile'); // 濃い色（髪・ブーツ・碑の文字）
+  const tile = b.id('tile'); // 碑の文字
+  const bronze = b.id('bronze'); // 像（青緑がかった銅像の色）
+  const bronzeDark = b.id('bronzedark'); // 像の濃い所（袴・髪・目）・台座の銘板
   const glass = b.id('glass'); // デッキの柵（見える・落ちない）
   const lantern = b.id('lantern');
   const castlewall = b.id('castlewall'); // 看板
@@ -69,22 +77,24 @@ function build(world: World): void {
   b.box(28, G, 33, 68, G, 69, grass);
 
   // ===== 大きな坂本龍馬像（海を背に、こちらを向いて立つ） =====
-  buildRyoma(b, 48, 36, stonewall, roof, tile);
+  buildRyoma(b, 48, 36, stonewall, stone, bronze, bronzeDark);
 
   // ===== スタート正面からの大階段（中央・まっすぐ像へ上る） =====
-  // z62→z42 で y11→y21 へ（2マスごとに1段＝上りやすい大階段）。両わきに石の手すり。
+  // z62→z42 で y11→y29 へ（1段はブロック1つ分まで＝歩いて上れる）。両わきに石の手すり。
+  // 像を写真に合わせて高くしたので、顔の高さのデッキ（y29）まで上れるようにした
   for (let z = 62; z >= 42; z--) {
-    const ty = 11 + Math.floor((62 - z) / 2);
+    const ty = 11 + Math.floor(((62 - z) * 18) / 20);
     b.box(44, G, z, 52, ty, z, stonewall); // 段（中央・幅9）
     b.box(43, ty + 1, z, 43, ty + 2, z, stonewall); // 左の手すり
     b.box(53, ty + 1, z, 53, ty + 2, z, stonewall); // 右の手すり
   }
-  // 上のデッキ（像の手前・顔の高さ y21）
-  b.box(44, 21, 40, 52, 21, 41, wood); // デッキ床（階段の天端と段差なし）
-  b.box(43, 22, 40, 43, 23, 41, glass); // 左の柵
-  b.box(53, 22, 40, 53, 23, 41, glass); // 右の柵
-  // 像側（北端）の柵＝のぞきこんでも落ちない。階段側（z41〜42）は開けて出入りできる
-  b.box(44, 22, 40, 52, 23, 40, glass);
+  // 上のデッキ（像の手前・顔の高さ y29）
+  b.box(44, 29, 40, 52, 29, 41, wood); // デッキ床（階段の天端と段差なし）
+  b.box(43, 30, 40, 43, 31, 41, glass); // 左の柵
+  b.box(53, 30, 40, 53, 31, 41, glass); // 右の柵
+  // 像側（北端）の柵＝のぞきこんでも落ちない。階段側（z41〜42）は開けて出入りできる。
+  // 目の高さに柵があると龍馬の顔がガラス越しにくもって見えるので、像側は1段だけにする
+  b.box(44, 30, 40, 52, 30, 40, glass);
 
   // ===== 記念碑（左の広場） =====
   monument(b, 34, 52, stonewall, tile);
@@ -117,7 +127,7 @@ export const ryomaStatue: SpotDefinition = {
   nameJa: '坂本龍馬像',
   emoji: '🗿',
   available: true,
-  center: { x: 48, y: 16, z: 46 },
+  center: { x: 48, y: 20, z: 46 },
   viewDistance: 64,
   // 階段全体と像を見上げられるよう、階段からすこし離れた位置からスタート
   spawn: { pos: { x: 48, y: G + 1, z: 68 }, yaw: 0 },
@@ -128,8 +138,8 @@ export const ryomaStatue: SpotDefinition = {
       id: 'statue',
       name: 'Statue of Sakamoto Ryoma',
       nameJa: '坂本龍馬像',
-      region: { min: { x: 44, y: 10, z: 33 }, max: { x: 52, y: 26, z: 39 } },
-      focus: { x: 48, y: 22, z: 36 },
+      region: { min: { x: 44, y: 10, z: 32 }, max: { x: 52, y: 34, z: 39 } },
+      focus: { x: 48, y: 30, z: 36 },
       image: './photos/ryoma-statue/statue.jpg',
       guide: {
         canDo: 'You can look up at the huge Ryoma statue.',
@@ -141,8 +151,8 @@ export const ryomaStatue: SpotDefinition = {
       id: 'deck',
       name: 'Viewing Deck',
       nameJa: '展望デッキ（龍馬に大接近）',
-      region: { min: { x: 44, y: 21, z: 40 }, max: { x: 52, y: 24, z: 41 } },
-      focus: { x: 48, y: 22, z: 41 },
+      region: { min: { x: 44, y: 29, z: 40 }, max: { x: 52, y: 32, z: 41 } },
+      focus: { x: 48, y: 30, z: 41 },
       image: './photos/ryoma-statue/deck.jpg',
       guide: {
         canDo: 'You can climb the big steps to his face.',

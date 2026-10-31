@@ -122,7 +122,7 @@ export class InfoPanel {
     const voiceTag = o.audio ? '<span class="info-voice-tag">teacher voice</span>' : '';
 
     this.root.innerHTML = `
-      <button class="info-panel__close" data-role="close" title="Close">✕ Close <kbd>Esc</kbd></button>
+      <button class="info-panel__close" data-role="close" title="Close">✕ Close <kbd>X</kbd></button>
       <div class="info-panel__name">${this.esc(o.name)}</div>
       <div class="info-panel__ja">${this.esc(o.nameJa ?? '')}</div>
       ${

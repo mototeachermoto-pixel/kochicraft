@@ -1,5 +1,6 @@
 import type { World } from '@/world/World';
 import { Build } from './Build';
+import { ryomaFigure } from './ryomaFigure';
 import type { SpotDefinition } from './SpotDefinition';
 
 /**
@@ -34,27 +35,24 @@ function toriiGate(b: Build, x: number, baseY: number, z: number, red: number): 
  * 坂本龍馬像（実物に忠実に）。
  * 実物：像5.3m＋台座8.2m＝総高13.5m。台座が像より高い。
  * 和服に懐手・ブーツ姿で、太平洋（-Z方向）を見つめる。
- * → 高くて細い台座の上に、腕を組まない（懐手）すらりとした立ち姿を置く。
+ * → 写真に合わせて、石の土台＋太い台座＋笠石の上に、袴・着物・懐手の立ち姿（ryomaFigure）を置く。
+ *   世界の高さ（40マス）に収まるよう、台座は龍馬像のスポットより少し低くしている。
  */
-function ryomaStatue(b: Build, x: number, z: number, stonewall: number, bronze: number, dark: number): void {
-  // 台座（下が広く、上に向かって細い・像より高い）
+function ryomaStatue(
+  b: Build,
+  x: number,
+  z: number,
+  stonewall: number,
+  stone: number,
+  body: number,
+  dark: number,
+): void {
   b.box(x - 3, TOP, z - 3, x + 3, TOP, z + 3, stonewall); // 7x7 土台
-  b.box(x - 2, TOP + 1, z - 2, x + 2, TOP + 1, z + 2, stonewall); // 5x5
-  b.box(x - 1, TOP + 2, z - 1, x + 1, TOP + 9, z + 1, stonewall); // 3x3 の高い柱（8段）
-  b.box(x - 2, TOP + 10, z - 2, x + 2, TOP + 10, z + 2, stonewall); // 5x5 笠石
-  const py = TOP + 10; // 台座の上面
-
-  // 人物（懐手なので腕は出さない。袴は下が広い）
-  b.set(x, py + 1, z, dark); // ブーツ
-  b.set(x - 1, py + 2, z, bronze); // 袴（下が広い）
-  b.set(x, py + 2, z, bronze);
-  b.set(x + 1, py + 2, z, bronze);
-  b.set(x, py + 3, z, bronze); // 着物（胴）
-  b.set(x, py + 4, z, bronze);
-  b.set(x, py + 5, z, bronze); // 肩
-  b.set(x, py + 6, z, bronze); // 頭
-  b.set(x, py + 7, z, dark); // 髪
-  b.set(x, py + 7, z + 1, dark); // 後ろ髪（海と反対側）
+  b.box(x - 2, TOP + 1, z - 2, x + 2, TOP + 4, z + 2, stonewall); // 5x5 の太い台座
+  b.box(x, TOP + 2, z - 2, x, TOP + 3, z - 2, dark); // 台座の前（海側）の銘板
+  b.box(x - 3, TOP + 5, z - 3, x + 3, TOP + 5, z + 3, stone); // 7x7 笠石（少し明るい石）
+  b.box(x - 2, TOP + 6, z - 2, x + 2, TOP + 6, z + 2, stonewall); // 5x5 像の足もとの台
+  ryomaFigure(b, x, TOP + 6, z, -1, body, dark); // 立ち姿（海＝-z を見つめる。y23〜37）
 }
 
 function build(world: World): void {
@@ -120,7 +118,7 @@ function build(world: World): void {
   b.set(61, TOP, 38, stonewall);
 
   // ===== 坂本龍馬像（砂浜の中央、海を見つめる） =====
-  ryomaStatue(b, 48, 48, stonewall, roof, tile);
+  ryomaStatue(b, 48, 48, stonewall, stone, b.id('bronze'), b.id('bronzedark'));
 
   // ===== 松林（後方のふちに数本だけ・中央は開けて建築スペースに） =====
   const grove: [number, number, number][] = [
@@ -166,8 +164,8 @@ export const katsurahama: SpotDefinition = {
       id: 'ryoma',
       name: 'Statue of Sakamoto Ryoma',
       nameJa: '坂本龍馬像',
-      region: { min: { x: 45, y: 16, z: 45 }, max: { x: 51, y: 34, z: 51 } },
-      focus: { x: 48, y: 26, z: 48 },
+      region: { min: { x: 45, y: 16, z: 45 }, max: { x: 51, y: 37, z: 51 } },
+      focus: { x: 48, y: 30, z: 48 },
       image: './photos/katsurahama/ryoma.jpg',
       guide: {
         canDo: 'You can see the big statue of Ryoma.',

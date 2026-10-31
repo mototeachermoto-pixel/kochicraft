@@ -14,6 +14,8 @@ export class HubScreen {
     parent: HTMLElement,
     spots: SpotDefinition[],
     private readonly onSelect: (spot: SpotDefinition) => void,
+    /** 「How to play（せつめい）」ボタンを押したとき */
+    onHowTo?: () => void,
   ) {
     this.root = document.createElement('div');
     this.root.className = 'hub-screen';
@@ -38,11 +40,13 @@ export class HubScreen {
         <div class="hub-screen__keys">
           Push <kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> to choose, then <kbd>Enter</kbd> to go.
         </div>
+        <button class="kc-btn hub-howto" data-role="howto">📖 How to play <span class="hub-howto__ja">せつめい</span></button>
       </div>
       <div class="spot-grid">${cards}</div>
     `;
     parent.appendChild(this.root);
     this.whoBar = this.root.querySelector('.hub-who') as HTMLElement;
+    this.root.querySelector('[data-role="howto"]')!.addEventListener('click', () => onHowTo?.());
 
     for (const btn of Array.from(this.root.querySelectorAll<HTMLButtonElement>('.spot-card'))) {
       if (btn.disabled) continue;

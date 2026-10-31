@@ -36,4 +36,9 @@ export const BLOCK_TYPES: BlockType[] = [
   { id: 19, key: 'sakura', name: '桜', nameEn: 'Sakura', color: '#f2b6d0', transparent: false, solid: true, category: 'decor' },
   { id: 20, key: 'torii', name: '鳥居', nameEn: 'Torii', color: '#c63b2f', transparent: false, solid: true, category: 'decor' },
   { id: 21, key: 'lantern', name: '灯籠', nameEn: 'Lantern', color: '#cfc2a0', transparent: false, solid: true, category: 'decor' },
+
+  // ----- 像（観光地の景観専用。子どもの建築パレット PALETTE_KEYS には入れない） -----
+  // 坂本龍馬像などの銅像を写真に近づけるための、青緑がかった銅の色と、目・髪・袴などの濃い色
+  { id: 22, key: 'bronze', name: '銅像', nameEn: 'Bronze', color: '#5f6e63', transparent: false, solid: true, category: 'decor' },
+  { id: 23, key: 'bronzedark', name: '銅像（濃い）', nameEn: 'Dark Bronze', color: '#262c29', transparent: false, solid: true, category: 'decor' },
 ];

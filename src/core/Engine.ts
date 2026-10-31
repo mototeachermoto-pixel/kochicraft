@@ -13,6 +13,7 @@ import { PhotoStore } from '@/data/PhotoStore';
 import { EditStore } from '@/data/EditStore';
 import { SaveStorage } from '@/data/SaveStorage';
 import { NumberPanel, type NumberMode } from '@/ui/NumberPanel';
+import { HowToPlayPanel } from '@/ui/HowToPlayPanel';
 import { Avatar, SKIN_LABEL, type SkinKind } from '@/player/Avatar';
 import { SceneManager } from './SceneManager';
 import { OrbitCameraController } from './OrbitCameraController';
@@ -162,7 +163,9 @@ export class Engine {
     this.orbit.onTap = tap;
     this.walk.onTap = tap;
 
-    this.hub = new HubScreen(this.hudRoot, SPOTS, (spot) => this.enterSpot(spot));
+    // 最初の画面の「How to play（せつめい）」＝操作方法の一覧
+    const howTo = new HowToPlayPanel(this.hudRoot);
+    this.hub = new HubScreen(this.hudRoot, SPOTS, (spot) => this.enterSpot(spot), () => howTo.open());
     this.buildSpotUI();
 
     // GAS 版：子どもの番号ごとに大学の Google へ保存する（Safari を閉じても残るように）
@@ -187,7 +190,7 @@ export class Engine {
     this.toolbar = document.createElement('div');
     this.toolbar.className = 'spot-toolbar hidden';
     this.toolbar.innerHTML = `
-      <button class="kc-btn" data-role="back"><span class="kc-btn__icon">←</span>Back to list<kbd>Esc</kbd></button>
+      <button class="kc-btn" data-role="back"><span class="kc-btn__icon">←</span>Back to list<kbd>X</kbd></button>
       <button class="kc-btn" data-role="mode"><span class="kc-btn__icon">👀</span><span data-label="mode">Look</span><kbd>L</kbd></button>
       <button class="kc-btn" data-role="build"><span class="kc-btn__icon">🧱</span><span data-label="build">Build</span><kbd>B</kbd></button>
       <button class="kc-btn" data-role="map"><span class="kc-btn__icon">🗺️</span>Map<kbd>M</kbd></button>
@@ -629,7 +632,7 @@ export class Engine {
         row(`${k('N')} / ${k('F')}`, '<b>N</b>ear / <b>F</b>ar'),
         head('Go'),
         row(k('W'), '<b>W</b>alk again'),
-        row(k('Esc'), 'Back to list'),
+        row(k('X'), 'Back to list'),
       ].join('');
     }
 
@@ -675,7 +678,7 @@ export class Engine {
           row(k('L'), '<b>L</b>ook from the sky'),
           ...(SaveStorage.readOnly ? [] : [row(k('B'), '<b>B</b>uild blocks')]),
           row(k('H'), '<b>H</b>ome (start)'),
-          row(k('Esc'), 'Back to list'),
+          row(k('X'), 'Back to list'),
         ];
 
     return [...move, ...rest].join('');
@@ -965,7 +968,7 @@ export class Engine {
     // キーは英単語の頭文字に合わせている：
     //   J=Jump / L=Look / B=Build / P=Put / T=Take / W=Walk / H=Home / E=English
     //   C=Change Character / V=View / I=Info / N=Next / K=Keys
-    // 編集モード：P=置く / T=消す / 数字=ブロック / W・Esc=歩行へ / Ctrl+S・Ctrl+O=保存・読込
+    // 編集モード：P=置く / T=消す / 数字=ブロック / W・X・Esc=歩行へ / Ctrl+S・Ctrl+O=保存・読込
     if (this.mode === 'build') {
       if (e.ctrlKey || e.metaKey) {
         if (SaveStorage.cloud) return; // GAS 版は自動で保存するので、ファイルは使わない
@@ -988,7 +991,7 @@ export class Engine {
       } else if (e.code === 'KeyT') {
         e.preventDefault();
         if (!this.build.remove()) this.showToast('You can take only your own blocks');
-      } else if (e.code === 'KeyD' || e.code === 'KeyW' || e.code === 'KeyB' || e.code === 'Escape') {
+      } else if (e.code === 'KeyD' || e.code === 'KeyW' || e.code === 'KeyB' || e.code === 'KeyX' || e.code === 'Escape') {
         this.setMode('walk'); // D = Done（ボタンの表示と同じ）
       } else if (e.code === 'KeyH') {
         this.returnToStart();
@@ -1031,7 +1034,8 @@ export class Engine {
     } else if (e.code === 'KeyE') {
       // E = English（選んでいる構造物の英語を聞く）
       this.infoPanel.listenCurrent();
-    } else if (e.code === 'Escape') {
+    } else if (e.code === 'KeyX' || e.code === 'Escape') {
+      // X＝閉じる・もどる（学校の iPad のキーボードには Esc キーがないため。Esc も今までどおり使える）
       if (this.worldManager.selectedIndex >= 0) this.worldManager.clearSelection();
       else this.backToHub();
     }
