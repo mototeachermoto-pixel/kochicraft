@@ -264,6 +264,8 @@ export const muroto: SpotDefinition = {
       image: './photos/muroto/lighthouse.jpg',
       region: { min: { x: 54, y: 17, z: 50 }, max: { x: 60, y: 29, z: 56 } },
       focus: { x: 57, y: 25, z: 53 },
+      // Map で来たとき、屋根や物の上に立たないよう、立つ場所を決めておく
+      viewFrom: { x: 51.5, y: LAND + 1, z: 61.5 },
       guide: {
         canDo: 'You can climb the hill to the lighthouse.',
         feature: 'It is white. It is on a hill.',

@@ -418,8 +418,10 @@ export class Engine {
       const dist = Math.hypot(dx, dz);
       return dist > 0.001 ? Math.atan2(lookY - (p.y + PLAYER_EYE), dist) : 0;
     };
-    let best: { x: number; y: number; z: number } | null = null;
+    // 立つ場所が決めてある所（洞窟の中など）はそこへ。自動で探すと屋根の上や外に立ってしまうため
+    let best: { x: number; y: number; z: number } | null = obj.viewFrom ? { ...obj.viewFrom } : null;
     for (const k of order) {
+      if (best) break;
       const a = (Math.PI / 4) * k;
       let nearest: { x: number; y: number; z: number } | null = null; // その方向で一番近い「立てる場所」（最終手段）
       let comfortable: { x: number; y: number; z: number } | null = null; // 見上げ角がちょうどよい、一番近い場所
