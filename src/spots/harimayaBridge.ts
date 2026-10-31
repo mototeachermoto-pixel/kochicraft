@@ -288,6 +288,8 @@ export const harimayaBridge: SpotDefinition = {
       nameJa: 'はりまや橋',
       region: { min: { x: 45, y: 9, z: 36 }, max: { x: 51, y: 16, z: 44 } },
       focus: { x: 48, y: 13, z: 40 },
+      // 写真と同じく、水路の岸からななめに橋を見る場所に立つ（橋のたもとからだと、橋の床しか見えない）
+      viewFrom: { x: 57.5, y: 11, z: 45.5 },
       image: './photos/harimaya-bridge/bridge.jpg',
       guide: {
         canDo: 'You can walk over the red bridge.',

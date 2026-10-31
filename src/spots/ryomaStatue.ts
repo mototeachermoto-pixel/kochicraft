@@ -140,8 +140,6 @@ export const ryomaStatue: SpotDefinition = {
       nameJa: '坂本龍馬像',
       region: { min: { x: 44, y: 10, z: 32 }, max: { x: 52, y: 34, z: 39 } },
       focus: { x: 48, y: 30, z: 36 },
-      // Map で来たとき、屋根や物の上に立たないよう、立つ場所を決めておく
-      viewFrom: { x: 36.5, y: G + 1, z: 44.5 },
       image: './photos/ryoma-statue/statue.jpg',
       guide: {
         canDo: 'You can look up at the huge Ryoma statue.',
@@ -155,7 +153,7 @@ export const ryomaStatue: SpotDefinition = {
       nameJa: '展望デッキ（龍馬に大接近）',
       region: { min: { x: 44, y: 29, z: 40 }, max: { x: 52, y: 32, z: 41 } },
       focus: { x: 48, y: 30, z: 41 },
-      // Map で来たとき、屋根や物の上に立たないよう、立つ場所を決めておく
+      // Map で来たら、デッキの上（龍馬の顔の前）に立つ
       viewFrom: { x: 48.5, y: 30, z: 41.5 },
       image: './photos/ryoma-statue/deck.jpg',
       guide: {

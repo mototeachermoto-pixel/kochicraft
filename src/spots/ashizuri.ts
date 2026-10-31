@@ -232,8 +232,6 @@ export const ashizuri: SpotDefinition = {
       nameJa: '断崖（高い崖）',
       region: { min: { x: 28, y: 18, z: 38 }, max: { x: 68, y: 22, z: 40 } },
       focus: { x: 48, y: 20, z: 38 },
-      // Map で来たとき、屋根や物の上に立たないよう、立つ場所を決めておく
-      viewFrom: { x: 48.5, y: CLIFF + 1, z: 41.5 },
       image: './photos/ashizuri/cliffs.jpg',
       guide: {
         canDo: 'You can look down from high cliffs.',

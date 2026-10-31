@@ -205,8 +205,6 @@ export const hirome: SpotDefinition = {
       nameJa: 'ひろめ市場（入口）',
       region: { min: { x: 34, y: 11, z: 73 }, max: { x: 62, y: 17, z: 76 } },
       focus: { x: 48, y: 14, z: 74 },
-      // Map で来たとき、屋根や物の上に立たないよう、立つ場所を決めておく
-      viewFrom: { x: 48.5, y: G + 1, z: 79.5 },
       image: './photos/hirome/entrance.jpg',
       guide: {
         canDo: 'You can walk into the market.',
@@ -220,8 +218,6 @@ export const hirome: SpotDefinition = {
       nameJa: 'カツオのたたきの店',
       region: { min: { x: 50, y: 11, z: 21 }, max: { x: 54, y: 15, z: 24 } },
       focus: { x: 52, y: 13, z: 23 },
-      // Map で来たとき、屋根や物の上に立たないよう、立つ場所を決めておく
-      viewFrom: { x: 52.5, y: G + 1, z: 28.5 },
       image: './photos/hirome/katsuo.jpg',
       guide: {
         canDo: 'You can watch the fish cooking show.',
@@ -235,8 +231,6 @@ export const hirome: SpotDefinition = {
       nameJa: 'お店（屋台）',
       region: { min: { x: 25, y: 11, z: 32 }, max: { x: 29, y: 15, z: 60 } },
       focus: { x: 27, y: 13, z: 46 },
-      // Map で来たとき、屋根や物の上に立たないよう、立つ場所を決めておく
-      viewFrom: { x: 32.5, y: G + 1, z: 46.5 },
       image: './photos/hirome/shops.jpg',
       guide: {
         canDo: 'You can look at many small shops.',
@@ -250,8 +244,6 @@ export const hirome: SpotDefinition = {
       nameJa: '横長の机と椅子',
       region: { min: { x: 38, y: 11, z: 42 }, max: { x: 58, y: 13, z: 59 } },
       focus: { x: 48, y: 12, z: 50 },
-      // Map で来たとき、屋根や物の上に立たないよう、立つ場所を決めておく
-      viewFrom: { x: 48.5, y: G + 1, z: 61.5 },
       image: './photos/hirome/tables.jpg',
       guide: {
         canDo: 'You can sit and eat at the long tables.',
@@ -265,8 +257,6 @@ export const hirome: SpotDefinition = {
       nameJa: '赤提灯',
       region: { min: { x: 30, y: 14, z: 71 }, max: { x: 66, y: 17, z: 72 } },
       focus: { x: 48, y: 16, z: 72 },
-      // Map で来たとき、屋根や物の上に立たないよう、立つ場所を決めておく
-      viewFrom: { x: 48.5, y: G + 1, z: 79.5 },
       image: './photos/hirome/lanterns.jpg',
       guide: {
         canDo: 'You can see many red lanterns.',

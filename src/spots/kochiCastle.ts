@@ -413,8 +413,6 @@ export const kochiCastle: SpotDefinition = {
       nameJa: '桜',
       region: { min: { x: 28, y: 11, z: 53 }, max: { x: 68, y: 19, z: 69 } },
       focus: { x: 31, y: 15, z: 61 },
-      // Map で来たとき、屋根や物の上に立たないよう、立つ場所を決めておく
-      viewFrom: { x: 34.5, y: PARK + 1, z: 60.5 },
       image: './photos/kochi-castle/cherry.jpg',
       guide: {
         canDo: 'You can see pink flowers in spring.',

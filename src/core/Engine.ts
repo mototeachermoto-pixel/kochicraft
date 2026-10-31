@@ -20,6 +20,7 @@ import { OrbitCameraController } from './OrbitCameraController';
 import { WalkController, VIEW_LABEL, VIEW_ORDER, type ViewMode } from './WalkController';
 import { WorldManager } from './WorldManager';
 import { BuildController } from './BuildController';
+import { blockRegistry } from '@/world/BlockRegistry';
 
 type Mode = 'walk' | 'orbit' | 'build';
 
@@ -74,6 +75,8 @@ export class Engine {
   private fileInput!: HTMLInputElement;
   private toast!: HTMLElement;
   private toastTimer = 0;
+  /** スタート地点から歩いて行ける場所（Map の立ち位置えらび用。観光地に入る・ブロックを置くと作り直す） */
+  private reachCache: Set<string> | null = null;
   /** 番号（例：5A12）を入れる画面（GAS 版だけ） */
   private readonly numberPanel: NumberPanel;
 
@@ -122,7 +125,10 @@ export class Engine {
     this.worldManager = new WorldManager(this.world, this.sceneManager.scene, this.camera, this.orbit);
     this.build = new BuildController(this.world, this.sceneManager.scene, this.camera, this.player);
     // 編集（自動保存）が起きたら静かに「Saved」を出す
-    this.build.onChange = () => this.showToast('Saved ✓');
+    this.build.onChange = () => {
+      this.reachCache = null; // ブロックが変わったので、歩いて行ける場所をしらべ直す
+      this.showToast('Saved ✓');
+    };
 
     const hudRoot = document.getElementById('hud');
     if (!hudRoot) throw new Error('HUD要素(#hud)が見つかりません');
@@ -356,6 +362,7 @@ export class Engine {
       return;
     }
     this.worldManager.loadSpot(spot);
+    this.reachCache = null;
     // 編集の文脈（工作ひろば＋復元済みの編集差分）をセット
     this.build.setContext(spot.id, spot.field, this.worldManager.editCells);
     this.build.setActiveBlock(this.palette.getActiveId());
@@ -370,8 +377,17 @@ export class Engine {
   }
 
   /**
-   * 一覧で選んだ場所へ移動する。
-   * その構造物の手前の「立てる場所」を探して着地させ、構造物の方を向かせ、説明パネルを出す。
+   * 一覧（Map）で選んだ場所へ移動する。
+   * 写真のように「その物の全体が、じゃまな物なしによく見える場所」を探して立たせ、
+   * その物の方を向かせて、説明パネルを出す。
+   *
+   * 立つ場所は、まわり16方向 × いろいろな距離の候補に点数をつけて、いちばん良い所を選ぶ：
+   *   - 目から物まで、建物や木にさえぎられずに見えるか（ガラスと水は見通せる）
+   *   - 物の全体が画面に入る距離か（写真のように、近すぎず遠すぎず）
+   *   - 正面（+z＝手前。全観光地共通の設計）側か
+   *   - まわりに壁や物がなく、ぶつかっていないか
+   *   - 物の足もとに近い高さか（屋根の上や、はるか下には立たせない）
+   * 洞窟の中など、立つ場所を決めてある物（viewFrom）はそこへ立つ。
    */
   private goToObject(index: number): void {
     const objects = this.worldManager.getObjects();
@@ -380,82 +396,225 @@ export class Engine {
     if (this.mode !== 'walk') this.setMode('walk'); // 編集・俯瞰中でも歩いて見られるように
 
     const r = obj.region;
-    const bboxCx = (r.min.x + r.max.x + 1) / 2;
-    const bboxCz = (r.min.z + r.max.z + 1) / 2;
-    // 探索の中心は focus（設計時に決めた見どころ）を優先する。
-    // 海・砂浜のようにフィールド全体に広がる region は、その bbox 中心だと
-    // フィールドの外まで離れてしまうことがあるため、focus の方が安定する。
-    const cx = obj.focus?.x ?? bboxCx;
-    const cz = obj.focus?.z ?? bboxCz;
-    const lookX = obj.focus?.x ?? bboxCx;
+    const lookX = obj.focus?.x ?? (r.min.x + r.max.x + 1) / 2;
     const lookY = obj.focus?.y ?? r.max.y;
-    const lookZ = obj.focus?.z ?? bboxCz;
+    const lookZ = obj.focus?.z ?? (r.min.z + r.max.z + 1) / 2;
+    const SPAWN_PITCH_CLAMP = (30 * Math.PI) / 180; // 見上げ／見下ろしはこれ以上にしない（首がつらくならないように）
 
-    // 構造物の大きさに応じて少し離れた所に立つ（巨大な region で外周に出ないよう上限あり）
-    const MAX_AWAY = 16;
-    const SPAWN_PITCH_CLAMP = (30 * Math.PI) / 180; // 初期視点の見上げ／見下ろしはこれ以上に振らない（首がつらくならないように）
-    // 対象の足元(r.min.y)より、これ以上低い場所へは立たせない（ジャンプ＋自動段差で登り返せない
-    // 崖・段差の下に「落ちて」しまうのを防ぐ安全マージン。JUMP_SPEED/GRAVITY から実際に届く
-    // 高さは約1.4段、STEP_HEIGHT による自動よじ登りは約1段なので、2段までを許容範囲とする）。
-    const MAX_SAFE_DROP = 2;
-    const baseAway = Math.min(Math.max(r.max.x - r.min.x, r.max.z - r.min.z) / 2 + 3.5, MAX_AWAY);
-
-    // 正面（+z＝手前。全スポット共通の設計規約）を最優先に、そこから左右対称に探す。
-    // 0=正面 → ±45° → ±90° → ±135° → 180°（背面・最終手段）の順で方向を試す。
-    // 大事なのは「向き（正面かどうか）」を最優先にすること：
-    // ある方向に立てる場所が1つでもあれば、見上げ角が多少きつくてもその方向を採用し、
-    // 見やすい角度の方向を探して斜め・真横へ回り込んでしまわないようにする。
-    // 同じ方向の中では、近い距離から少しずつ離れていき、
-    // 「ちょうどよい角度（見上げ／見下ろしが緩やか）」になった時点ですぐ確定する。
-    // ※ 最初から「一番見上げ角が小さい距離」を探すと、坂・崖のある場所では
-    //   離れるほど地面がどんどん下がり続け、結局フィールドの端（最大距離）まで
-    //   後退して、対象がはるか遠く・はるか下に「落ちた」ように見えてしまうため、
-    //   あくまで「ちょうどよくなった最初の場所」で止める（必要以上に下がらない）。
-    const order = [0, 1, -1, 2, -2, 3, -3, 4];
-    const pitchOf = (p: { x: number; y: number; z: number }): number => {
-      const dx = lookX - p.x;
-      const dz = lookZ - p.z;
-      const dist = Math.hypot(dx, dz);
-      return dist > 0.001 ? Math.atan2(lookY - (p.y + PLAYER_EYE), dist) : 0;
-    };
-    // 立つ場所が決めてある所（洞窟の中など）はそこへ。自動で探すと屋根の上や外に立ってしまうため
-    let best: { x: number; y: number; z: number } | null = obj.viewFrom ? { ...obj.viewFrom } : null;
-    for (const k of order) {
-      if (best) break;
-      const a = (Math.PI / 4) * k;
-      let nearest: { x: number; y: number; z: number } | null = null; // その方向で一番近い「立てる場所」（最終手段）
-      let comfortable: { x: number; y: number; z: number } | null = null; // 見上げ角がちょうどよい、一番近い場所
-      for (let d = baseAway; d <= MAX_AWAY; d += 1) {
-        const px = cx + Math.sin(a) * d;
-        const pz = cz + Math.cos(a) * d;
-        const cand = this.findStand(px, pz, r.max.y + 4);
-        if (!cand) continue;
-        if (r.min.y - cand.y > MAX_SAFE_DROP) continue; // 登り返せないほど低い場所には立たせない
-        if (!nearest) nearest = cand;
-        if (Math.abs(pitchOf(cand)) <= SPAWN_PITCH_CLAMP) {
-          comfortable = cand;
-          break; // 近い方から探しているので、最初に見つかった時点で確定
-        }
-      }
-      const chosen = comfortable ?? nearest;
-      if (chosen) {
-        best = chosen;
-        break; // この方向（正面寄りの中で最初に見つかった方向）で確定。他の方向は探さない
-      }
-    }
-    // どの方向にも立てる場所がなければ、構造物の真上から降ろす（最終手段）
-    if (!best) best = this.findStand(cx, cz, r.max.y + 6);
+    const best = obj.viewFrom ? { ...obj.viewFrom } : this.findViewPoint(obj);
     if (!best) return;
 
-    // その物の「注視点」(focus。設計時に決めた見どころ)を正面に見る。
-    // 高さ方向のずれも見て、必要なら見上げる／見下ろす角度も合わせるが、
-    // 首が痛くなるほどの急角度にはしない（上下ともに一定角度でクランプ）。
+    const dist = Math.hypot(lookX - best.x, lookZ - best.z);
+    const rawPitch = dist > 0.001 ? Math.atan2(lookY - (best.y + PLAYER_EYE), dist) : 0;
     const yaw = Math.atan2(-(lookX - best.x), -(lookZ - best.z));
-    const pitch = Math.max(-SPAWN_PITCH_CLAMP, Math.min(SPAWN_PITCH_CLAMP, pitchOf(best)));
-
+    const pitch = Math.max(-SPAWN_PITCH_CLAMP, Math.min(SPAWN_PITCH_CLAMP, rawPitch));
     this.walk.spawn(best, yaw, pitch);
     this.worldManager.selectIndex(index); // 説明パネルを出す
     this.showToast(`Welcome to ${obj.name}!`);
+  }
+
+  /** その物がよく見える立ち位置を、点数をつけて選ぶ（くわしくは goToObject の説明） */
+  private findViewPoint(obj: SceneObject): { x: number; y: number; z: number } | null {
+    const r = obj.region;
+    const cx = obj.focus?.x ?? (r.min.x + r.max.x + 1) / 2;
+    const cz = obj.focus?.z ?? (r.min.z + r.max.z + 1) / 2;
+    const lookY = obj.focus?.y ?? r.max.y;
+
+    // 写真のように全体が画面に入る距離（たて・よことも画面の約7割におさまる距離）
+    const width = Math.max(r.max.x - r.min.x + 1, r.max.z - r.min.z + 1);
+    const height = r.max.y - r.min.y + 1;
+    const tanV = Math.tan(((CAMERA_FOV / 2) * Math.PI) / 180);
+    const tanH = tanV * this.camera.aspect;
+    const fit = Math.max(height / (2 * tanV * 0.7), Math.min(width, 20) / (2 * tanH * 0.7));
+    const ideal = Math.max(5, Math.min(22, fit));
+    const halfV = Math.atan(tanV); // 画面のたての半分の角度
+    const baseFeet = r.min.y + 1; // 物の足もとに立ったときの足の高さ
+
+    // 見たい点：注目点・物のまん中・物のてっぺん
+    const mx = (r.min.x + r.max.x + 1) / 2;
+    const mz = (r.min.z + r.max.z + 1) / 2;
+    const targets = [
+      { x: cx, y: lookY, z: cz },
+      { x: mx, y: (r.min.y + r.max.y + 1) / 2, z: mz },
+      { x: mx, y: r.max.y + 0.5, z: mz },
+    ];
+
+    // スタート地点から歩いて行ける場所だけを候補にする（屋根の上や、登り返せない崖の下には立たせない）
+    const reachable = this.reachableStands();
+
+    let best: { x: number; y: number; z: number } | null = null;
+    let bestScore = -Infinity;
+    for (let k = 0; k < 16; k++) {
+      const a = (Math.PI / 8) * k; // 0＝正面（+z）
+      const back = (1 - Math.cos(a)) / 2; // 0＝正面 … 1＝真うしろ
+      for (let d = 3; d <= 26; d += 1) {
+        const cand = this.findStandNear(cx + Math.sin(a) * d, cz + Math.cos(a) * d, baseFeet);
+        if (!cand) continue;
+        if (reachable && !reachable.has(`${Math.floor(cand.x)},${cand.y},${Math.floor(cand.z)}`)) continue;
+        if (this.inRegion(cand.x, cand.y + 1, cand.z, r, 0.5)) continue; // 物の中には立たない
+        if (baseFeet - cand.y > 2) continue; // 登り返せないほど低い所には立たせない
+
+        const eye = { x: cand.x, y: cand.y + PLAYER_EYE, z: cand.z };
+        let seen = 0;
+        for (const t of targets) if (this.canSee(eye, t, r)) seen++;
+        if (seen === 0) continue; // 物が見えない場所はだめ
+
+        const dist = Math.hypot(cx - cand.x, cz - cand.z);
+        const pitch = Math.atan2(lookY - eye.y, Math.max(0.1, dist));
+        const crowd = this.crowdAround(cand); // まわりの壁や物の数
+        // 物のてっぺんと足もとが、画面の上下に入るか（見上げは30度まで。はみ出す分だけ減点）
+        const camPitch = Math.max(-0.52, Math.min(0.52, pitch));
+        const topOut = Math.max(0, Math.atan2(r.max.y + 1 - eye.y, Math.max(0.1, dist)) - camPitch - halfV * 0.9);
+        const botOut = Math.max(0, camPitch - Math.atan2(r.min.y - eye.y, Math.max(0.1, dist)) - halfV * 0.9);
+        const score =
+          seen * 6 -
+          Math.abs(dist - ideal) * 0.5 -
+          back * 6 -
+          crowd * 1.5 -
+          Math.max(0, Math.abs(pitch) - (25 * Math.PI) / 180) * 12 -
+          (topOut + botOut) * 14 -
+          Math.abs(cand.y - baseFeet) * 0.25;
+        if (score > bestScore) {
+          bestScore = score;
+          best = cand;
+        }
+      }
+    }
+    // どこからも見えなければ、物の真上から降ろす（最終手段）
+    return best ?? this.findStand(cx, cz, r.max.y + 6);
+  }
+
+  /**
+   * スタート地点から歩いて行ける「立てる場所」をすべて集める（"x,足の高さ,z" の集まり）。
+   * となりのマスへは、1段上る（自動で段差を上る）・2段上る（ジャンプ）・下りる（落ちる）ができる。
+   * スタート地点が分からないときは null（しぼりこまない）。
+   */
+  private reachableStands(): Set<string> | null {
+    // 一度しらべたら覚えておく（観光地に入り直したとき・ブロックを置いたときに、しらべ直す）
+    if (this.reachCache) return this.reachCache;
+    const spot = this.worldManager.currentSpot;
+    const f = spot?.field;
+    if (!spot || !f) return null;
+    const sp = spot.spawn?.pos ?? { x: spot.center.x, y: 16, z: spot.center.z + 14 };
+    const start = this.findStandNear(sp.x, sp.z, sp.y);
+    if (!start) return null;
+
+    // その列で立てる高さの一覧（足の高さ）。水の中も歩けるので、水は通れるものとして数える
+    const open = (x: number, y: number, z: number) => !this.world.isSolid(x, y, z);
+    const columns = new Map<number, number[]>(); // 列ごとに一度だけしらべる
+    const standsAt = (x: number, z: number): number[] => {
+      const key = x * 1000 + z;
+      const hit = columns.get(key);
+      if (hit) return hit;
+      const solid: boolean[] = [];
+      for (let y = 1; y <= 40; y++) solid[y] = this.world.isSolid(x, y, z);
+      const ys: number[] = [];
+      for (let y = 1; y <= 38; y++) if (solid[y] && !solid[y + 1] && !solid[y + 2]) ys.push(y + 1);
+      columns.set(key, ys);
+      return ys;
+    };
+    const seen = new Set<string>();
+    const sx = Math.floor(start.x);
+    const sz = Math.floor(start.z);
+    const queue: [number, number, number][] = [[sx, start.y, sz]];
+    seen.add(`${sx},${start.y},${sz}`);
+    while (queue.length > 0) {
+      const [x, y, z] = queue.pop()!;
+      for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ] as const) {
+        const nx = x + dx;
+        const nz = z + dz;
+        if (nx < f.min.x || nx > f.max.x || nz < f.min.z || nz > f.max.z) continue;
+        for (const ny of standsAt(nx, nz)) {
+          if (ny > y + 2) continue; // 3段以上は上れない
+          if (ny < y - 12) continue; // 高すぎる所からは下りない
+          // 上るときは、今いる場所の頭の上があいているか（天井でジャンプできない所は上れない）
+          if (ny > y && !open(x, y + 2, z)) continue;
+          // 下りるときは、となりのマスの今の高さが空いているか（壁があると進めない）
+          if (ny < y && !(open(nx, y, nz) && open(nx, y + 1, nz))) continue;
+          const key = `${nx},${ny},${nz}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          queue.push([nx, ny, nz]);
+        }
+      }
+    }
+    this.reachCache = seen;
+    return seen;
+  }
+
+  /** その点が物の範囲（region）の中か（m だけ広げて考える） */
+  private inRegion(x: number, y: number, z: number, r: SceneObject['region'], m: number): boolean {
+    return (
+      x >= r.min.x - m &&
+      x <= r.max.x + 1 + m &&
+      y >= r.min.y - m &&
+      y <= r.max.y + 1 + m &&
+      z >= r.min.z - m &&
+      z <= r.max.z + 1 + m
+    );
+  }
+
+  /** 目から点まで、さえぎる物がないか（物の範囲に入ったら見えたことにする。ガラス・水・空気は見通せる） */
+  private canSee(
+    eye: { x: number; y: number; z: number },
+    t: { x: number; y: number; z: number },
+    r: SceneObject['region'],
+  ): boolean {
+    const dx = t.x - eye.x;
+    const dy = t.y - eye.y;
+    const dz = t.z - eye.z;
+    const steps = Math.ceil(Math.hypot(dx, dy, dz) / 0.3);
+    for (let i = 1; i < steps; i++) {
+      const f = i / steps;
+      const x = eye.x + dx * f;
+      const y = eye.y + dy * f;
+      const z = eye.z + dz * f;
+      if (this.inRegion(x, y, z, r, 0)) return true;
+      const id = this.world.getBlock(Math.floor(x), Math.floor(y), Math.floor(z));
+      if (id !== 0 && !blockRegistry.isTransparent(id)) return false;
+    }
+    return true;
+  }
+
+  /** 立つ場所のまわり（5×5、足と頭の高さ）にある、ぶつかる物の数 */
+  private crowdAround(p: { x: number; y: number; z: number }): number {
+    let n = 0;
+    const bx = Math.floor(p.x);
+    const bz = Math.floor(p.z);
+    for (let dx = -2; dx <= 2; dx++) {
+      for (let dz = -2; dz <= 2; dz++) {
+        if (dx === 0 && dz === 0) continue;
+        for (const y of [p.y, p.y + 1]) if (this.world.isSolid(bx + dx, y, bz + dz)) n++;
+      }
+    }
+    return n;
+  }
+
+  /**
+   * その x/z で立てる場所のうち、足の高さが wantFeet にいちばん近い所を返す。
+   * 上から探して最初の所に立つと、屋根や木の上に立ってしまうため。
+   */
+  private findStandNear(x: number, z: number, wantFeet: number): { x: number; y: number; z: number } | null {
+    const f = this.worldManager.currentSpot?.field;
+    const bx = Math.floor(x);
+    const bz = Math.floor(z);
+    if (f && (bx < f.min.x || bx > f.max.x || bz < f.min.z || bz > f.max.z)) return null; // 歩ける範囲の外
+    let best: { x: number; y: number; z: number } | null = null;
+    for (let y = 38; y >= 1; y--) {
+      const ground = this.world.isSolid(bx, y, bz);
+      const feet = this.world.getBlock(bx, y + 1, bz) === 0;
+      const head = this.world.getBlock(bx, y + 2, bz) === 0;
+      if (!(ground && feet && head)) continue;
+      if (!best || Math.abs(y + 1 - wantFeet) < Math.abs(best.y - wantFeet)) {
+        best = { x: bx + 0.5, y: y + 1, z: bz + 0.5 };
+      }
+    }
+    return best;
   }
 
   /**
@@ -917,6 +1076,7 @@ export class Engine {
       const cur = this.worldManager.currentSpot;
       if (cur && affected.includes(cur.id)) {
         this.worldManager.loadSpot(cur);
+        this.reachCache = null;
         this.build.setContext(cur.id, cur.field, this.worldManager.editCells);
       }
       this.showToast('Opened ✓');
