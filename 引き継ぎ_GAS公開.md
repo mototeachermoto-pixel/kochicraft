@@ -16,7 +16,7 @@ GitHub版（https://mototeachermoto-pixel.github.io/kochicraft/）は、記録�
 |---|---|
 | Googleアカウント | ryusaku@g.kochi-u.ac.jp（大学） |
 | GASプロジェクト | scriptId `13hNtUZ1eQlSRsVvjzJfNiK5_cyDIns_mqsM8QULX9Z-Ut9g21WFdE6at`（ドライブの「KochiCraft」フォルダの中） |
-| 公開デプロイ | `AKfycbz_y2f_vQIULz7J1wfkzhlVnbGoYOtnNO_JWY1FO9nokDkFWnS3jq3N2QXqQWuUcPk`（2026-11-01時点で版6。版5＝Esc→X・説明・龍馬像の前、版4＝年度別にする前、版3＝子どもごとの保存を入れる前） |
+| 公開デプロイ | `AKfycbz_y2f_vQIULz7J1wfkzhlVnbGoYOtnNO_JWY1FO9nokDkFWnS3jq3N2QXqQWuUcPk`（2026-11-01時点で版7。版6＝11か所を作り直す前、版5＝Esc→X・説明・龍馬像の前、版4＝年度別にする前、版3＝子どもごとの保存を入れる前） |
 | 子どもの作品の保存先 | ドライブの「KochiCraft」フォルダ →「子どもの保存データ」→「2026年度」のような**年度ごとのフォルダ**（1人2ファイル：`5A12.json`＝ブロック・付け足し文、`5A12.media.json`＝写真・声） |
 | テスト用（先生だけ） | https://script.google.com/a/macros/g.kochi-u.ac.jp/s/AKfycbwZDvQcfuqYZpP3L1tM0O9Mxy-SHOIbHpnUL8zEUQ/dev |
 | 手元のGAS用フォルダ | `gas/`（Code.js・appsscript.json・.clasp.json は記録済み。index.html と photos_*.html はビルドで毎回作る） |
@@ -80,7 +80,7 @@ NODE_OPTIONS=--use-system-ca clasp update-deployment --user univ AKfycbz_y2f_vQI
   - 龍馬像のスポットは、像が高くなったので、大階段とデッキを y29（顔の高さ）まで上げた。デッキの像側の柵は1段（顔がガラスでくもらないように）。
 - ほかの観光地も、写真に近づける作業を1か所ずつ進める予定（先生の了承を得ながら）。
 
-## 2026-11-01 夜：11か所を写真に近づけて作り直した（まだ公開版には反映していない）
+## 2026-11-01 夜：11か所を写真に近づけて作り直した（版7で公開版に反映済み）
 先生の指示「写真とブロックの見た目がかけ離れている。写真に似るように作り直して」「まだ送らなくていい」。
 手元（このPC）で作り直してコミットだけした。**GitHub への送信と、公開版（GAS）への反映はしていない**。
 - 共通の部品：`src/spots/statues.ts`（着物と袴の立ち姿・騎馬像）、`Build.ts` に `boulder`（苔むした丸い岩）と `roundTree`（広葉樹）。
