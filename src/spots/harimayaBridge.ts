@@ -1,5 +1,6 @@
 ﻿import type { World } from '@/world/World';
 import { Build } from './Build';
+import { kimonoFigure } from './statues';
 import type { SpotDefinition } from './SpotDefinition';
 
 /**
@@ -15,52 +16,84 @@ import type { SpotDefinition } from './SpotDefinition';
  *
  * 座標の目安：小さい z＝奥／大きい z＝手前（入口・スポーン）。
  *   電車通り: z 29〜31（レール）
- *   川:       z 38〜42（水面 = GROUND）
- *   橋:       z 37〜43（cx=48 で南北にかかる）
+ *   川:       z 38〜42（両岸は石垣 z38・z42、水 z39〜41。水面は地面より1段低い y9）
+ *   橋:       z 36〜44（cx=48 で南北にかかる）
  */
 
 const GROUND = 10; // 公園の地面の上面。立つのは GROUND+1
 
-/** 赤い太鼓橋（反り橋）。cx,cz を中心に z 方向へかける。red＝朱色, gold＝擬宝珠。 */
-function taikoBridge(b: Build, cx: number, cz: number, red: number, gold: number): void {
-  // z=cz-3..cz+3 の各列で、橋げたの「上面」と「下面」の高さ（まんなかが高い反り）
-  const top = [11, 12, 13, 13, 13, 12, 11];
-  const bot = [11, 11, 12, 12, 12, 11, 11];
-  for (let i = 0; i < 7; i++) {
-    const z = cz - 3 + i;
-    b.box(cx - 3, bot[i], z, cx + 3, top[i], z, red); // 橋げた（赤・幅7）
-    b.set(cx - 4, top[i] + 1, z, red); // 左の欄干
-    b.set(cx + 4, top[i] + 1, z, red); // 右の欄干
+/**
+ * 赤い太鼓橋（反り橋）。写真に合わせて：
+ *   - まんなかが高く反った、木の床板（茶色）の橋。橋の下はアーチのように空いて、川の水が見える
+ *   - 両側に朱色の欄干（柱＋上の手すり。すき間がある）
+ *   - 両端とまんなかの柱の上に、金の擬宝珠（ぎぼし）
+ *   - 橋げたのふちは濃い色
+ * cx,cz を中心に z 方向へかける。
+ */
+function taikoBridge(
+  b: Build,
+  cx: number,
+  cz: number,
+  red: number,
+  gold: number,
+  plank: number,
+  dark: number,
+  stoneW: number,
+): void {
+  // z=cz-4..cz+4 の各列の床の高さ（まんなかが高い反り）
+  const deck = [11, 11, 12, 12, 13, 12, 12, 11, 11];
+  for (let i = 0; i < deck.length; i++) {
+    const z = cz - 4 + i;
+    const y = deck[i];
+    b.box(cx - 2, y, z, cx + 2, y, z, plank); // 木の床板（はば5）
+    b.set(cx - 3, y, z, dark); // 橋げたのふち（濃い色）
+    b.set(cx + 3, y, z, dark);
+    b.set(cx - 3, y + 2, z, red); // 上の手すり
+    b.set(cx + 3, y + 2, z, red);
+    // 柱（1つおき）＝手すりの下にすき間ができる
+    if (i % 2 === 0) {
+      b.set(cx - 3, y + 1, z, red);
+      b.set(cx + 3, y + 1, z, red);
+    }
+    // 床の下：岸の上は石の土台、川の上はアーチの下側（濃い色）だけにして、下を空ける
+    if (y > 11) b.box(cx - 3, y - 1, z, cx + 3, y - 1, z, dark);
+    else b.box(cx - 3, 9, z, cx + 3, y - 1, z, stoneW);
   }
-  // 擬宝珠（ぎぼし）＝四隅の親柱の上に金のたま
-  for (const z of [cz - 3, cz + 3]) {
-    b.set(cx - 4, 13, z, gold);
-    b.set(cx + 4, 13, z, gold);
+  // 擬宝珠（ぎぼし）＝両端とまんなかの柱の上に金のたま
+  for (const i of [0, 4, 8]) {
+    const z = cz - 4 + i;
+    b.set(cx - 3, deck[i] + 3, z, gold);
+    b.set(cx + 3, deck[i] + 3, z, gold);
   }
 }
 
-/** 柳（やなぎ）：幹＋垂れ下がる緑の枝。 */
+/**
+ * 柳（やなぎ）。写真に合わせて：高い幹の上に、明るい黄緑の葉が
+ * 長いすだれのように、地面の近くまで垂れ下がる。
+ */
 function willow(b: Build, x: number, z: number, trunkH: number, wood: number, leaf: number): void {
   for (let i = 1; i <= trunkH; i++) b.set(x, GROUND + i, z, wood);
   const t = GROUND + trunkH; // 幹の上
-  b.disc(x, z, t, 2, leaf); // 樹冠（広め）
+  b.disc(x, z, t, 3, leaf); // 樹冠（広い）
   b.disc(x, z, t + 1, 2, leaf);
   b.set(x, t + 2, z, leaf);
-  // 垂れ下がる枝（四方に下げる）
-  for (const [dx, dz] of [
-    [-2, 0],
-    [2, 0],
-    [0, -2],
-    [0, 2],
-    [-2, -1],
-    [2, 1],
-  ]) {
-    b.set(x + dx, t - 1, z + dz, leaf);
-    b.set(x + dx, t - 2, z + dz, leaf);
+  // 垂れ下がる枝：樹冠のいちばん外のふちから、すき間をあけて下へ（すだれのように）。
+  // 幹が見えるよう、内側には垂らさない
+  for (let dx = -3; dx <= 3; dx++) {
+    for (let dz = -3; dz <= 3; dz++) {
+      const r2 = dx * dx + dz * dz;
+      if (r2 < 8 || r2 > 10) continue; // いちばん外のふちだけ
+      if ((dx + dz) % 2 !== 0) continue; // 1つおき
+      const len = Math.abs(dx) === 3 ? 4 : 3;
+      for (let k = 1; k <= len; k++) b.set(x + dx, t - k, z + dz, leaf);
+    }
   }
 }
 
-/** 純信とお馬の像（かんざしの恋物語の2人。お馬の髪に金のかんざし）。 */
+/**
+ * 純信とお馬の像（かんざしの恋物語の2人）。写真に合わせて：
+ * 低い石の台座の上に、銅像の2人が並んで立つ。お馬の手に金のかんざし。
+ */
 function coupleMonument(
   b: Build,
   x: number,
@@ -68,22 +101,21 @@ function coupleMonument(
   stoneW: number,
   bronze: number,
   dark: number,
-  pink: number,
   gold: number,
 ): void {
-  b.box(x - 1, GROUND + 1, z - 1, x + 1, GROUND + 1, z + 1, stoneW); // 台座
-  // 純信（左・こげ茶の衣）
-  b.set(x - 1, GROUND + 2, z, bronze);
-  b.set(x - 1, GROUND + 3, z, bronze);
-  b.set(x - 1, GROUND + 4, z, dark); // 頭
-  // お馬（右・桃色の着物）
-  b.set(x + 1, GROUND + 2, z, pink);
-  b.set(x + 1, GROUND + 3, z, pink);
-  b.set(x + 1, GROUND + 4, z, dark); // 頭
-  b.set(x + 1, GROUND + 5, z, gold); // かんざし（物語の主役）
+  b.box(x - 3, GROUND + 1, z - 1, x + 3, GROUND + 2, z + 1, stoneW); // 低い石の台座
+  kimonoFigure(b, x - 2, GROUND + 2, z, 1, bronze, dark, 'stand'); // 純信（左）
+  kimonoFigure(b, x + 2, GROUND + 2, z, 1, bronze, dark, 'reach'); // お馬（右。手を前へ）
+  b.set(x, GROUND + 9, z + 2, gold); // お馬がさし出した手に金のかんざし（物語の主役）
 }
 
-/** からくり時計（毎正時に人形が出て踊る名物の時計台）。cz+ 側＝手前を正面に。 */
+/**
+ * からくり時計（毎正時に人形が出て踊る名物の時計台）。写真に合わせて：
+ *   - 下は木の板張り、上に白いしっくいの帯
+ *   - 広い木の台（ベランダ）の上に、扉が左右に開いた人形の舞台（色とりどりの人形）
+ *   - 白壁と木の柱の上の階、2段の瓦屋根
+ * cz+ 側＝手前を正面に。
+ */
 function karakuriClock(
   b: Build,
   cx: number,
@@ -91,48 +123,79 @@ function karakuriClock(
   white: number,
   dark: number,
   gold: number,
-  stoneW: number,
+  wood: number,
   red: number,
   pink: number,
-  roofId: number,
+  blue: number,
 ): void {
-  b.box(cx - 1, GROUND + 1, cz - 1, cx + 1, GROUND + 2, cz + 1, stoneW); // 土台
-  b.box(cx - 1, GROUND + 3, cz - 1, cx + 1, GROUND + 6, cz + 1, white); // 塔（白）
-  // 時計の文字盤（正面。濃い盤＋金の針）
-  b.box(cx - 1, GROUND + 4, cz + 1, cx + 1, GROUND + 5, cz + 1, dark);
-  b.set(cx, GROUND + 5, cz + 1, gold);
-  // 人形の舞台＋よさこいを踊る人形（赤・桃）
-  b.box(cx - 2, GROUND + 7, cz - 2, cx + 2, GROUND + 7, cz + 2, dark); // 舞台
-  b.set(cx - 1, GROUND + 8, cz, red);
-  b.set(cx, GROUND + 8, cz, pink);
-  b.set(cx + 1, GROUND + 8, cz, red);
-  // 屋根
-  b.box(cx - 1, GROUND + 9, cz - 1, cx + 1, GROUND + 9, cz + 1, roofId);
-  b.set(cx, GROUND + 10, cz, roofId);
+  // 下の段：木の板張り＋白い帯
+  b.box(cx - 1, GROUND + 1, cz - 1, cx + 1, GROUND + 3, cz + 1, wood);
+  b.box(cx - 1, GROUND + 4, cz - 1, cx + 1, GROUND + 4, cz + 1, white);
+  // 広い木の台（人形の舞台のゆか）
+  b.box(cx - 2, GROUND + 5, cz - 2, cx + 2, GROUND + 5, cz + 2, wood);
+  // 人形の舞台：うしろと横は木、前は開いている
+  b.box(cx - 1, GROUND + 6, cz - 1, cx + 1, GROUND + 7, cz - 1, wood);
+  b.box(cx - 1, GROUND + 6, cz, cx - 1, GROUND + 7, cz, white);
+  b.box(cx + 1, GROUND + 6, cz, cx + 1, GROUND + 7, cz, white);
+  // 左右に開いた扉
+  b.box(cx - 2, GROUND + 6, cz + 1, cx - 2, GROUND + 7, cz + 1, wood);
+  b.box(cx + 2, GROUND + 6, cz + 1, cx + 2, GROUND + 7, cz + 1, wood);
+  // よさこいを踊る人形（赤・桃・青）
+  b.set(cx - 1, GROUND + 6, cz + 1, red);
+  b.set(cx, GROUND + 6, cz + 1, pink);
+  b.set(cx + 1, GROUND + 6, cz + 1, blue);
+  b.set(cx, GROUND + 6, cz, red);
+  // 1段目の屋根
+  b.box(cx - 2, GROUND + 8, cz - 2, cx + 2, GROUND + 8, cz + 2, dark);
+  // 上の階：白壁＋木の柱、正面に時計
+  b.box(cx - 1, GROUND + 9, cz - 1, cx + 1, GROUND + 10, cz + 1, white);
+  for (const [dx, dz] of [
+    [-1, -1],
+    [1, -1],
+    [-1, 1],
+    [1, 1],
+  ]) {
+    b.box(cx + dx, GROUND + 9, cz + dz, cx + dx, GROUND + 10, cz + dz, wood);
+  }
+  b.set(cx, GROUND + 10, cz + 1, dark); // 時計の文字盤
+  b.set(cx, GROUND + 9, cz + 1, gold); // 針
+  // 2段目の屋根（大きく張り出し、てっぺんに棟）
+  b.box(cx - 2, GROUND + 11, cz - 2, cx + 2, GROUND + 11, cz + 2, dark);
+  b.box(cx - 1, GROUND + 12, cz - 1, cx + 1, GROUND + 12, cz + 1, dark);
+  b.box(cx, GROUND + 13, cz - 1, cx, GROUND + 13, cz + 1, dark);
 }
 
-/** 路面電車（緑と白の2色＋ガラス窓＋パンタグラフ）。x0 から +x 方向へ6ブロック。 */
+/**
+ * 路面電車（写真に合わせて：下が緑、窓のまわりがクリーム色、屋根が緑。屋根の上にパンタグラフ）。
+ * x0 から +x 方向へ10ブロック。
+ */
 function tram(
   b: Build,
   x0: number,
   z0: number,
   green: number,
-  white: number,
+  cream: number,
   glassId: number,
   dark: number,
-  wood: number,
 ): void {
-  const x1 = x0 + 5;
+  const x1 = x0 + 9;
   const z1 = z0 + 1;
-  b.box(x0, GROUND + 1, z0, x1, GROUND + 1, z1, dark); // 足回り
+  b.box(x0 + 1, GROUND + 1, z0, x1 - 1, GROUND + 1, z1, dark); // 足回り
   b.box(x0, GROUND + 2, z0, x1, GROUND + 2, z1, green); // 車体（下＝緑）
-  b.box(x0, GROUND + 3, z0, x1, GROUND + 3, z1, white); // 車体（上＝白）
+  b.box(x0, GROUND + 3, z0, x1, GROUND + 4, z1, cream); // 車体（窓のまわり＝クリーム）
   for (let x = x0 + 1; x <= x1 - 1; x++) {
-    b.set(x, GROUND + 3, z0, glassId); // 窓
-    b.set(x, GROUND + 3, z1, glassId);
+    b.box(x, GROUND + 3, z0, x, GROUND + 4, z0, glassId); // 窓
+    b.box(x, GROUND + 3, z1, x, GROUND + 4, z1, glassId);
   }
-  b.box(x0, GROUND + 4, z0, x1, GROUND + 4, z1, dark); // 屋根
-  b.box(x0 + 2, GROUND + 5, z0, x0 + 2, GROUND + 5, z1, wood); // パンタグラフ
+  // 前と後ろの大きな窓
+  b.set(x0, GROUND + 4, z0, glassId);
+  b.set(x0, GROUND + 4, z1, glassId);
+  b.set(x1, GROUND + 4, z0, glassId);
+  b.set(x1, GROUND + 4, z1, glassId);
+  b.box(x0, GROUND + 5, z0, x1, GROUND + 5, z1, green); // 屋根（緑）
+  // パンタグラフ（ひし形の骨組み）
+  b.box(x0 + 4, GROUND + 6, z0, x0 + 5, GROUND + 6, z1, dark);
+  b.box(x0 + 3, GROUND + 7, z0, x0 + 6, GROUND + 7, z0, dark);
 }
 
 function build(world: World): void {
@@ -149,7 +212,10 @@ function build(world: World): void {
   const stonewall = b.id('stonewall'); // 台座・土台
   const castlewall = b.id('castlewall'); // 白（時計台・電車・看板）
   const flower = b.id('flower');
-  const roof = b.id('roof'); // ブロンズ（像・時計台の屋根）
+  const bridgeWood = b.id('bridge'); // 橋の床板
+  const bamboo = b.id('bamboo'); // 柳の明るい黄緑
+  const bronze = b.id('bronze'); // 銅像
+  const bronzeDark = b.id('bronzedark'); // 銅像の濃い所
   const glass = b.id('glass'); // 電車の窓
   const sakura = b.id('sakura'); // 桃色（お馬の着物・踊り子人形）
   const road = b.id('road'); // 電車通り
@@ -159,9 +225,11 @@ function build(world: World): void {
   b.box(28, GROUND, 26, 68, GROUND, 37, turf); // 奥の芝
   b.box(28, GROUND, 43, 68, GROUND, 69, turf); // 手前の大きな芝
 
-  // ===== 小さな川（左右に流れる。水面 = GROUND） =====
-  b.box(28, 8, 38, 68, 8, 42, sand); // 川底
-  b.box(28, 9, 38, 68, GROUND, 42, water); // 水
+  // ===== 小さな川（左右に流れる）。写真のように両岸は石垣、水面は地面より1段低い =====
+  b.box(28, 7, 38, 68, 7, 42, sand); // 川底
+  b.box(28, 8, 39, 68, 9, 41, water); // 水（上面 y9）
+  b.box(28, 8, 38, 68, GROUND, 38, stonewall); // 奥の岸の石垣
+  b.box(28, 8, 42, 68, GROUND, 42, stonewall); // 手前の岸の石垣
 
   // ===== 石畳の道（スポーン → 橋 → 奥） =====
   b.box(46, GROUND, 43, 50, GROUND, 69, tile);
@@ -171,16 +239,16 @@ function build(world: World): void {
   b.box(28, GROUND, 29, 68, GROUND, 31, road); // 道路
   b.box(28, GROUND, 29, 68, GROUND, 29, tile); // レール（2本）
   b.box(28, GROUND, 31, 68, GROUND, 31, tile);
-  tram(b, 54, 29, turf, castlewall, glass, tile, wood);
+  tram(b, 54, 29, leaves, lantern, glass, tile);
 
   // ===== 朱色の太鼓橋（名物） =====
-  taikoBridge(b, 48, 40, torii, lantern);
+  taikoBridge(b, 48, 40, torii, lantern, bridgeWood, tile, stonewall);
 
   // ===== 柳（川のそば・公園のふち。中央は開けて建築スペースに） =====
-  willow(b, 33, 46, 4, wood, leaves);
-  willow(b, 63, 46, 4, wood, leaves);
-  willow(b, 33, 34, 4, wood, leaves);
-  willow(b, 63, 34, 4, wood, leaves);
+  willow(b, 34, 46, 6, wood, bamboo);
+  willow(b, 62, 46, 6, wood, bamboo);
+  willow(b, 34, 34, 6, wood, bamboo);
+  willow(b, 62, 34, 6, wood, bamboo);
 
   // ===== 川ぞいの花 =====
   b.set(40, GROUND, 43, flower);
@@ -189,10 +257,10 @@ function build(world: World): void {
   b.set(56, GROUND, 37, flower);
 
   // ===== からくり時計（手前の広場・左のふち。実物は交差点そばの名物） =====
-  karakuriClock(b, 33, 53, castlewall, tile, lantern, stonewall, torii, sakura, roof);
+  karakuriClock(b, 33, 54, castlewall, tile, lantern, wood, torii, sakura, glass);
 
   // ===== 純信とお馬の像（手前の広場・左。かんざしの恋物語） =====
-  coupleMonument(b, 38, 58, stonewall, roof, tile, sakura, lantern);
+  coupleMonument(b, 40, 61, stonewall, bronze, bronzeDark, lantern);
 
   // ===== 看板（入口・右） =====
   b.pillar(56, 64, GROUND + 1, GROUND + 2, wood);
@@ -218,7 +286,7 @@ export const harimayaBridge: SpotDefinition = {
       id: 'bridge',
       name: 'Harimaya Bridge',
       nameJa: 'はりまや橋',
-      region: { min: { x: 44, y: 11, z: 37 }, max: { x: 52, y: 15, z: 43 } },
+      region: { min: { x: 45, y: 9, z: 36 }, max: { x: 51, y: 16, z: 44 } },
       focus: { x: 48, y: 13, z: 40 },
       image: './photos/harimaya-bridge/bridge.jpg',
       guide: {
@@ -231,8 +299,8 @@ export const harimayaBridge: SpotDefinition = {
       id: 'stream',
       name: 'Horikawa Canal',
       nameJa: '堀川',
-      region: { min: { x: 28, y: 9, z: 38 }, max: { x: 68, y: 11, z: 42 } },
-      focus: { x: 36, y: 10, z: 40 },
+      region: { min: { x: 28, y: 8, z: 38 }, max: { x: 68, y: 10, z: 42 } },
+      focus: { x: 40, y: 9, z: 40 },
       image: './photos/harimaya-bridge/stream.jpg',
       guide: {
         canDo: 'You can look at the water under the bridge.',
@@ -244,8 +312,8 @@ export const harimayaBridge: SpotDefinition = {
       id: 'willows',
       name: 'Willow Trees',
       nameJa: '柳',
-      region: { min: { x: 30, y: 11, z: 32 }, max: { x: 66, y: 18, z: 49 } },
-      focus: { x: 33, y: 14, z: 46 },
+      region: { min: { x: 31, y: 11, z: 31 }, max: { x: 65, y: 19, z: 49 } },
+      focus: { x: 34, y: 15, z: 46 },
       image: './photos/harimaya-bridge/willows.jpg',
       guide: {
         canDo: 'You can stand under the willow trees.',
@@ -257,8 +325,8 @@ export const harimayaBridge: SpotDefinition = {
       id: 'clock',
       name: 'Karakuri Clock',
       nameJa: 'からくり時計',
-      region: { min: { x: 30, y: 11, z: 50 }, max: { x: 36, y: 21, z: 56 } },
-      focus: { x: 33, y: 16, z: 53 },
+      region: { min: { x: 31, y: 11, z: 52 }, max: { x: 35, y: 23, z: 56 } },
+      focus: { x: 33, y: 17, z: 54 },
       image: './photos/harimaya-bridge/clock.jpg',
       guide: {
         canDo: 'You can watch the clock show.',
@@ -270,8 +338,8 @@ export const harimayaBridge: SpotDefinition = {
       id: 'couple',
       name: 'Junshin and Ouma',
       nameJa: '純信とお馬の像',
-      region: { min: { x: 36, y: 11, z: 56 }, max: { x: 40, y: 17, z: 60 } },
-      focus: { x: 38, y: 13, z: 58 },
+      region: { min: { x: 37, y: 11, z: 60 }, max: { x: 44, y: 21, z: 63 } },
+      focus: { x: 40, y: 16, z: 61 },
       image: './photos/harimaya-bridge/couple.jpg',
       guide: {
         canDo: 'You can see two statues.',
@@ -283,8 +351,8 @@ export const harimayaBridge: SpotDefinition = {
       id: 'tram',
       name: 'Street Tram',
       nameJa: '路面電車',
-      region: { min: { x: 52, y: 11, z: 27 }, max: { x: 61, y: 16, z: 33 } },
-      focus: { x: 56, y: 13, z: 30 },
+      region: { min: { x: 54, y: 11, z: 29 }, max: { x: 63, y: 17, z: 30 } },
+      focus: { x: 58, y: 14, z: 30 },
       image: './photos/harimaya-bridge/tram.jpg',
       guide: {
         canDo: 'You can see a tram on the street.',

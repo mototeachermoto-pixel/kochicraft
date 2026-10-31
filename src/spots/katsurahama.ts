@@ -22,13 +22,19 @@ const WATER = 14;
 const SAND = 15; // 砂浜の上面（水面+1）
 const TOP = SAND + 1; // 砂の上に物を置く高さ
 
-/** 鳥居（2本の柱＋貫＋笠木）。柱は x±1 ＝浜からの道（z方向）をくぐれる向き。 */
-function toriiGate(b: Build, x: number, baseY: number, z: number, red: number): void {
-  b.pillar(x - 1, z, baseY, baseY + 3, red);
-  b.pillar(x + 1, z, baseY, baseY + 3, red);
-  b.box(x - 1, baseY + 2, z, x + 1, baseY + 2, z, red); // 貫（下をくぐれる高さ）
-  b.box(x - 2, baseY + 4, z, x + 2, baseY + 4, z, red); // 笠木（はみ出す）
-  b.set(x, baseY + 5, z, red); // 島木の中央
+/**
+ * 鳥居（写真に合わせて：朱色の2本の柱と貫、その上に朱色の島木と、
+ * はしが反り上がった黒い笠木）。柱は x±1 ＝浜からの道（z方向）をくぐれる向き。
+ */
+function toriiGate(b: Build, x: number, baseY: number, z: number, red: number, dark: number): void {
+  b.pillar(x - 1, z, baseY, baseY + 4, red);
+  b.pillar(x + 1, z, baseY, baseY + 4, red);
+  b.box(x - 2, baseY + 3, z, x + 2, baseY + 3, z, red); // 貫（柱の外へ少しはみ出す）
+  b.box(x - 2, baseY + 5, z, x + 2, baseY + 5, z, red); // 島木
+  b.box(x - 3, baseY + 6, z, x + 3, baseY + 6, z, dark); // 黒い笠木
+  b.set(x - 3, baseY + 7, z, dark); // はしが反り上がる
+  b.set(x + 3, baseY + 7, z, dark);
+  b.set(x, baseY + 4, z, red); // 額束（まん中の短い柱）
 }
 
 /**
@@ -72,6 +78,8 @@ function build(world: World): void {
   const flower = b.id('flower');
   const brick = b.id('brick');
   const turf = b.id('turf');
+  const darkRock = b.id('dirt'); // 岬の茶色っぽい黒い岩
+  const leaves = b.id('leaves');
 
   // ===== 地面の土台 =====
   b.box(26, 9, 26, 70, 9, 70, stone);
@@ -92,28 +100,47 @@ function build(world: World): void {
 
   // ===== 五色石（桂浜名物）：渚ぞいの帯だけにまとめる＝奥は平らな砂のまま（建築スペース） =====
   const pebbles = [flower, brick, tile, turf, stonewall];
-  for (let z = 45; z <= 50; z++) {
-    for (let x = 30; x <= 66; x++) {
-      if ((x * 13 + z * 7) % 11 === 0) {
+  // 写真のように、色とりどりの小石が浜にたくさん散らばる
+  for (let z = 45; z <= 56; z++) {
+    for (let x = 28; x <= 68; x++) {
+      if ((x * 13 + z * 7) % 4 === 0) {
         b.set(x, SAND, z, pebbles[(x + z) % pebbles.length]);
       }
     }
   }
 
   // ===== 岬の岩（龍頭岬・龍王岬）：左右に岩山＋ふっくらした松 =====
-  b.mound(30, 33, 11, 23, 6, stone, grass);
-  b.pine(30, 23, 33, 4, 4, 2);
-  b.pine(28, 20, 37, 3, 3, 1);
-  b.mound(66, 33, 11, 22, 6, stone, grass);
-  b.pine(66, 22, 33, 4, 4, 2);
+  // 写真のように、茶色っぽい黒い岩の崖の上を、こんもりした松の森がおおう
+  b.mound(30, 33, 11, 23, 6, darkRock, grass);
+  b.mound(66, 33, 11, 22, 6, darkRock, grass);
+  for (const [x, y, z] of [
+    [30, 23, 33],
+    [27, 20, 30],
+    [33, 20, 30],
+    [28, 19, 37],
+    [66, 22, 33],
+    [63, 20, 30],
+    [69, 19, 31],
+    [68, 19, 37],
+  ] as const) {
+    b.pine(x, y, z, 3, 3, 2);
+  }
+  b.sphere(31, 21, 36, 2, leaves); // こんもりした木
+  b.sphere(64, 21, 36, 2, leaves);
 
   // ===== 竜王宮（龍王岬の赤い鳥居＋小さなほこら。浜から石の道でわたり、鳥居をくぐってお参り） =====
-  b.mound(60, 39, 11, SAND, 4, stone, stone); // 岬の岩（上面 = SAND）
-  b.box(60, 11, 41, 60, SAND, 44, stone); // 浜からわたる石の道（鳥居へ続く）
-  toriiGate(b, 60, TOP, 40, torii); // 道の上に立つ鳥居（くぐれる）
-  b.box(59, SAND, 37, 61, SAND, 37, stone); // ほこらの足場
-  b.box(59, TOP, 37, 61, TOP, 37, torii); // ほこら（小さな社）
-  b.box(59, TOP + 1, 37, 61, TOP + 1, 37, tile); // ほこらの屋根
+  b.mound(60, 38, 11, SAND, 5, darkRock, stone); // 岬の黒い岩（上面 = SAND）
+  b.box(58, 11, 34, 62, SAND, 38, stone); // ほこらの立つ岩の台
+  b.box(60, 11, 41, 60, SAND, 44, stonewall); // 浜からわたる石だたみの道（鳥居へ続く）
+  b.box(59, SAND, 39, 61, SAND, 40, stonewall);
+  toriiGate(b, 60, TOP, 40, torii, tile); // 道の上に立つ鳥居（くぐれる）
+  // ほこら（写真のように、朱色の小さな社。屋根は赤茶で、前に白いしめなわ）
+  b.box(59, TOP, 35, 61, TOP + 1, 37, torii);
+  b.box(60, TOP, 37, 60, TOP, 37, wood); // 扉
+  b.set(60, TOP + 1, 38, castlewall); // しめなわ
+  b.box(58, TOP + 2, 34, 62, TOP + 2, 38, roof); // 屋根（張り出す）
+  b.box(59, TOP + 3, 34, 61, TOP + 3, 38, roof);
+  b.box(60, TOP + 4, 34, 60, TOP + 4, 38, roof); // 棟
   b.set(59, TOP, 38, stonewall); // 参道の石（左右）
   b.set(61, TOP, 38, stonewall);
 

@@ -45,6 +45,37 @@ export class Build {
           if (dx * dx + dy * dy + dz * dz <= r2) this.set(cx + dx, cy + dy, cz + dz, id);
   }
 
+  /**
+   * 丸い岩（苔つき）。半径rの丸い石の上の面に、ところどころ苔をのせる。
+   * 写真の「苔むした丸い岩」に近づけるための部品。moss を省けば苔なし。
+   */
+  boulder(cx: number, cy: number, cz: number, r: number, stoneId: number, moss?: number): void {
+    this.sphere(cx, cy, cz, r, stoneId);
+    if (moss === undefined) return;
+    const r2 = (r + 0.4) * (r + 0.4);
+    for (let dz = -r; dz <= r; dz++) {
+      for (let dx = -r; dx <= r; dx++) {
+        // その列の、いちばん上のブロックの高さ
+        let top = -1;
+        for (let dy = r; dy >= -r; dy--) {
+          if (dx * dx + dy * dy + dz * dz <= r2) {
+            top = dy;
+            break;
+          }
+        }
+        if (top < 0) continue;
+        // 3つに2つの割合で苔（全部を緑にせず、石の色も見えるように）
+        if (((cx + dx) * 7 + (cz + dz) * 3) % 3 !== 0) this.set(cx + dx, cy + top, cz + dz, moss);
+      }
+    }
+  }
+
+  /** 広葉樹（丸い葉のかたまり）。幹の高さ trunkH、葉の半径 r */
+  roundTree(x: number, groundY: number, z: number, trunkH: number, r: number, wood: number, leaf: number): void {
+    for (let i = 1; i <= trunkH; i++) this.set(x, groundY + i, z, wood);
+    this.sphere(x, groundY + trunkH + r - 1, z, r, leaf);
+  }
+
   /** 円板（水平・半径r） */
   disc(cx: number, cz: number, y: number, r: number, id: number): void {
     const r2 = (r + 0.4) * (r + 0.4);

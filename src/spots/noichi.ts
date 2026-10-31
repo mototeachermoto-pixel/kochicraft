@@ -32,72 +32,119 @@ function fence(b: Build, x0: number, z0: number, x1: number, z1: number, post: n
   }
 }
 
-/** ハシビロコウ（「動かない鳥」。灰色の体＋大きなくちばし）。-z を向く。 */
+/**
+ * ハシビロコウ（「動かない鳥」）。写真に合わせて、背が高く、青みがかった灰色の体に
+ * とても大きな黄色っぽいくちばし。+z（園路）を向いてじっと立つ。
+ */
 function shoebill(b: Build, x: number, z: number, grey: number, beak: number, dark: number): void {
-  b.set(x, G + 1, z, dark); // 細い脚
-  b.set(x, G + 2, z, grey); // 体
-  b.set(x - 1, G + 2, z, grey); // つばさ
-  b.set(x + 1, G + 2, z, grey);
-  b.set(x, G + 3, z, grey); // 頭
-  b.set(x, G + 3, z - 1, beak); // 大きなくちばし
+  b.box(x, G + 1, z, x, G + 3, z, dark); // 細く長い脚
+  b.box(x + 1, G + 1, z, x + 1, G + 3, z, dark);
+  b.box(x, G + 4, z - 1, x + 1, G + 6, z, grey); // 体
+  b.box(x, G + 3, z - 2, x + 1, G + 4, z - 2, grey); // 尾羽
+  b.box(x, G + 7, z, x + 1, G + 7, z, grey); // 首
+  b.box(x, G + 8, z, x + 1, G + 9, z + 1, grey); // 大きな頭
+  b.box(x, G + 8, z + 2, x + 1, G + 8, z + 3, beak); // くつのような大きなくちばし
+  b.set(x, G + 9, z + 1, dark); // 目
 }
 
-/** カピバラ（ずんぐりした茶色の体＋四角い頭）。-z を向く。 */
-function capybara(b: Build, x: number, z: number, brown: number): void {
-  b.box(x - 1, G + 1, z - 1, x, G + 2, z + 1, brown); // ずんぐりした体（脚は低くて見えない）
-  b.box(x - 1, G + 2, z - 2, x, G + 2, z - 2, brown); // 四角い頭
+/** カピバラ（写真に合わせて：ずんぐりした茶色の体＋四角い大きな頭）。+x を向く。 */
+function capybara(b: Build, x: number, z: number, brown: number, dark: number): void {
+  b.box(x - 2, G + 1, z, x + 1, G + 2, z + 1, brown); // ずんぐりした体
+  b.box(x + 2, G + 1, z, x + 3, G + 2, z + 1, brown); // 四角い大きな頭
+  b.set(x + 3, G + 2, z, dark); // 鼻
+  b.set(x + 2, G + 3, z, dark); // 小さな耳
+  b.set(x + 2, G + 3, z + 1, dark);
 }
 
-/** チンパンジーの遊び場（木のやぐら）＋上で遊ぶチンパンジー（こげ茶）。 */
-function chimpTower(b: Build, x: number, z: number, wood: number, dark: number): void {
-  b.box(x - 2, G + 1, z - 2, x - 2, G + 4, z - 2, wood); // やぐらの脚 4本
-  b.box(x + 2, G + 1, z - 2, x + 2, G + 4, z - 2, wood);
-  b.box(x - 2, G + 1, z + 2, x - 2, G + 4, z + 2, wood);
-  b.box(x + 2, G + 1, z + 2, x + 2, G + 4, z + 2, wood);
+/** チンパンジーの遊び場（木のやぐら）＋上で遊ぶ黒いチンパンジー（肌色の顔）。 */
+function chimpTower(b: Build, x: number, z: number, wood: number, black: number, skin: number): void {
+  for (const [dx, dz] of [
+    [-2, -2],
+    [2, -2],
+    [-2, 2],
+    [2, 2],
+  ] as const) {
+    b.box(x + dx, G + 1, z + dz, x + dx, G + 4, z + dz, wood); // やぐらの脚
+  }
   b.box(x - 2, G + 5, z - 2, x + 2, G + 5, z + 2, wood); // 上の床
-  b.set(x, G + 6, z, dark); // チンパンジー（体）
-  b.set(x, G + 7, z, dark); // 頭
-  b.set(x + 1, G + 6, z, dark); // うで
+  b.box(x - 3, G + 4, z, x - 3, G + 9, z, wood); // 登るロープの柱
+  // すわっているチンパンジー
+  b.box(x, G + 6, z, x + 1, G + 7, z, black); // 体
+  b.box(x - 1, G + 6, z, x - 1, G + 7, z, black); // うで
+  b.box(x + 2, G + 6, z, x + 2, G + 7, z, black);
+  b.box(x, G + 8, z, x + 1, G + 9, z, black); // 頭
+  b.set(x, G + 8, z + 1, skin); // 顔
+  b.set(x + 1, G + 8, z + 1, skin);
 }
 
-/** ワオキツネザル（灰色の体＋白い顔＋白黒しまの立てたしっぽ）。 */
+/** ワオキツネザル（灰色の体＋白い顔＋白と黒のしまの長いしっぽを立てる）。 */
 function lemur(b: Build, x: number, z: number, grey: number, white: number, dark: number): void {
-  b.set(x, G + 1, z, grey); // 体
-  b.set(x, G + 2, z, white); // 白い顔
-  b.set(x, G + 1, z + 1, dark); // 立てた長いしっぽ（しま）
-  b.set(x, G + 2, z + 1, white);
-  b.set(x, G + 3, z + 1, dark);
+  b.box(x, G + 1, z, x + 1, G + 2, z, grey); // 体
+  b.set(x + 2, G + 2, z, white); // 白い顔
+  b.set(x + 2, G + 3, z, dark); // 耳
+  for (let i = 0; i < 5; i++) b.set(x - 1, G + 1 + i, z, i % 2 === 0 ? white : dark); // しまのしっぽ
 }
 
-/** レッサーパンダ（赤茶の体＋白い顔＋濃いしっぽ）。y＝乗っている台の上。 */
+/** レッサーパンダ（赤茶の体＋白い顔＋赤茶と濃い色のしまのしっぽ）。y＝乗っている台の上。 */
 function redPanda(b: Build, x: number, y: number, z: number, red: number, white: number, dark: number): void {
-  b.set(x, y, z, red); // 体
-  b.set(x, y, z - 1, white); // 顔
-  b.set(x, y, z + 1, dark); // しっぽ
+  b.box(x - 1, y, z, x, y + 1, z, red); // 体
+  b.set(x + 1, y + 1, z, white); // 白い顔
+  b.set(x + 1, y + 2, z, red); // 耳
+  b.set(x - 1, y, z, dark); // 足
+  for (let i = 0; i < 3; i++) b.set(x - 2 - i, y + 1, z, i % 2 === 0 ? red : dark); // しまのしっぽ
 }
 
-/** キリン（黄色・長い首＋模様）。 */
-function giraffe(b: Build, x: number, z: number, tan: number, spot: number, dark: number): void {
-  for (const [dx, dz] of [[-1, 0], [1, 0], [-1, 2], [1, 2]] as const) b.box(x + dx, G + 1, z + dz, x + dx, G + 3, z + dz, tan); // 長い脚
-  b.box(x - 1, G + 4, z, x + 1, G + 4, z + 2, tan); // 体
-  b.box(x, G + 5, z, x, G + 8, z, tan); // 長い首
-  b.set(x, G + 9, z, tan); // 頭
-  b.set(x, G + 9, z - 1, tan); // 鼻
-  b.set(x, G + 10, z, dark); // 角
-  b.set(x - 1, G + 4, z + 1, spot); // 模様
-  b.set(x + 1, G + 4, z + 2, spot);
-  b.set(x, G + 7, z, spot);
+/**
+ * キリン（写真に合わせて：オレンジ茶の地に、クリーム色のあみ目もよう。長い脚と長い首）。
+ * +x を向く（園路から横向きに見える）。高さ約13マス。
+ */
+function giraffe(b: Build, x: number, z: number, brown: number, cream: number, dark: number): void {
+  const coat = (xx: number, yy: number, zz: number) => ((xx + yy + zz) % 2 === 0 ? brown : cream);
+  for (const lx of [x - 2, x + 1]) {
+    for (const lz of [z, z + 1]) b.box(lx, G + 1, lz, lx, G + 4, lz, cream); // 長い脚（4本）
+  }
+  for (let xx = x - 2; xx <= x + 1; xx++) {
+    for (let yy = G + 5; yy <= G + 6; yy++) {
+      for (let zz = z; zz <= z + 1; zz++) b.set(xx, yy, zz, coat(xx, yy, zz)); // 体（あみ目もよう）
+    }
+  }
+  // 長い首（ななめ前へのびる）
+  const neck: [number, number][] = [
+    [x + 1, G + 7],
+    [x + 1, G + 8],
+    [x + 2, G + 9],
+    [x + 2, G + 10],
+    [x + 2, G + 11],
+  ];
+  for (const [nx, ny] of neck) b.set(nx, ny, z, coat(nx, ny, z));
+  b.box(x + 2, G + 12, z, x + 3, G + 12, z, brown); // 頭
+  b.set(x + 4, G + 12, z, cream); // 鼻先
+  b.set(x + 2, G + 13, z, dark); // 角
+  b.set(x - 3, G + 6, z, dark); // しっぽ
+  b.set(x - 3, G + 5, z, dark);
 }
 
-/** シマウマ（白＋黒のしま）。 */
-function zebra(b: Build, x: number, z: number, white: number, stripe: number): void {
-  for (const [dx, dz] of [[-1, 0], [1, 0], [-1, 2], [1, 2]] as const) b.set(x + dx, G + 1, z + dz, white); // 脚
-  b.box(x - 1, G + 2, z, x + 1, G + 3, z + 2, white); // 体
-  b.set(x, G + 3, z, stripe); // しま
-  b.set(x - 1, G + 2, z + 1, stripe);
-  b.set(x + 1, G + 2, z + 1, stripe);
-  b.box(x, G + 3, z - 1, x, G + 4, z - 1, white); // 首・頭
-  b.set(x, G + 4, z - 2, white); // 鼻
+/** シマウマ（写真に合わせて：白と黒のたてじま。黒いたてがみと鼻）。+x を向く。 */
+function zebra(b: Build, x: number, z: number, white: number, black: number): void {
+  const stripe = (xx: number) => ((xx % 2) + 2) % 2 === 0 ? white : black;
+  for (const lx of [x - 2, x + 1]) {
+    for (const lz of [z, z + 1]) b.box(lx, G + 1, lz, lx, G + 2, lz, stripe(lx + 1)); // 脚
+  }
+  for (let xx = x - 2; xx <= x + 1; xx++) b.box(xx, G + 3, z, xx, G + 4, z + 1, stripe(xx)); // 体のたてじま
+  b.box(x + 2, G + 4, z, x + 2, G + 5, z + 1, white); // 首
+  b.set(x + 2, G + 6, z, black); // たてがみ
+  b.box(x + 3, G + 5, z, x + 3, G + 5, z + 1, white); // 頭
+  b.set(x + 4, G + 5, z, black); // 黒い鼻
+  b.set(x - 3, G + 4, z, black); // しっぽ
+}
+
+/** アカシアの木（写真のサバンナの木：細い幹の上に、平らで横に広い葉）。 */
+function acacia(b: Build, x: number, z: number, wood: number, leaf: number): void {
+  b.box(x, G + 1, z, x, G + 5, z, wood); // 幹
+  b.set(x - 1, G + 5, z, wood); // 枝
+  b.set(x + 1, G + 6, z, wood);
+  b.disc(x, z, G + 7, 5, leaf); // 平らで広い葉
+  b.disc(x, z, G + 8, 3, leaf);
 }
 
 function build(world: World): void {
@@ -116,6 +163,9 @@ function build(world: World): void {
   const roof = b.id('roof'); // 濃い茶（チンパンジー・ゲート梁）
   const flower = b.id('flower');
   const bamboo = b.id('bamboo'); // アシ・カピバラの笹
+  const turf = b.id('turf'); // サバンナの草
+  const dirt = b.id('dirt'); // サバンナの土・カピバラ
+  const black = b.id('bronzedark'); // チンパンジーの黒い毛
 
   // ===== 地面（広い園内） =====
   b.box(6, 8, 6, 90, 9, 90, stone);
@@ -129,33 +179,38 @@ function build(world: World): void {
   // ハシビロコウの湿地（左奥。水辺でじっと動かない）
   fence(b, 12, 12, 40, 40, wood);
   b.box(20, 9, 28, 28, 9, 36, water); // 水場
-  shoebill(b, 30, 32, stone, lantern, tile);
+  shoebill(b, 30, 32, stone, lantern, tile); // 水辺の手前で、園路の方を向いて立つ
   for (const [rx, rz] of [[19, 29], [29, 36], [21, 37]] as const) b.set(rx, G + 1, rz, bamboo); // 水辺のアシ
   // キリン＋シマウマの混合展示（右奥。実物の名物「2種混合展示」）
-  b.box(56, G, 12, 84, G, 40, sand);
+  // 写真のように、草の広い原っぱ（土のところもある）
+  b.box(56, G, 12, 84, G, 40, turf);
+  for (let x = 66; x <= 80; x++) for (let z = 16; z <= 22; z++) if ((x + z) % 3 !== 0) b.set(x, G, z, dirt);
   fence(b, 56, 12, 84, 40, wood);
-  giraffe(b, 70, 24, sand, brick, tile);
-  zebra(b, 62, 30, castlewall, tile);
-  zebra(b, 76, 32, castlewall, tile);
-  b.pine(78, G, 18, 5, 4, 2); // 食べる木
+  acacia(b, 74, 19, wood, leaves); // 大きなアカシアの木（木かげにシマウマ）
+  giraffe(b, 62, 26, brick, lantern, tile);
+  giraffe(b, 68, 31, brick, lantern, tile);
+  zebra(b, 61, 35, castlewall, tile);
+  zebra(b, 77, 30, castlewall, tile);
+  zebra(b, 72, 21, castlewall, tile); // 木かげで休む
   // チンパンジーの森（左・中ほど。木のやぐらで遊ぶ）
   fence(b, 12, 56, 40, 84, wood);
-  chimpTower(b, 26, 70, wood, roof);
-  b.set(31, G + 1, 76, roof); // 地面のチンパンジー
-  b.set(31, G + 2, 76, roof);
+  chimpTower(b, 26, 70, wood, black, lantern);
+  b.box(31, G + 1, 76, 32, G + 2, 76, black); // 地面のチンパンジー
+  b.box(31, G + 3, 76, 32, G + 4, 76, black);
+  b.set(31, G + 3, 77, lantern); // 顔
   b.set(20, G + 1, 64, stone); // 岩
   // カピバラの水辺（右・中ほど。水と笹が大好き）
   fence(b, 56, 56, 84, 84, wood);
   b.box(64, 9, 66, 72, G, 72, water); // 小さな池
-  capybara(b, 62, 63, brick);
-  capybara(b, 75, 71, brick);
+  capybara(b, 61, 62, dirt, tile);
+  capybara(b, 74, 74, dirt, tile);
   for (const [bx, bz] of [[60, 62], [61, 63], [74, 74], [75, 73]] as const) b.set(bx, G + 1, bz, bamboo); // 大好きな笹
 
   // ===== 通路ぞいの小さな展示（中央） =====
   // ワオキツネザルの島（中央左の池）
   b.box(38, 9, 44, 44, G, 50, water);
   b.box(40, G, 46, 42, G, 48, grass); // 島
-  lemur(b, 41, 47, stone, castlewall, tile);
+  lemur(b, 40, 47, stone, castlewall, tile);
   // レッサーパンダの木（中央右）
   b.box(55, G + 1, 47, 55, G + 3, 47, wood); // 幹
   b.box(54, G + 4, 46, 56, G + 4, 48, wood); // 木の台
@@ -211,8 +266,8 @@ export const noichi: SpotDefinition = {
       id: 'giraffe-zebra',
       name: 'Giraffes and Zebras',
       nameJa: 'キリンとシマウマ（混合展示）',
-      region: { min: { x: 56, y: 10, z: 12 }, max: { x: 84, y: 22, z: 40 } },
-      focus: { x: 70, y: 16, z: 26 },
+      region: { min: { x: 56, y: 10, z: 12 }, max: { x: 84, y: 24, z: 40 } },
+      focus: { x: 65, y: 17, z: 28 },
       image: './photos/noichi/giraffe-zebra.jpg',
       guide: {
         canDo: 'You can see giraffes and zebras together.',

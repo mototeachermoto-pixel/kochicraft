@@ -68,6 +68,10 @@ function build(world: World): void {
   const torii = b.id('torii'); // 赤いカヌー
   const glass = b.id('glass'); // 屋形船の窓
   const roof = b.id('roof'); // 屋形船の屋根
+  const concrete = b.id('stonewall'); // 沈下橋（明るい灰色のコンクリート）
+  const leaves = b.id('leaves'); // 山の森（濃い緑）
+  const bamboo = b.id('bamboo'); // 山の森（明るい緑）
+  const lantern = b.id('lantern'); // 川原の白っぽい小石
 
   // ===== 土台 =====
   b.box(28, 7, 26, 68, 10, 69, stone);
@@ -76,17 +80,25 @@ function build(world: World): void {
   b.box(28, BANK, 53, 68, BANK, 69, grass); // 手前の大きな岸（スポーン側）
   b.box(28, BANK, 26, 68, BANK, 35, grass); // 奥の岸
 
-  // ===== 水際の砂利の河原（実物の川原） =====
-  b.box(30, BANK, 53, 66, BANK, 53, sand); // 手前の水際
-  b.box(30, BANK, 35, 66, BANK, 35, sand); // 奥の水際
+  // ===== 水際の砂利の河原（写真のように、白っぽい砂に小石がまざる広い川原） =====
+  b.box(28, BANK, 53, 68, BANK, 56, sand); // 手前の川原
+  b.box(28, BANK, 33, 68, BANK, 35, sand); // 奥の川原
+  for (let x = 28; x <= 68; x++) {
+    for (const z of [53, 54, 55, 56, 33, 34, 35]) {
+      const h = (x * 7 + z * 11) % 6;
+      if (h === 0) b.set(x, BANK, z, stone); // 灰色の小石
+      else if (h === 3) b.set(x, BANK, z, lantern); // 白っぽい小石
+    }
+  }
 
   // ===== 四万十川（広くて澄んだ青い川） =====
   b.box(28, 8, 36, 68, 8, 52, sand); // 川底（砂＝清流）
   b.box(28, 9, 36, 68, WATER, 52, water); // 水 y9〜10
 
   // ===== 沈下橋（手すりが無く・低く・平ら・狭い＝車1台分のグレーの橋） =====
-  b.box(47, BANK, 36, 49, BANK, 52, road); // デッキ（両岸と同じ高さ・幅3）
-  for (const z of [40, 44, 48]) b.box(47, 9, z, 49, WATER, z, stone); // 橋脚（川の中）
+  // 写真のように、明るい灰色のコンクリートで、水面すれすれに低くまっすぐのびる
+  b.box(47, BANK, 33, 49, BANK, 56, concrete); // デッキ（両岸の川原から川原まで・幅3）
+  for (const z of [39, 43, 47, 51]) b.box(48, 9, z, 48, WATER, z, concrete); // 細い橋脚（川の中）
 
   // ===== カヌー2艘（木＋赤。実物のレンタルカヌーはカラフル） =====
   canoe(b, 36, 41, wood, tile);
@@ -95,15 +107,29 @@ function build(world: World): void {
   // ===== 屋形船（屋根つきの川舟。ゆっくり川を下る） =====
   houseboat(b, 57, 42, wood, castlewall, glass, roof, tile);
 
-  // ===== 奥の緑の山（背景） =====
-  b.mound(34, 30, BANK, 17, 5, stone, grass);
-  b.mound(48, 28, BANK, 19, 6, stone, grass);
-  b.mound(61, 30, BANK, 17, 5, stone, grass);
-  b.pine(34, 17, 30, 3, 3, 1);
-  b.pine(48, 19, 28, 4, 4, 2);
-  b.pine(61, 17, 30, 3, 3, 1);
-  b.pine(40, 13, 32, 3, 3, 1);
-  b.pine(56, 13, 32, 3, 3, 1);
+  // ===== 奥の緑の山（写真のように、木にびっしりおおわれた低い山が横に続く） =====
+  b.mound(32, 28, BANK, 20, 6, leaves, leaves);
+  b.mound(42, 27, BANK, 22, 7, leaves, leaves);
+  b.mound(54, 27, BANK, 21, 7, leaves, leaves);
+  b.mound(65, 28, BANK, 19, 6, leaves, leaves);
+  // 山の表面のもこもこした木（明るい緑と濃い緑をまぜる）
+  for (const [x, z, y, r, light] of [
+    [30, 31, 13, 2, true],
+    [36, 30, 15, 2, false],
+    [41, 31, 14, 2, true],
+    [46, 30, 16, 2, false],
+    [51, 31, 14, 2, true],
+    [57, 30, 15, 2, false],
+    [62, 31, 14, 2, true],
+    [67, 30, 13, 2, false],
+    [39, 28, 19, 2, true],
+    [55, 28, 19, 2, true],
+  ] as const) {
+    b.sphere(x, y, z, r, light ? bamboo : leaves);
+  }
+  // 川原のきわの木
+  b.roundTree(31, BANK, 32, 2, 2, wood, bamboo);
+  b.roundTree(64, BANK, 32, 2, 2, wood, leaves);
 
   // ===== 岸の木と花（建築スペースは中央を空けておく） =====
   b.pine(32, BANK, 60, 4, 4, 2);

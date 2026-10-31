@@ -1,5 +1,6 @@
 import type { World } from '@/world/World';
 import { Build } from './Build';
+import { kimonoFigure } from './statues';
 import type { SpotDefinition } from './SpotDefinition';
 
 /**
@@ -31,7 +32,12 @@ function woodRing(b: Build, x0: number, z0: number, x1: number, z1: number, y: n
   }
 }
 
-/** 白い灯台（足摺岬灯台）。白い塔＋廻縁＋ガラスの灯り部屋＋黒い屋根。 */
+/**
+ * 白い灯台（足摺岬灯台）。写真に合わせて、ほっそりと高い白い塔：
+ *   - 細く高い白い塔（ぜんぶ白）。てっぺん近くに白い手すりのベランダ
+ *   - 小さなガラスの灯り部屋と、白い丸屋根
+ *   - 根もとに小さな白い建物、まわりを低い石の塀がかこむ
+ */
 function lighthouse(
   b: Build,
   cx: number,
@@ -41,26 +47,42 @@ function lighthouse(
   glass: number,
   light: number,
   dark: number,
-  wood: number,
+  stoneW: number,
 ): void {
-  b.box(cx - 2, by, cz - 2, cx + 2, by, cz + 2, white); // 土台
-  b.box(cx - 1, by, cz - 1, cx + 1, by + 8, cz + 1, white); // 白い塔（やや高め）
-  woodRing(b, cx - 2, cz - 2, cx + 2, cz + 2, by + 8, wood); // 廻縁
-  b.box(cx - 1, by + 9, cz - 1, cx + 1, by + 10, cz + 1, glass); // 灯り部屋
-  b.set(cx, by + 9, cz, light);
-  b.box(cx - 1, by + 11, cz - 1, cx + 1, by + 11, cz + 1, dark); // 屋根
-  b.set(cx, by + 12, cz, dark);
+  // まわりの低い石の塀（丸く囲む）
+  for (let dx = -5; dx <= 5; dx++) {
+    for (let dz = -5; dz <= 5; dz++) {
+      const d2 = dx * dx + dz * dz;
+      if (d2 >= 20 && d2 <= 27 && !(dz === 5 && Math.abs(dx) <= 1)) b.set(cx + dx, by, cz + dz, stoneW);
+    }
+  }
+  b.box(cx + 2, by, cz - 1, cx + 3, by + 1, cz + 1, white); // 根もとの小さな白い建物
+  b.box(cx - 1, by, cz - 1, cx + 1, by + 11, cz + 1, white); // 細く高い白い塔
+  b.box(cx - 2, by + 11, cz - 2, cx + 2, by + 11, cz + 2, white); // ベランダの床
+  woodRing(b, cx - 2, cz - 2, cx + 2, cz + 2, by + 12, white); // 白い手すり
+  b.set(cx, by + 12, cz, white);
+  b.box(cx - 1, by + 13, cz - 1, cx + 1, by + 13, cz + 1, glass); // ガラスの灯り部屋
+  b.set(cx, by + 13, cz, light);
+  b.box(cx - 1, by + 14, cz - 1, cx + 1, by + 14, cz + 1, white); // 白い丸屋根
+  b.set(cx, by + 15, cz, white);
+  b.set(cx, by + 16, cz, dark); // 避雷針
 }
 
-/** ブロンズの立像（石の台座＋海の方を見る姿）。groundY＝立っている地面の上面。 */
-function statue(b: Build, x: number, z: number, groundY: number, stone: number, bronze: number, dark: number): void {
-  b.box(x - 1, groundY + 1, z - 1, x + 1, groundY + 2, z + 1, stone); // 台座
-  const py = groundY + 2;
-  b.set(x, py + 1, z, dark); // 足元
-  b.set(x, py + 2, z, bronze); // 胴
-  b.set(x, py + 3, z, bronze); // 胸
-  b.set(x - 1, py + 3, z - 1, bronze); // 海の方へ伸ばした腕
-  b.set(x, py + 4, z, dark); // 頭
+/** ジョン万次郎像（写真に合わせて：石を積んだ四角い台座の上に、右手を高く上げて立つ姿）。 */
+function statue(
+  b: Build,
+  x: number,
+  z: number,
+  groundY: number,
+  stone: number,
+  stoneW: number,
+  bronze: number,
+  dark: number,
+): void {
+  b.box(x - 1, groundY + 1, z - 1, x + 1, groundY + 4, z + 1, stoneW); // 石積みの台座
+  b.set(x, groundY + 3, z - 2, dark); // 銘板（海の側）
+  b.box(x - 1, groundY + 5, z - 1, x + 1, groundY + 5, z + 1, stone); // 台座の上の石
+  kimonoFigure(b, x, groundY + 5, z, -1, bronze, dark, 'wave'); // 海（-z）の方へ手を上げる
 }
 
 /** 椿（ツバキ）の木：幹＋緑の茂み＋ピンクの花。groundY＝地面の上面。 */
@@ -87,7 +109,9 @@ function build(world: World): void {
   const wood = b.id('wood'); // 手すり・展望台・遊歩道・看板
   const leaves = b.id('leaves'); // 椿の緑
   const flower = b.id('flower'); // 椿の花（ピンク）
-  const roof = b.id('roof'); // ブロンズ（像）
+  const bronze = b.id('bronze'); // 銅像
+  const bronzeDark = b.id('bronzedark'); // 銅像の濃い所
+  const granite = b.id('lantern'); // 白っぽい花崗岩（白山洞門）
   const road = b.id('road'); // 遊歩道
   const stonewall = b.id('stonewall'); // 白い花崗岩（白山洞門）・碑
 
@@ -109,12 +133,44 @@ function build(world: World): void {
   b.box(45, CLIFF + 1, 35, 45, CLIFF + 2, 38, glass); // 柵（左）
   b.box(51, CLIFF + 1, 35, 51, CLIFF + 2, 38, glass); // 柵（右）
 
-  // ===== 白山洞門ふうの岩のアーチ（崖下の海。白い花崗岩に波が空けた大きな穴） =====
-  b.box(33, 6, 31, 34, 12, 31, stonewall); // 左の脚
-  b.box(38, 6, 31, 39, 12, 31, stonewall); // 右の脚
-  b.box(33, 13, 31, 39, 14, 31, stonewall); // 上のわたし（穴の上）
-  b.set(33, 8, 32, castlewall); // 波しぶき
-  b.set(39, 8, 32, castlewall);
+  // ===== 白山洞門（写真に合わせて：白っぽい花崗岩の大きな岩山に、波が空けた大きな穴） =====
+  // 岩山（左右が厚く、上は丸くでこぼこ）
+  for (let x = 30; x <= 42; x++) {
+    for (let z = 28; z <= 34; z++) {
+      const dx = x - 36;
+      const dz = z - 31;
+      const top = 18 - Math.round(Math.abs(dx) * 0.6 + Math.abs(dz) * 0.9) + ((x * 7 + z * 3) % 2);
+      if (top < 9) continue;
+      b.box(x, 6, z, x, top, z, (x + z) % 3 === 0 ? stonewall : granite);
+    }
+  }
+  // 波が空けた穴（海側から見て、向こうの空が見える）
+  b.box(34, 7, 28, 38, 12, 34, 0);
+  b.box(35, 13, 28, 37, 13, 34, 0);
+  b.box(34, 6, 28, 38, 8, 34, water); // 穴の中の海
+  // 岩のてっぺんの緑
+  b.set(33, 17, 31, leaves);
+  b.set(36, 18, 30, leaves);
+  b.set(39, 17, 32, leaves);
+  // 波しぶき
+  for (const [x, z] of [
+    [30, 35],
+    [33, 35],
+    [39, 35],
+    [42, 35],
+    [36, 27],
+  ] as const) {
+    b.set(x, SEA, z, castlewall);
+  }
+
+  // ===== 崖の面の緑（写真のように、崖は草木におおわれている） =====
+  for (let x = 28; x <= 68; x++) {
+    for (let y = SEA + 1; y <= CLIFF - 1; y++) {
+      const h = (x * 7 + y * 11 + x * y) % 5;
+      if (h === 0 || h === 3) b.set(x, y, 38, leaves);
+      else if (h === 1 && y > 12) b.set(x, y, 38, grass);
+    }
+  }
 
   // ===== 崖下の岩礁＋波しぶき =====
   b.mound(58, 33, 5, 11, 3, stone, tile);
@@ -128,10 +184,10 @@ function build(world: World): void {
   }
 
   // ===== 白い灯台（足摺岬灯台）＝台地の上 =====
-  lighthouse(b, 58, 50, CLIFF + 1, castlewall, glass, lantern, tile, wood);
+  lighthouse(b, 58, 50, CLIFF + 1, castlewall, glass, lantern, tile, stonewall);
 
   // ===== ジョン万次郎像（実物どおり入口広場。海の方を見つめる） =====
-  statue(b, 41, 64, CLIFF, stone, roof, tile);
+  statue(b, 41, 63, CLIFF, stone, stonewall, bronze, bronzeDark);
 
   // ===== 四国最南端の碑（入口広場・右） =====
   b.box(54, CLIFF + 1, 63, 56, CLIFF + 1, 63, stonewall); // 台
@@ -200,8 +256,8 @@ export const ashizuri: SpotDefinition = {
       id: 'lighthouse',
       name: 'Ashizuri Lighthouse',
       nameJa: '足摺岬灯台',
-      region: { min: { x: 55, y: 20, z: 47 }, max: { x: 61, y: 33, z: 53 } },
-      focus: { x: 58, y: 27, z: 50 },
+      region: { min: { x: 55, y: 20, z: 47 }, max: { x: 61, y: 37, z: 53 } },
+      focus: { x: 58, y: 29, z: 50 },
       image: './photos/ashizuri/lighthouse.jpg',
       guide: {
         canDo: 'You can see the white lighthouse.',
@@ -226,8 +282,8 @@ export const ashizuri: SpotDefinition = {
       id: 'arch',
       name: 'Sea Arch (Hakusan Domon)',
       nameJa: '白山洞門',
-      region: { min: { x: 31, y: 6, z: 29 }, max: { x: 41, y: 16, z: 33 } },
-      focus: { x: 36, y: 10, z: 31 },
+      region: { min: { x: 30, y: 6, z: 28 }, max: { x: 42, y: 19, z: 34 } },
+      focus: { x: 36, y: 11, z: 31 },
       image: './photos/ashizuri/arch.jpg',
       guide: {
         canDo: 'You can find a big rock arch in the sea.',
@@ -239,8 +295,8 @@ export const ashizuri: SpotDefinition = {
       id: 'statue',
       name: 'Statue of John Manjiro',
       nameJa: 'ジョン万次郎像',
-      region: { min: { x: 39, y: 20, z: 62 }, max: { x: 43, y: 27, z: 66 } },
-      focus: { x: 41, y: 24, z: 64 },
+      region: { min: { x: 38, y: 20, z: 60 }, max: { x: 44, y: 35, z: 65 } },
+      focus: { x: 41, y: 29, z: 63 },
       image: './photos/ashizuri/manjiro.jpg',
       guide: {
         canDo: 'You can see a bronze statue.',

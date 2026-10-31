@@ -1,5 +1,6 @@
 ﻿import type { World } from '@/world/World';
 import { Build } from './Build';
+import { horseRider, kimonoFigure } from './statues';
 import type { SpotDefinition } from './SpotDefinition';
 
 /**
@@ -42,9 +43,38 @@ function woodRing(b: Build, x0: number, z0: number, x1: number, z1: number, y: n
 }
 
 /**
- * 天守（望楼型・4重＝実物と同じ外観）。下から重ねていく。
- * baseY＝1重目の床。白壁(white)＋瓦(roofTile)＋木(wood)＋ブロンズの鯱(shachi)。
- * 正面（cz+ 側＝手前）にだけ連子窓と千鳥破風を付け、入口側から見栄えよくする。
+ * 三角の破風（はふ）。屋根の上に立つ白い三角の壁＋ふちの濃い瓦。
+ * axis='z' なら z 一定の面（手前・奥向き）、'x' なら x 一定の面（左右向き）。
+ * c＝三角のまん中、y0＝いちばん下の段、w＝段の数（下の段の白は c-w+1〜c+w-1）。
+ */
+function gable(
+  b: Build,
+  axis: 'x' | 'z',
+  c: number,
+  y0: number,
+  plane: number,
+  w: number,
+  white: number,
+  roofTile: number,
+): void {
+  const put = (u: number, y: number, id: number) =>
+    axis === 'z' ? b.set(u, y, plane, id) : b.set(plane, y, u, id);
+  for (let i = 0; i < w; i++) {
+    const half = w - 1 - i;
+    for (let u = c - half; u <= c + half; u++) put(u, y0 + i, white);
+    put(c - half - 1, y0 + i, roofTile);
+    put(c + half + 1, y0 + i, roofTile);
+  }
+  put(c, y0 + w, roofTile); // てっぺん
+}
+
+/**
+ * 天守（望楼型・4重）。写真に合わせて：
+ *   - 石の天守台の上に、白壁＋大きく張り出した濃い瓦屋根を4段
+ *   - 1段目の屋根の四方に、大きな三角の破風（入母屋破風・千鳥破風）
+ *   - 最上階は木の廻縁（ベランダ）と高欄（手すり）が一周し、屋根は前後に三角の破風
+ *   - 棟の両端に鯱（しゃちほこ）
+ * baseY＝天守台のいちばん下。正面＝cz+（手前）。
  */
 function tenshu(
   b: Build,
@@ -55,44 +85,65 @@ function tenshu(
   roofTile: number,
   wood: number,
   shachi: number,
+  stoneWall: number,
 ): void {
-  // ===== 1重目（大入母屋・1〜2階）r=5 =====
-  b.box(cx - 5, baseY, cz - 5, cx + 5, baseY + 3, cz + 5, white); // 白漆喰の胴
-  for (const wx of [cx - 3, cx, cx + 3]) b.set(wx, baseY + 2, cz + 5, wood); // 連子窓
-  b.box(cx - 6, baseY + 4, cz - 6, cx + 6, baseY + 4, cz + 6, roofTile); // 軒（広く張り出す）
-  b.box(cx - 5, baseY + 5, cz - 5, cx + 5, baseY + 5, cz + 5, roofTile);
-  // 千鳥破風（正面）
-  b.box(cx - 1, baseY + 4, cz + 6, cx + 1, baseY + 4, cz + 6, white);
-  b.set(cx, baseY + 5, cz + 6, white);
+  // ===== 天守台（石垣。下がわずかに広い） =====
+  b.box(cx - 6, baseY, cz - 6, cx + 6, baseY + 1, cz + 6, stoneWall);
+  b.box(cx - 5, baseY + 2, cz - 5, cx + 5, baseY + 2, cz + 5, stoneWall);
 
-  // ===== 2重目 r=4 =====
-  const y2 = baseY + 6;
+  // ===== 1重目（白壁・4段）＋窓 =====
+  const y1 = baseY + 3;
+  b.box(cx - 5, y1, cz - 5, cx + 5, y1 + 3, cz + 5, white);
+  for (const d of [-3, 0, 3]) {
+    b.set(cx + d, y1 + 2, cz + 5, wood); // 正面の窓
+    b.set(cx + d, y1 + 2, cz - 5, wood); // 背面
+    b.set(cx + 5, y1 + 2, cz + d, wood); // 右
+    b.set(cx - 5, y1 + 2, cz + d, wood); // 左
+  }
+  // 1重目の屋根（広く張り出す）
+  b.box(cx - 6, y1 + 4, cz - 6, cx + 6, y1 + 4, cz + 6, roofTile);
+  b.box(cx - 5, y1 + 5, cz - 5, cx + 5, y1 + 5, cz + 5, roofTile);
+
+  // ===== 2重目（白壁・2段） =====
+  const y2 = y1 + 6;
   b.box(cx - 4, y2, cz - 4, cx + 4, y2 + 1, cz + 4, white);
-  for (const wx of [cx - 2, cx + 2]) b.set(wx, y2 + 1, cz + 4, wood); // 連子窓
+  // 四方の大きな三角の破風（屋根の上に立つ）
+  gable(b, 'z', cx, y1 + 5, cz + 6, 3, white, roofTile);
+  gable(b, 'z', cx, y1 + 5, cz - 6, 3, white, roofTile);
+  gable(b, 'x', cz, y1 + 5, cx + 6, 3, white, roofTile);
+  gable(b, 'x', cz, y1 + 5, cx - 6, 3, white, roofTile);
+  // 破風の小窓
+  b.set(cx, y1 + 6, cz + 6, wood);
+  b.set(cx + 6, y1 + 6, cz, wood);
+  b.set(cx - 6, y1 + 6, cz, wood);
+  // 2重目の屋根
   b.box(cx - 5, y2 + 2, cz - 5, cx + 5, y2 + 2, cz + 5, roofTile);
   b.box(cx - 4, y2 + 3, cz - 4, cx + 4, y2 + 3, cz + 4, roofTile);
-  // 千鳥破風（正面）
-  b.box(cx - 1, y2 + 2, cz + 5, cx + 1, y2 + 2, cz + 5, white);
-  b.set(cx, y2 + 3, cz + 5, white);
 
-  // ===== 3重目 r=3 =====
+  // ===== 3重目（白壁・2段） =====
   const y3 = y2 + 4;
   b.box(cx - 3, y3, cz - 3, cx + 3, y3 + 1, cz + 3, white);
+  b.set(cx - 1, y3 + 1, cz + 3, wood);
+  b.set(cx + 1, y3 + 1, cz + 3, wood);
+  // 3重目の屋根（前に小さな破風）
   b.box(cx - 4, y3 + 2, cz - 4, cx + 4, y3 + 2, cz + 4, roofTile);
-  b.box(cx - 3, y3 + 3, cz - 3, cx + 3, y3 + 3, cz + 3, roofTile);
+  gable(b, 'z', cx, y3 + 2, cz + 5, 2, white, roofTile);
 
-  // ===== 4重目（望楼・最上階）＋ 廻縁・高欄 r=2 =====
-  const y4 = y3 + 4;
-  woodRing(b, cx - 3, cz - 3, cx + 3, cz + 3, y4, wood); // 廻縁（回廊の床）
-  woodRing(b, cx - 3, cz - 3, cx + 3, cz + 3, y4 + 1, wood); // 高欄（木の手すり）
-  b.box(cx - 2, y4, cz - 2, cx + 2, y4 + 1, cz + 2, white); // 最上階の白い胴
-  b.set(cx, y4 + 1, cz + 2, wood); // 正面の窓
-  b.box(cx - 3, y4 + 2, cz - 3, cx + 3, y4 + 2, cz + 3, roofTile); // 入母屋屋根
-  b.box(cx - 2, y4 + 3, cz - 2, cx + 2, y4 + 3, cz + 2, roofTile);
-  b.box(cx - 1, y4 + 4, cz - 1, cx + 1, y4 + 4, cz + 1, roofTile); // 棟
-  // 鯱（しゃちほこ）を棟の両端に。高知城の鯱は金色ではなくブロンズ系
-  b.set(cx - 1, y4 + 5, cz, shachi);
-  b.set(cx + 1, y4 + 5, cz, shachi);
+  // ===== 4重目（最上階）：木の廻縁と高欄が一周 =====
+  const y4 = y3 + 3;
+  b.box(cx - 3, y4, cz - 3, cx + 3, y4, cz + 3, wood); // 廻縁の床
+  woodRing(b, cx - 3, cz - 3, cx + 3, cz + 3, y4 + 1, wood); // 高欄（手すり）
+  b.box(cx - 2, y4 + 1, cz - 2, cx + 2, y4 + 2, cz + 2, white); // 最上階の白い壁
+  b.box(cx - 1, y4 + 2, cz + 2, cx + 1, y4 + 2, cz + 2, wood); // 正面の窓
+  // 最上階の屋根（入母屋。前後に三角の破風）
+  b.box(cx - 3, y4 + 3, cz - 3, cx + 3, y4 + 3, cz + 3, roofTile);
+  b.box(cx - 2, y4 + 4, cz - 2, cx + 2, y4 + 4, cz + 2, roofTile);
+  gable(b, 'z', cx, y4 + 4, cz + 3, 2, white, roofTile);
+  gable(b, 'z', cx, y4 + 4, cz - 3, 2, white, roofTile);
+  b.box(cx, y4 + 5, cz - 2, cx, y4 + 5, cz + 2, roofTile); // 棟（前後にのびる）
+  // 鯱（しゃちほこ）を棟の両端に
+  b.set(cx, y4 + 6, cz - 2, shachi);
+  b.set(cx, y4 + 6, cz + 2, shachi);
 }
 
 /**
@@ -118,21 +169,25 @@ function goten(b: Build, white: number, roofTile: number, wood: number): void {
   b.box(50, y0, 37, 50, y0 + 1, 39, white);
 }
 
-/** 山内一豊の騎馬像（石の台座＋馬にまたがるブロンズ像。国内最大級の騎馬像）。入口側（z+）を向く。 */
-function kazutoyoStatue(b: Build, x: number, z: number, stone: number, bronze: number, dark: number): void {
-  b.box(x - 2, PARK + 1, z - 2, x + 2, PARK + 1, z + 2, stone); // 台座 下段（広い）
-  b.box(x - 1, PARK + 2, z - 1, x + 1, PARK + 3, z + 1, stone); // 台座 上段
-  const py = PARK + 3; // 台座の上面
-  // 馬（頭を入口側 z+ へ）
-  b.set(x, py + 1, z - 1, bronze); // 後ろ脚
-  b.set(x, py + 1, z + 1, bronze); // 前脚
-  b.box(x, py + 2, z - 1, x, py + 2, z + 1, bronze); // 胴
-  b.set(x, py + 2, z - 2, dark); // しっぽ
-  b.set(x, py + 3, z + 1, bronze); // 首
-  b.set(x, py + 4, z + 2, dark); // 頭（前へ突き出す）
-  // 騎手（一豊）
-  b.set(x, py + 3, z, bronze); // 胴
-  b.set(x, py + 4, z, dark); // 頭
+/**
+ * 山内一豊の騎馬像（写真に合わせて：大きな四角い台座の上に、前脚を上げた馬と、かぶとの武将）。
+ * 入口側（z+）を向く。国内最大級の騎馬像。
+ */
+function kazutoyoStatue(
+  b: Build,
+  x: number,
+  z: number,
+  stone: number,
+  stoneWall: number,
+  bronze: number,
+  dark: number,
+  gold: number,
+): void {
+  b.box(x - 3, PARK + 1, z - 3, x + 3, PARK + 1, z + 3, stone); // 台座の土台
+  b.box(x - 2, PARK + 2, z - 3, x + 2, PARK + 4, z + 2, stoneWall); // 台座（四角く大きい）
+  b.set(x, PARK + 3, z + 3, dark); // 前の銘板
+  b.box(x - 2, PARK + 5, z - 3, x + 2, PARK + 5, z + 2, stone); // 台座の上のふち
+  horseRider(b, x, PARK + 5, z, 1, bronze, dark, gold);
 }
 
 /** 追手門（櫓門）。cx を中心に、石垣の親柱＋木の門扉＋上に白壁の櫓と瓦屋根。 */
@@ -152,27 +207,33 @@ function otemonGate(
   b.box(cx + 3, PARK + 1, 59, cx + 4, PARK + 4, 59, wood);
   // まぐさ（門の上の梁）＝櫓を支える
   b.box(cx - 4, HONMARU, 58, cx + 4, HONMARU, 60, wood);
+  // 門の上の小さな屋根（庇）
+  b.box(cx - 5, HONMARU - 1, 61, cx + 5, HONMARU - 1, 61, roofTile);
   // 櫓（白壁）
   b.box(cx - 7, HONMARU + 1, 58, cx + 7, HONMARU + 3, 60, white);
-  for (const wx of [cx - 4, cx, cx + 4]) b.set(wx, HONMARU + 2, 60, roofTile); // 連子窓
+  // 写真の大きな木の格子窓（正面のまん中）
+  b.box(cx - 2, HONMARU + 2, 60, cx + 2, HONMARU + 2, 60, wood);
   // 櫓の瓦屋根
   b.box(cx - 8, HONMARU + 4, 57, cx + 8, HONMARU + 4, 61, roofTile);
   b.box(cx - 7, HONMARU + 5, 58, cx + 7, HONMARU + 5, 60, roofTile);
   b.box(cx - 6, HONMARU + 6, 59, cx + 6, HONMARU + 6, 59, roofTile); // 棟
+  // 左の高い櫓（写真の左に立つ、三角の破風のある2階）
+  b.box(cx - 8, HONMARU + 5, 57, cx - 4, HONMARU + 8, 61, white);
+  b.set(cx - 7, HONMARU + 7, 61, wood); // 窓
+  b.set(cx - 5, HONMARU + 7, 61, wood);
+  b.box(cx - 9, HONMARU + 9, 56, cx - 3, HONMARU + 9, 62, roofTile); // 屋根
+  b.box(cx - 8, HONMARU + 10, 57, cx - 4, HONMARU + 10, 61, roofTile);
+  gable(b, 'z', cx - 6, HONMARU + 10, 62, 2, white, roofTile); // 正面の破風
+  b.box(cx - 6, HONMARU + 11, 57, cx - 6, HONMARU + 11, 61, roofTile); // 棟
 }
 
 /**
- * 板垣退助の銅像（実物は台座 約4.2m＞像 約2.2m ＝台座の方が高い）。
- * 広い下段＋細く高い柱の台座の上に、片腕を横に伸ばした演説の立ち姿。
+ * 板垣退助の銅像（写真に合わせて：細長い石の台座の上に、右手を横へのばした着物と袴の立ち姿）。
+ * 実物は台座 約4.2m＞像 約2.2m ＝台座の方が高い。石段の方（z+）を向く。
  */
 function bronzeStatue(b: Build, x: number, z: number, stone: number, bronze: number, dark: number): void {
-  b.box(x - 1, PARK + 1, z - 1, x + 1, PARK + 1, z + 1, stone); // 台座 下段（広い）
-  b.box(x, PARK + 2, z, x, PARK + 4, z, stone); // 台座 上段（細く高い柱）
-  const py = PARK + 4; // 台座の上面
-  b.set(x, py + 1, z, dark); // 足元（ブーツ）
-  b.set(x, py + 2, z, bronze); // 胴
-  b.set(x - 1, py + 2, z, bronze); // 横に伸ばした腕（演説の姿）
-  b.set(x, py + 3, z, dark); // 頭
+  b.box(x - 1, PARK + 1, z - 1, x + 1, PARK + 6, z + 1, stone); // 細長い台座
+  kimonoFigure(b, x, PARK + 6, z, 1, bronze, dark, 'point');
 }
 
 /** 桜の木（木の幹＋ふっくら丸い花のかたまり。下を広く、上を細く） */
@@ -198,7 +259,8 @@ function build(world: World): void {
   const castlewall = b.id('castlewall'); // 白漆喰の白壁・看板
   const tile = b.id('tile'); // 濃い瓦屋根
   const wood = b.id('wood');
-  const roof = b.id('roof'); // ブロンズ風の濃い茶（像）
+  const bronze = b.id('bronze'); // 銅像
+  const bronzeDark = b.id('bronzedark'); // 銅像の濃い所
   const turf = b.id('turf'); // 公園の芝
   const road = b.id('road'); // 参道（石畳）
   const sakura = b.id('sakura'); // 桜
@@ -234,7 +296,7 @@ function build(world: World): void {
   b.box(59, HONMARU + 3, 32, 59, HONMARU + 3, 50, tile);
 
   // ===== 天守（実物と同じく本丸の奥・西寄り。手前＝cz+ 側を正面に） =====
-  tenshu(b, 44, 38, HONMARU + 1, castlewall, tile, wood, roof);
+  tenshu(b, 44, 38, HONMARU + 1, castlewall, tile, wood, tile, stonewall);
 
   // ===== 本丸御殿（懐徳館）＝天守の東どなり。廊下で天守と直結（現存は全国で高知城だけ） =====
   goten(b, castlewall, tile, wood);
@@ -267,10 +329,10 @@ function build(world: World): void {
   b.set(65, PARK, 61, flower);
 
   // ===== 板垣退助の銅像（実物と同じ、追手門をくぐった石段の上り口・左脇） =====
-  bronzeStatue(b, 40, 56, stonewall, roof, tile);
+  bronzeStatue(b, 39, 54, stone, bronze, bronzeDark);
 
   // ===== 山内一豊の騎馬像（実物と同じ、追手門の手前の広場） =====
-  kazutoyoStatue(b, 36, 65, stonewall, roof, tile);
+  kazutoyoStatue(b, 36, 65, stone, stonewall, bronze, bronzeDark, lantern);
 
   // ===== 看板（入口・右手前） =====
   b.pillar(55, 66, PARK + 1, PARK + 2, wood);
@@ -297,8 +359,8 @@ export const kochiCastle: SpotDefinition = {
       id: 'tenshu',
       name: 'Kochi Castle',
       nameJa: '高知城（天守）',
-      region: { min: { x: 37, y: 16, z: 31 }, max: { x: 51, y: 36, z: 45 } },
-      focus: { x: 44, y: 26, z: 38 },
+      region: { min: { x: 37, y: 16, z: 31 }, max: { x: 51, y: 39, z: 45 } },
+      focus: { x: 44, y: 28, z: 38 },
       image: './photos/kochi-castle/tenshu.jpg',
       guide: {
         canDo: 'You can look up at the tall castle tower.',
@@ -336,7 +398,7 @@ export const kochiCastle: SpotDefinition = {
       id: 'otemon',
       name: 'Otemon Gate',
       nameJa: '追手門',
-      region: { min: { x: 41, y: 11, z: 57 }, max: { x: 55, y: 21, z: 61 } },
+      region: { min: { x: 39, y: 11, z: 56 }, max: { x: 55, y: 27, z: 62 } },
       focus: { x: 48, y: 16, z: 59 },
       image: './photos/kochi-castle/otemon.jpg',
       guide: {
@@ -362,8 +424,8 @@ export const kochiCastle: SpotDefinition = {
       id: 'statue',
       name: 'Statue of Itagaki Taisuke',
       nameJa: '板垣退助像',
-      region: { min: { x: 38, y: 11, z: 54 }, max: { x: 42, y: 18, z: 57 } },
-      focus: { x: 40, y: 15, z: 56 },
+      region: { min: { x: 35, y: 11, z: 52 }, max: { x: 41, y: 26, z: 56 } },
+      focus: { x: 39, y: 19, z: 54 },
       image: './photos/kochi-castle/statue.jpg',
       guide: {
         canDo: 'You can see a bronze statue.',
@@ -375,8 +437,8 @@ export const kochiCastle: SpotDefinition = {
       id: 'kazutoyo',
       name: 'Statue of Yamauchi Kazutoyo',
       nameJa: '山内一豊の騎馬像',
-      region: { min: { x: 33, y: 11, z: 62 }, max: { x: 39, y: 18, z: 68 } },
-      focus: { x: 36, y: 15, z: 65 },
+      region: { min: { x: 33, y: 11, z: 62 }, max: { x: 39, y: 25, z: 69 } },
+      focus: { x: 36, y: 19, z: 65 },
       image: './photos/kochi-castle/kazutoyo.jpg',
       guide: {
         canDo: 'You can see a man on a horse.',

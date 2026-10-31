@@ -1,5 +1,6 @@
 import type { World } from '@/world/World';
 import { Build } from './Build';
+import { kimonoFigure } from './statues';
 import type { SpotDefinition } from './SpotDefinition';
 
 /**
@@ -32,7 +33,12 @@ function woodRing(b: Build, x0: number, z0: number, x1: number, z1: number, y: n
   }
 }
 
-/** 白い灯台（室戸岬灯台）。白い塔＋廻縁＋ガラスの灯り部屋＋黒い屋根。 */
+/**
+ * 白い灯台（室戸岬灯台）。写真に合わせて、ぜんぶ白：
+ *   - 下に丸くて低い白い建物（土台）
+ *   - 白い塔の途中を、白い手すりのベランダが一周
+ *   - 上にガラスの灯り部屋（中に大きなレンズ）、てっぺんは白い丸屋根
+ */
 function lighthouse(
   b: Build,
   cx: number,
@@ -42,26 +48,43 @@ function lighthouse(
   glass: number,
   light: number,
   dark: number,
-  wood: number,
 ): void {
-  b.box(cx - 2, by, cz - 2, cx + 2, by, cz + 2, white); // 土台 5x5
-  b.box(cx - 1, by, cz - 1, cx + 1, by + 7, cz + 1, white); // 白い塔（8段）
-  woodRing(b, cx - 2, cz - 2, cx + 2, cz + 2, by + 7, wood); // 廻縁（手すり）
-  b.box(cx - 1, by + 8, cz - 1, cx + 1, by + 9, cz + 1, glass); // 灯り部屋（ガラス）
-  b.set(cx, by + 8, cz, light); // 灯り
-  b.box(cx - 1, by + 10, cz - 1, cx + 1, by + 10, cz + 1, dark); // 屋根
-  b.set(cx, by + 11, cz, dark);
+  b.disc(cx, cz, by, 3, white); // 丸い土台の建物（2段）
+  b.disc(cx, cz, by + 1, 3, white);
+  b.box(cx - 1, by + 2, cz - 1, cx + 1, by + 6, cz + 1, white); // 白い塔
+  b.box(cx - 2, by + 5, cz - 2, cx + 2, by + 5, cz + 2, white); // ベランダの床
+  woodRing(b, cx - 2, cz - 2, cx + 2, cz + 2, by + 6, white); // 白い手すり
+  b.box(cx - 1, by + 7, cz - 1, cx + 1, by + 8, cz + 1, glass); // ガラスの灯り部屋
+  b.set(cx, by + 7, cz, light); // 大きなレンズ
+  b.set(cx, by + 8, cz, light);
+  b.box(cx - 1, by + 9, cz - 1, cx + 1, by + 9, cz + 1, white); // 白い丸屋根
+  b.set(cx, by + 10, cz, white);
+  b.set(cx, by + 11, cz, dark); // 避雷針
 }
 
-/** 中岡慎太郎像（石の台座＋ブロンズの立ち姿。海の方を見て、片腕を上げる）。 */
-function statue(b: Build, x: number, z: number, stone: number, bronze: number, dark: number): void {
-  b.box(x - 1, LAND + 1, z - 1, x + 1, LAND + 2, z + 1, stone); // 台座
-  const py = LAND + 2;
-  b.set(x, py + 1, z, dark); // 足元
-  b.set(x, py + 2, z, bronze); // 胴
-  b.set(x, py + 3, z, bronze); // 胸
-  b.set(x - 1, py + 3, z - 1, bronze); // 海の方へ伸ばした腕
-  b.set(x, py + 4, z, dark); // 頭
+/** 中岡慎太郎像（写真に合わせて：石を積んだ四角い台座の上に、海を見つめて立つ姿）。 */
+function statue(b: Build, x: number, z: number, stone: number, stoneW: number, bronze: number, dark: number): void {
+  b.box(x - 1, 9, z - 1, x + 1, LAND + 2, z + 1, stoneW); // 岩場から立ち上がる石積みの台座
+  b.box(x - 1, LAND + 3, z - 1, x + 1, LAND + 3, z + 1, stone); // 台座の上の石
+  kimonoFigure(b, x, LAND + 3, z, -1, bronze, dark, 'stand'); // 海（-z）を見つめる
+}
+
+/**
+ * 黒くゴツゴツした岩礁（写真の室戸の岩）。
+ * 半径 r の中に、高さのちがう岩の柱をでこぼこに立て、とがった頂をつくる。
+ */
+function jaggedRock(b: Build, x: number, z: number, h: number, r: number, rock: number, darkRock: number): void {
+  for (let dx = -r; dx <= r; dx++) {
+    for (let dz = -r; dz <= r; dz++) {
+      const d = Math.sqrt(dx * dx + dz * dz);
+      if (d > r + 0.3) continue;
+      const bump = ((x + dx) * 7 + (z + dz) * 13) % 3; // でこぼこ
+      const top = Math.round(8 + (h - 8) * (1 - d / (r + 1))) + bump - 1;
+      if (top < 9) continue;
+      b.box(x + dx, 8, z + dz, x + dx, top - 1, z + dz, darkRock);
+      b.set(x + dx, top, z + dz, (dx + dz) % 2 === 0 ? rock : darkRock);
+    }
+  }
 }
 
 /** ヤシ（ビロウ）：細い幹＋てっぺんに四方へ広がる葉。 */
@@ -117,7 +140,10 @@ function build(world: World): void {
   const lantern = b.id('lantern'); // 灯台の灯り
   const wood = b.id('wood'); // 手すり・遊歩道・看板
   const leaves = b.id('leaves'); // ヤシの葉
-  const roof = b.id('roof'); // ブロンズ（像）
+  const bronze = b.id('bronze'); // 銅像
+  const bronzeDark = b.id('bronzedark'); // 銅像の濃い所
+  const darkRock = b.id('road'); // 黒っぽい岩（室戸の岩礁）
+  const stonewall = b.id('stonewall'); // 像の石積みの台座
   const road = b.id('road'); // 遊歩道（乱礁遊歩道）
   const flower = b.id('flower');
 
@@ -133,26 +159,39 @@ function build(world: World): void {
   b.box(44, 9, 30, 52, LAND, 33, stone); // 先端
   b.box(44, LAND, 30, 52, LAND, 33, stone);
 
-  // ===== 荒々しい岩礁（暗い頂の岩が海から突き出す） =====
-  b.mound(48, 28, 8, 17, 4, stone, tile); // 先端沖の大岩
-  b.mound(38, 30, 8, 14, 3, stone, tile);
-  b.mound(58, 30, 8, 15, 3, stone, tile);
-  b.mound(34, 38, 8, 16, 3, stone, tile);
-  b.mound(62, 40, 8, 15, 3, stone, tile);
-  b.mound(30, 50, 8, 13, 2, stone, tile); // 左の岩
-  b.mound(66, 52, 8, 13, 2, stone, tile); // 右の岩
-
-  // ===== 波しぶき（岩や岸のきわに白） =====
-  for (const [x, z] of [
-    [44, 33],
-    [52, 33],
-    [40, 36],
-    [56, 36],
-    [36, 44],
-    [60, 44],
-    [48, 31],
+  // ===== 荒々しい岩礁（写真のように、黒くゴツゴツした岩が海岸にずらりと並ぶ） =====
+  // 岬の先の陸も、平らな岩ではなく黒い岩場にする
+  for (let x = 40; x <= 56; x++) {
+    for (let z = 30; z <= 43; z++) {
+      if (x >= 46 && x <= 50) continue; // 遊歩道は平らなまま
+      const h = (x * 5 + z * 3) % 4;
+      if (h === 0) b.set(x, LAND, z, darkRock);
+      else if (h === 2) b.box(x, LAND, z, x, LAND + 1, z, darkRock);
+    }
+  }
+  for (const [x, z, h, r] of [
+    [48, 27, 18, 3], // 先端沖の大岩
+    [40, 30, 16, 3],
+    [57, 30, 17, 3],
+    [35, 36, 16, 3],
+    [61, 38, 15, 3],
+    [37, 42, 14, 2],
+    [59, 44, 14, 2],
+    [30, 49, 14, 2], // 左の岩
+    [66, 51, 14, 2], // 右の岩
+    [31, 30, 13, 2],
+    [65, 30, 13, 2],
   ] as const) {
-    b.set(x, SEA, z, castlewall);
+    jaggedRock(b, x, z, h, r, stone, darkRock);
+  }
+
+  // ===== 白い波しぶき（写真のように、岩のまわりの海が白くあわ立つ） =====
+  for (let x = 28; x <= 68; x++) {
+    for (let z = 26; z <= 46; z++) {
+      // 岩や岸の近くだけ、まだらに白くする
+      const nearRock = (x * 3 + z * 7) % 4 === 0;
+      if (nearRock && (z <= 33 || x <= 39 || x >= 57)) b.set(x, SEA, z, castlewall);
+    }
   }
 
   // ===== 灯台の丘（実物の灯台は岬の高台の上に建つ。緑の丘） =====
@@ -160,10 +199,10 @@ function build(world: World): void {
   b.disc(57, 53, LAND + 5, 2, grass); // 頂上を平らに広げる（灯台の土台が乗る）
 
   // ===== 白い灯台（室戸岬灯台）＝丘の上。光の強さは日本一級 =====
-  lighthouse(b, 57, 53, LAND + 6, castlewall, glass, lantern, tile, wood);
+  lighthouse(b, 57, 53, LAND + 6, castlewall, glass, lantern, tile);
 
   // ===== 中岡慎太郎像（乱礁遊歩道の入口で海を見つめる） =====
-  statue(b, 38, 42, stone, roof, tile);
+  statue(b, 42, 45, stone, stonewall, bronze, bronzeDark);
 
   // ===== 海辺の岩屋（御厨人窟ふう。空と海だけが見える洞窟の物語） =====
   b.mound(34, 47, 9, 17, 4, stone, grass);
@@ -209,7 +248,7 @@ export const muroto: SpotDefinition = {
       id: 'rocks',
       name: 'Cape Muroto',
       nameJa: '室戸岬（岩礁）',
-      region: { min: { x: 34, y: 9, z: 28 }, max: { x: 62, y: 18, z: 43 } },
+      region: { min: { x: 30, y: 9, z: 24 }, max: { x: 66, y: 19, z: 43 } },
       focus: { x: 48, y: 13, z: 33 },
       image: './photos/muroto/rocks.jpg',
       guide: {
@@ -223,8 +262,8 @@ export const muroto: SpotDefinition = {
       name: 'Muroto Lighthouse',
       nameJa: '室戸岬灯台',
       image: './photos/muroto/lighthouse.jpg',
-      region: { min: { x: 53, y: 17, z: 49 }, max: { x: 61, y: 30, z: 57 } },
-      focus: { x: 57, y: 24, z: 53 },
+      region: { min: { x: 54, y: 17, z: 50 }, max: { x: 60, y: 29, z: 56 } },
+      focus: { x: 57, y: 25, z: 53 },
       guide: {
         canDo: 'You can climb the hill to the lighthouse.',
         feature: 'It is white. It is on a hill.',
@@ -248,8 +287,8 @@ export const muroto: SpotDefinition = {
       id: 'statue',
       name: 'Statue of Nakaoka Shintaro',
       nameJa: '中岡慎太郎像',
-      region: { min: { x: 36, y: 12, z: 40 }, max: { x: 40, y: 19, z: 44 } },
-      focus: { x: 38, y: 15, z: 42 },
+      region: { min: { x: 40, y: 12, z: 42 }, max: { x: 44, y: 25, z: 47 } },
+      focus: { x: 42, y: 19, z: 45 },
       image: './photos/muroto/statue.jpg',
       guide: {
         canDo: 'You can see a bronze statue.',

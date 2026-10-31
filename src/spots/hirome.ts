@@ -47,13 +47,16 @@ function stall(
 }
 
 /**
- * 食事セット：横長の机（高さ2）＋両側に座れる椅子（机より低い・高さ1）。
- * x0〜x1 が横長の長さ。机は z..z+1 の2マス幅、椅子は z-1 と z+2 に1列ずつ。
+ * 食事セット：写真のような明るい木の横長の机＋両側に丸い木の椅子（1つずつ間をあけて並ぶ）。
+ * x0〜x1 が横長の長さ。机は z..z+1 の2マス幅、椅子は z-1 と z+2 に1つおき。
  */
 function diningSet(b: Build, x0: number, x1: number, z: number, deskId: number, chairId: number): void {
-  b.box(x0, G + 1, z, x1, G + 2, z + 1, deskId); // 横長の机（2段＝高い）
-  b.box(x0, G + 1, z - 1, x1, G + 1, z - 1, chairId); // 手前の椅子（1段＝低い・小さい）
-  b.box(x0, G + 1, z + 2, x1, G + 1, z + 2, chairId); // 奥の椅子
+  b.box(x0, G + 2, z, x1, G + 2, z + 1, deskId); // 机の天板
+  for (const x of [x0, x1]) b.box(x, G + 1, z, x, G + 1, z + 1, deskId); // 机の脚
+  for (let x = x0; x <= x1; x += 2) {
+    b.set(x, G + 1, z - 1, chairId); // 手前の丸い椅子
+    b.set(x, G + 1, z + 2, chairId); // 奥の丸い椅子
+  }
 }
 
 function build(world: World): void {
@@ -71,6 +74,8 @@ function build(world: World): void {
   const sakura = b.id('sakura'); // ピンクの店
   const turf = b.id('turf'); // 緑の店
   const lantern = b.id('lantern'); // 炎の明るい部分（藁焼き）
+  const lightWood = b.id('bridge'); // 明るい木（机・丸い椅子）
+  const glass = b.id('glass'); // 天井のガラス屋根（アーケード）
 
   // ===== まわりの広場（芝）＋市場の床（1.5倍に拡大） =====
   b.box(20, 7, 16, 76, 9, 80, stone); // 土台
@@ -101,7 +106,31 @@ function build(world: World): void {
   b.box(24, G + 7, 40, 35, G + 7, 62, tile); // 左
   b.box(61, G + 7, 40, 72, G + 7, 62, tile); // 右
   b.box(24, G + 7, 63, 72, G + 7, 72, tile); // 中ほど手前
-  // → 中央 x36〜60, z40〜62 と 入口 z73〜76 は開いている
+  // 中央 x36〜60, z40〜62 は写真のようなガラスの屋根（明るいアーケード）
+  b.box(36, G + 8, 40, 60, G + 8, 62, glass);
+  b.box(36, G + 7, 40, 36, G + 7, 62, tile); // ガラス屋根のふち
+  b.box(60, G + 7, 40, 60, G + 7, 62, tile);
+
+  // ===== 外の壁（下は木の板張り、上は白いしっくい）＝建物らしく囲む =====
+  b.box(24, G + 1, 20, 24, G + 4, 72, wood); // 左
+  b.box(24, G + 5, 20, 24, G + 6, 72, castlewall);
+  b.box(72, G + 1, 20, 72, G + 4, 72, wood); // 右
+  b.box(72, G + 5, 20, 72, G + 6, 72, castlewall);
+  b.box(24, G + 1, 20, 72, G + 4, 20, wood); // 奥
+  b.box(24, G + 5, 20, 72, G + 6, 20, castlewall);
+  // 正面（入口の左右）
+  b.box(24, G + 1, 73, 33, G + 4, 73, wood);
+  b.box(24, G + 5, 73, 33, G + 6, 73, castlewall);
+  b.box(63, G + 1, 73, 72, G + 4, 73, wood);
+  b.box(63, G + 5, 73, 72, G + 6, 73, castlewall);
+
+  // ===== 中の通路の上に、赤提灯をずらりと吊るす（写真の天井） =====
+  for (let z = 41; z <= 61; z += 2) {
+    b.set(38, G + 6, z, torii);
+    b.set(58, G + 6, z, torii);
+    b.set(38, G + 7, z, tile); // 吊るすひも
+    b.set(58, G + 7, z, tile);
+  }
 
   // ===== 屋台（お店）：色とりどりに10店 =====
   // 奥の列（手前＝+zを向く）
@@ -131,16 +160,25 @@ function build(world: World): void {
   b.set(52, G + 3, 23, brick); // 高く上がる炎の先
 
   // ===== 中央：横長の机＋座れる椅子（椅子は机より低い） =====
-  diningSet(b, 40, 56, 44, wood, roof);
-  diningSet(b, 40, 56, 50, wood, roof);
-  diningSet(b, 40, 56, 56, wood, roof);
+  diningSet(b, 40, 56, 44, lightWood, lightWood);
+  diningSet(b, 40, 56, 50, lightWood, lightWood);
+  diningSet(b, 40, 56, 56, lightWood, lightWood);
 
-  // ===== 赤提灯を入口にずらりと（にぎやか） =====
-  for (let x = 30; x <= 66; x += 4) b.set(x, G + 6, 72, torii);
-
-  // ===== 入口の大きな暖簾＋看板 =====
-  b.box(34, G + 5, 73, 62, G + 6, 73, castlewall); // 白い看板
-  b.box(34, G + 4, 73, 62, G + 4, 73, torii); // 赤い暖簾
+  // ===== 入口（写真に合わせて：上に赤提灯が2段ずらり、その下に濃い赤の大きな暖簾） =====
+  // 木の格子の中に、赤提灯が2段に並ぶ
+  b.box(34, G + 5, 73, 62, G + 7, 73, wood); // 格子の木枠
+  for (let x = 35; x <= 61; x += 2) {
+    b.set(x, G + 5, 74, torii); // 下の段の提灯（少し前に出す）
+    b.set(x, G + 6, 74, torii); // 上の段の提灯
+  }
+  // 入口の上の瓦のひさし
+  b.box(23, G + 8, 73, 73, G + 8, 75, tile);
+  // 濃い赤の暖簾（何枚かに分かれて垂れる。まん中は高く上がって通れる）
+  for (let x = 34; x <= 62; x++) {
+    if ((x - 34) % 4 === 3) continue; // 暖簾の切れ目
+    const low = x >= 44 && x <= 52 ? G + 4 : G + 3; // まん中はくぐれるように短く
+    b.box(x, low, 74, x, G + 4, 74, roof);
+  }
 
   // ===== 広場の看板（プラザ・手前） =====
   b.pillar(66, 79, G + 1, G + 2, wood);

@@ -16,53 +16,109 @@ import type { SpotDefinition } from './SpotDefinition';
 const G = 10; // 園内の地面の上面。立つのは G+1
 const AIR = 0;
 
-/** ガラスの大温室（ガラスの壁＋屋根、中に植物。手前に入口）。 */
-function greenhouse(b: Build, x0: number, z0: number, x1: number, z1: number, glass: number, wood: number, leaf: number, bloom: number, bloom2: number): void {
+/**
+ * ガラスの大温室。写真に合わせて：
+ *   - 高いアーチ形のガラス屋根（灰色の鉄の骨組みが等間隔に入る）
+ *   - 中はジャングルのように植物がぎっしり（高いヤシ・シダ・色とりどりの花）
+ *   - まん中に石畳の小道
+ */
+function greenhouse(
+  b: Build,
+  x0: number,
+  z0: number,
+  x1: number,
+  z1: number,
+  glass: number,
+  frame: number,
+  wood: number,
+  leaf: number,
+  light: number,
+  blooms: number[],
+  path: number,
+): void {
   const cx = Math.floor((x0 + x1) / 2);
-  b.box(x0, G, z0, x1, G, z1, wood);
-  for (const [px, pz] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]] as const) b.box(px, G + 1, pz, px, G + 6, pz, wood);
-  b.box(x0, G + 1, z0, x1, G + 5, z0, glass); // 奥
-  b.box(x0, G + 1, z0, x0, G + 5, z1, glass); // 左
-  b.box(x1, G + 1, z0, x1, G + 5, z1, glass); // 右
-  for (let x = x0; x <= x1; x++) for (let y = G + 1; y <= G + 5; y++) {
-    if (Math.abs(x - cx) <= 1 && y <= G + 3) continue; // 入口
-    b.set(x, y, z1, glass);
+  const half = (x1 - x0) / 2;
+  // 屋根の高さ（まん中が高いアーチ）
+  const roofY = (x: number) => G + 5 + Math.round(4 * Math.sqrt(Math.max(0, 1 - ((x - cx) / (half + 0.5)) ** 2)));
+  b.box(x0, G, z0, x1, G, z1, light); // 床（植えこみの土＝明るい緑）
+  b.box(cx - 1, G, z0 + 1, cx + 1, G, z1, path); // まん中の石畳の小道
+  for (let x = x0; x <= x1; x++) {
+    const ry = roofY(x);
+    for (let z = z0; z <= z1; z++) {
+      const rib = (z - z0) % 4 === 0 || z === z1; // 骨組み
+      b.set(x, ry, z, rib ? frame : glass); // 屋根
+      if (x === x0 || x === x1) b.box(x, G + 1, z, x, ry - 1, z, rib ? frame : glass); // 左右の壁
+    }
+    // 奥と手前の壁（手前は入口を空ける）
+    for (let y = G + 1; y < ry; y++) {
+      b.set(x, y, z0, x % 4 === 0 ? frame : glass);
+      if (Math.abs(x - cx) <= 1 && y <= G + 3) continue;
+      b.set(x, y, z1, x % 4 === 0 ? frame : glass);
+    }
   }
-  b.box(x0, G + 6, z0, x1, G + 6, z1, glass); // 屋根
-  // 中の植物：数を大きく減らし、中央に広い通路（余白）を残す。
-  // 1株ずつ背を高くして「植物」だとはっきり分かる形に（小さなヤシ／花の木）。種類（葉・花・桜）はそのまま。
-  for (const x of [x0 + 4, x1 - 4]) { // 左右2列だけ。中央（x 43〜57）は通路＝広い余白
-    for (const z of [z0 + 3, z0 + 7, z1 - 3]) { // 前・中・奥に1株ずつ
-      const kind = (x + z) % 3;
-      if (kind === 0) {
-        // 小さなヤシ（幹＋てっぺんに葉の広がり）
-        b.pillar(x, z, G + 1, G + 3, wood);
-        for (const [dx, dz] of [[0, 0], [-1, 0], [1, 0], [0, -1], [0, 1]] as const) b.set(x + dx, G + 4, z + dz, leaf);
-      } else if (kind === 1) {
-        // 花の木（緑の茎＋てっぺんに花）
-        b.pillar(x, z, G + 1, G + 3, leaf);
-        b.set(x, G + 4, z, bloom);
-      } else {
-        // 桜の花の木
-        b.pillar(x, z, G + 1, G + 2, wood);
-        b.set(x, G + 3, z, bloom2);
+  // 中の植物：小道の左右にぎっしり
+  for (let x = x0 + 1; x <= x1 - 1; x++) {
+    if (Math.abs(x - cx) <= 1) continue; // 小道
+    for (let z = z0 + 1; z <= z1 - 1; z++) {
+      const h = (x * 13 + z * 7) % 11;
+      if (h === 0 && Math.abs(x - cx) >= 4) {
+        // 高いヤシ（幹＋てっぺんに大きく広がる葉）
+        const top = Math.min(roofY(x) - 2, G + 7);
+        b.pillar(x, z, G + 1, top, wood);
+        for (const [dx, dz] of [
+          [0, 0], [-1, 0], [1, 0], [0, -1], [0, 1], [-2, 0], [2, 0], [0, -2], [0, 2],
+        ] as const) {
+          b.set(x + dx, top + 1, z + dz, leaf);
+        }
+        b.set(x - 2, top, z, leaf); // 垂れる葉先
+        b.set(x + 2, top, z, leaf);
+      } else if (h === 3 || h === 6) {
+        b.set(x, G + 1, z, h === 3 ? leaf : light); // シダ・低い葉
+        if (h === 3) b.set(x, G + 2, z, leaf);
+      } else if (h === 5 || h === 8) {
+        b.set(x, G + 1, z, leaf);
+        b.set(x, G + 2, z, blooms[(x + z) % blooms.length]); // 色とりどりの花（ランなど）
       }
     }
   }
 }
 
-/** 記念館（木の壁＋ガラス窓＋波打つ木の屋根）。 */
-function memorialHall(b: Build, x0: number, z0: number, x1: number, z1: number, wood: number, roofId: number, glass: number): void {
-  b.box(x0, G + 1, z0, x1, G + 3, z0, wood);
-  b.box(x0, G + 1, z0, x0, G + 3, z1, wood);
-  b.box(x1, G + 1, z0, x1, G + 3, z1, wood);
-  b.box(x0, G + 1, z1, x1, G + 3, z1, wood);
+/**
+ * 記念館（牧野富太郎記念館）。写真に合わせて：
+ *   - 波打つように大きくうねる木の屋根（大きく張り出す）
+ *   - 全面のガラスの壁、両端に灰色のコンクリートの壁
+ */
+function memorialHall(
+  b: Build,
+  x0: number,
+  z0: number,
+  x1: number,
+  z1: number,
+  roofWood: number,
+  concrete: number,
+  glass: number,
+): void {
+  b.box(x0, G, z0, x1, G, z1, concrete); // 床
+  // ガラスの壁（前後）と、両端のコンクリートの壁
+  b.box(x0, G + 1, z0, x1, G + 3, z0, glass);
+  b.box(x0, G + 1, z1, x1, G + 3, z1, glass);
+  b.box(x0, G + 1, z0, x0 + 1, G + 3, z1, concrete);
+  b.box(x1 - 1, G + 1, z0, x1, G + 3, z1, concrete);
+  for (let x = x0 + 4; x < x1 - 1; x += 4) {
+    b.box(x, G + 1, z0, x, G + 3, z0, concrete); // ガラスの間の細い柱
+    b.box(x, G + 1, z1, x, G + 3, z1, concrete);
+  }
   const cx = Math.floor((x0 + x1) / 2);
-  b.set(cx, G + 1, z1, AIR);
-  b.set(cx, G + 2, z1, AIR);
-  for (let x = x0 + 1; x < x1; x += 2) b.set(x, G + 2, z0, glass); // 窓
-  b.box(x0 - 1, G + 4, z0 - 1, x1 + 1, G + 4, z1 + 1, roofId);
-  for (let x = x0; x <= x1; x += 2) b.box(x, G + 5, z0, x, G + 5, z1, roofId); // 波打つ屋根
+  b.box(cx - 1, G + 1, z1, cx + 1, G + 2, z1, AIR); // 入口
+  // 波打つ木の屋根（x にそって高さがうねる。端は大きく張り出す）
+  for (let x = x0 - 2; x <= x1 + 2; x++) {
+    const t = (x - (x0 - 2)) / (x1 - x0 + 4);
+    const y = G + 5 + Math.round(1.6 * Math.sin(t * Math.PI * 1.6 - 0.4));
+    b.box(x, y, z0 - 2, x, y, z1 + 2, roofWood);
+    // 屋根と壁の間をうめる（すき間ができないように）
+    if (x >= x0 && x <= x1 && y > G + 4) b.box(x, G + 4, z0, x, y - 1, z0, glass);
+    if (x >= x0 && x <= x1 && y > G + 4) b.box(x, G + 4, z1, x, y - 1, z1, glass);
+  }
 }
 
 /** いろいろな木（kind で松/桜/椿/ヤシ/竹）。 */
@@ -101,6 +157,11 @@ function build(world: World): void {
   const turf = b.id('turf');
   const road = b.id('road');
   const castlewall = b.id('castlewall');
+  const stonewall = b.id('stonewall'); // 温室の石畳の小道
+  const lantern = b.id('lantern'); // 温室の白っぽい花
+  const brick = b.id('brick'); // 温室のオレンジの花
+  const torii = b.id('torii'); // 温室の赤い花
+  const bridgeWood = b.id('bridge'); // 記念館の木の屋根・池の木道
 
   // ===== 地面（フィールドいっぱいの広い園内） =====
   b.box(6, 8, 6, 90, 9, 90, stone);
@@ -117,15 +178,25 @@ function build(world: World): void {
   b.box(46, G, 47, 50, G, 89, road);
 
   // ===== ガラスの大温室（奥・中央＝主役） =====
-  greenhouse(b, 38, 28, 62, 44, glass, wood, leaves, flower, sakura);
+  greenhouse(b, 38, 28, 62, 44, glass, stone, wood, leaves, turf, [flower, sakura, lantern, brick, torii], stonewall);
 
   // ===== 池と木道（左） =====
   b.box(13, 8, 42, 31, 8, 66, sand);
   b.box(13, 9, 42, 31, G, 66, water);
-  b.box(20, G + 1, 42, 21, G + 1, 66, wood); // 木道
+  // ジグザグに折れ曲がる木道（写真の池の木道）
+  b.box(20, G + 1, 42, 21, G + 1, 48, bridgeWood);
+  b.box(20, G + 1, 48, 27, G + 1, 49, bridgeWood);
+  b.box(26, G + 1, 49, 27, G + 1, 56, bridgeWood);
+  b.box(18, G + 1, 56, 27, G + 1, 57, bridgeWood);
+  b.box(18, G + 1, 57, 19, G + 1, 66, bridgeWood);
+  // 池のふちの草（シダ・ハナショウブ）
+  for (let z = 42; z <= 66; z += 2) {
+    b.set(13, G + 1, z, leaves);
+    b.set(31, G + 1, z, z % 4 === 0 ? flower : leaves);
+  }
 
   // ===== 記念館（右） =====
-  memorialHall(b, 66, 46, 82, 60, wood, roof, glass);
+  memorialHall(b, 66, 47, 82, 58, bridgeWood, stone, glass);
 
   // ===== スエコザサ（記念館の入口前。博士が亡き妻・壽衛に感謝して名付けた低い笹） =====
   for (const [sx, sz] of [
@@ -178,7 +249,7 @@ export const makino: SpotDefinition = {
       id: 'greenhouse',
       name: 'Glass Greenhouse',
       nameJa: 'ガラスの大温室',
-      region: { min: { x: 38, y: 10, z: 28 }, max: { x: 62, y: 17, z: 44 } },
+      region: { min: { x: 38, y: 10, z: 28 }, max: { x: 62, y: 19, z: 44 } },
       focus: { x: 50, y: 13, z: 36 },
       image: './photos/makino/greenhouse.jpg',
       guide: {
@@ -217,7 +288,7 @@ export const makino: SpotDefinition = {
       id: 'hall',
       name: 'Makino Memorial Hall',
       nameJa: '牧野富太郎記念館',
-      region: { min: { x: 66, y: 10, z: 46 }, max: { x: 82, y: 16, z: 60 } },
+      region: { min: { x: 64, y: 10, z: 45 }, max: { x: 84, y: 17, z: 60 } },
       focus: { x: 74, y: 13, z: 53 },
       image: './photos/makino/hall.jpg',
       guide: {
