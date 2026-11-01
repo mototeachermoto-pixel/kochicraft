@@ -145,7 +145,82 @@ function readPart_(folder, id, part) {
   }
 }
 
-/** アプリから呼ばれる：その子の保存をすべて { キー: 値 } で返す（まだ無ければ空） */
+// ===== 合言葉（数字4けた） =====
+// 友だちの番号を入れても、見るだけで、作り変えられないようにする。
+// 番号ごとに、最初に開いた子が合言葉を決める。保存するときも合言葉を確かめる。
+// 合言葉そのものは残さず、まぜて別の形にしたもの（ハッシュ）をスクリプトのプロパティ
+// PIN_<年度>_<番号>（例：PIN_2026_5A12）に入れる。年度ごとなので、4月になると決め直しになる。
+// 合言葉を忘れた子がいたら、先生が GAS の編集画面の「プロジェクトの設定」→「スクリプト プロパティ」で
+// その子の PIN_… を消す。次に開いたとき、決め直せる（作品は消えない）。
+
+var PIN = /^[0-9]{4}$/;
+/** 続けてまちがえてよい回数。こえたら少し待つ */
+var MAX_PIN_MISSES = 10;
+var PIN_WAIT_SECONDS = 10 * 60;
+
+function pinKey_(id) {
+  return 'PIN_' + schoolYear_() + '_' + id;
+}
+
+function hashPin_(id, pin) {
+  var props = PropertiesService.getScriptProperties();
+  var salt = props.getProperty('PIN_SALT');
+  if (!salt) {
+    salt = Utilities.getUuid();
+    props.setProperty('PIN_SALT', salt);
+  }
+  var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, salt + '|' + id + '|' + pin);
+  return Utilities.base64Encode(bytes);
+}
+
+/** 合言葉が合っているか（まちがいが続いたときは 'locked'） */
+function checkPin_(id, pin) {
+  if (typeof pin !== 'string' || !PIN.test(pin)) return 'wrong';
+  var saved = PropertiesService.getScriptProperties().getProperty(pinKey_(id));
+  if (!saved) return 'none';
+  var cache = CacheService.getScriptCache();
+  var missKey = 'PINMISS_' + id;
+  var misses = Number(cache.get(missKey) || 0);
+  if (misses >= MAX_PIN_MISSES) return 'locked';
+  if (hashPin_(id, pin) === saved) {
+    cache.remove(missKey);
+    return 'ok';
+  }
+  cache.put(missKey, String(misses + 1), PIN_WAIT_SECONDS);
+  return 'wrong';
+}
+
+/** アプリから呼ばれる：その番号の合言葉がもう決まっているか */
+function hasPin(id) {
+  checkId_(id);
+  return !!PropertiesService.getScriptProperties().getProperty(pinKey_(id));
+}
+
+/** アプリから呼ばれる：合言葉を決める（まだ決まっていないときだけ）。{ ok, reason? } */
+function setPin(id, pin) {
+  checkId_(id);
+  if (typeof pin !== 'string' || !PIN.test(pin)) return { ok: false, reason: 'bad' };
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var props = PropertiesService.getScriptProperties();
+    if (props.getProperty(pinKey_(id))) return { ok: false, reason: 'taken' };
+    props.setProperty(pinKey_(id), hashPin_(id, pin));
+    return { ok: true };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** アプリから呼ばれる：合言葉を確かめて、自分の作品を開く。{ ok, reason?, items? } */
+function openMine(id, pin) {
+  checkId_(id);
+  var r = checkPin_(id, pin);
+  if (r !== 'ok') return { ok: false, reason: r };
+  return { ok: true, items: loadSave(id) };
+}
+
+/** アプリから呼ばれる：その子の保存をすべて { キー: 値 } で返す（まだ無ければ空）。見るだけなので合言葉はいらない */
 function loadSave(id) {
   checkId_(id);
   var folder = yearFolder_();
@@ -161,9 +236,13 @@ function loadSave(id) {
  * アプリから呼ばれる：変わった分だけを受け取って保存する。
  * changes は { キー: 新しい値（消すときは null） }。
  * 大きすぎて保存できないときは { ok: false, reason: 'too-big' } を返す（何も変えない）。
+ * 合言葉が合わないときは { ok: false, reason: 'pin' }。
  */
-function saveItems(id, changes) {
+function saveItems(id, pin, changes) {
   checkId_(id);
+  // 合言葉が合わないときは保存しない（友だちの番号で作り変えられないように）
+  var r = checkPin_(id, pin);
+  if (r !== 'ok') return { ok: false, reason: 'pin' };
   if (!changes || typeof changes !== 'object') throw new Error('保存する中身が正しくありません');
   var folder = yearFolder_();
   var parts = {};

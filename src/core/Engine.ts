@@ -12,7 +12,7 @@ import { BuildPalette } from '@/ui/BuildPalette';
 import { PhotoStore } from '@/data/PhotoStore';
 import { EditStore } from '@/data/EditStore';
 import { SaveStorage } from '@/data/SaveStorage';
-import { NumberPanel, type NumberMode } from '@/ui/NumberPanel';
+import { NumberPanel } from '@/ui/NumberPanel';
 import { HowToPlayPanel } from '@/ui/HowToPlayPanel';
 import { Avatar, SKIN_LABEL, type SkinKind } from '@/player/Avatar';
 import { SceneManager } from './SceneManager';
@@ -175,14 +175,21 @@ export class Engine {
     this.buildSpotUI();
 
     // GAS 版：子どもの番号ごとに大学の Google へ保存する（Safari を閉じても残るように）
-    this.numberPanel = new NumberPanel(
-      this.hudRoot,
-      (raw) => SaveStorage.normalizeId(raw),
-      (id, mode) => this.openWorks(id, mode),
-    );
+    this.numberPanel = new NumberPanel(this.hudRoot, {
+      normalize: (raw) => SaveStorage.normalizeId(raw),
+      normalizePin: (raw) => SaveStorage.normalizePin(raw),
+      check: (id) => this.checkNumber(id),
+      makePin: (id, pin) => this.makePin(id, pin),
+      start: (id, pin) => this.openMyWorks(id, pin),
+      look: (id) => this.lookAtWorks(id),
+    });
     SaveStorage.onError = (reason) => {
       this.showToast(
-        reason === 'too-big' ? '⚠ This is too big to save.' : '⚠ Not saved yet. Check the internet.',
+        reason === 'too-big'
+          ? '⚠ This is too big to save.'
+          : reason === 'pin'
+            ? '⚠ Not saved. Please open your number again.'
+            : '⚠ Not saved yet. Check the internet.',
         4000,
       );
     };
@@ -357,7 +364,7 @@ export class Engine {
   enterSpot(spot: SpotDefinition): void {
     if (!spot.available) return;
     // GAS 版で番号をまだ入れていなければ、先に番号を聞く（入れないと作品が保存されないため）
-    if (SaveStorage.cloud && !SaveStorage.owner) {
+    if (SaveStorage.cloud && !SaveStorage.owner && !SaveStorage.viewing) {
       if (!this.numberPanel.isOpen) this.numberPanel.open('me', this.lastNumber(), false);
       return;
     }
@@ -982,39 +989,72 @@ export class Engine {
     }
   }
 
-  /**
-   * 番号で作品を開く。
-   * me＝自分の作品（作れる）／friend＝友だちの作品（見るだけ）。
-   * 失敗したら英文の Error を投げる（番号の画面に出る）。
-   */
-  private async openWorks(id: string, mode: NumberMode): Promise<void> {
+  // 番号の画面から呼ぶ処理。失敗したら英文の Error を投げる（番号の画面に出る）。
+
+  /** 自分の番号を入れたとき：合言葉がもう決まっているか（自分の作品を開いているなら same） */
+  private async checkNumber(id: string): Promise<'new' | 'set' | 'same'> {
+    if (id === SaveStorage.owner) {
+      if (SaveStorage.readOnly) this.backToMyWorks();
+      return 'same';
+    }
     try {
-      if (mode === 'me') {
-        await SaveStorage.openMine(id);
-        try {
-          localStorage.setItem('kc.me', id);
-        } catch {
-          // 覚えられなくても続ける
-        }
-      } else if (id === SaveStorage.owner) {
-        SaveStorage.backToMine(); // 自分の番号なら、自分の作品に戻るだけ
-      } else {
-        await SaveStorage.openFriend(id);
-      }
+      return (await SaveStorage.hasPin(id)) ? 'set' : 'new';
+    } catch {
+      throw new Error('Could not open. Check the internet and try again.');
+    }
+  }
+
+  /** はじめての番号：合言葉を決める */
+  private async makePin(id: string, pin: string): Promise<void> {
+    try {
+      await SaveStorage.makePin(id, pin);
     } catch (err) {
-      if (err instanceof Error && err.message === 'not-saved') {
-        throw new Error('Your world is still saving. Check the internet and try again.');
+      if (err instanceof Error && err.message === 'taken') {
+        throw new Error('This number already has a secret number. Press ← Back.');
       }
       throw new Error('Could not open. Check the internet and try again.');
+    }
+  }
+
+  /** 番号と合言葉で、自分の作品を開く（作れる） */
+  private async openMyWorks(id: string, pin: string): Promise<void> {
+    try {
+      await SaveStorage.openMine(id, pin);
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : '';
+      if (reason === 'wrong') throw new Error('That is not right. Try again.');
+      if (reason === 'locked') throw new Error('Please wait 10 minutes, or ask your teacher.');
+      if (reason === 'not-saved') throw new Error('Your world is still saving. Check the internet and try again.');
+      throw new Error('Could not open. Check the internet and try again.');
+    }
+    try {
+      localStorage.setItem('kc.me', id);
+    } catch {
+      // 覚えられなくても続ける
     }
     this.afterWorksChanged();
   }
 
-  /** 友だちの作品を見るのをやめて、自分の作品に戻る */
+  /** 番号の作品を「見るだけ」で開く（自分の番号なら、自分の作品に戻るだけ） */
+  private async lookAtWorks(id: string): Promise<void> {
+    if (id === SaveStorage.owner) {
+      SaveStorage.backToMine();
+    } else {
+      try {
+        await SaveStorage.openFriend(id);
+      } catch {
+        throw new Error('Could not open. Check the internet and try again.');
+      }
+    }
+    this.afterWorksChanged();
+  }
+
+  /** 友だちの作品を見るのをやめて、自分の作品に戻る（まだ自分の番号を開いていなければ、番号を聞く） */
   private backToMyWorks(): void {
     SaveStorage.backToMine();
     this.afterWorksChanged();
-    this.showToast(`Welcome back, ${SaveStorage.owner}!`);
+    if (SaveStorage.owner) this.showToast(`Welcome back, ${SaveStorage.owner}!`);
+    else this.numberPanel.open('me', this.lastNumber());
   }
 
   /** 開いている作品（自分／友だち）が変わったら、画面を合わせる */
@@ -1029,14 +1069,14 @@ export class Engine {
   /** 一覧の一番上に「だれの作品か」と、切りかえのボタンを出す */
   private renderWho(): void {
     const bar = this.hub.whoBar;
-    if (!SaveStorage.cloud || !SaveStorage.owner) {
+    if (!SaveStorage.cloud || (!SaveStorage.owner && !SaveStorage.viewing)) {
       bar.classList.add('hidden');
       return;
     }
     const friend = SaveStorage.viewing;
     bar.innerHTML = friend
       ? `<span class="hub-who__name is-friend">👀 <b>${friend}</b>'s world <small>(look only)</small></span>
-         <button class="kc-btn" data-role="mine">🏠 Back to my world</button>`
+         <button class="kc-btn" data-role="mine">${SaveStorage.owner ? '🏠 Back to my world' : '🙂 Open my world'}</button>`
       : `<button class="kc-btn hub-who__me" data-role="me" title="Change number">🙂 <b>${SaveStorage.owner}</b></button>
          <button class="kc-btn" data-role="friend">👀 See a friend's world</button>`;
     bar.classList.remove('hidden');

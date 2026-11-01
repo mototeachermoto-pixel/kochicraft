@@ -5,6 +5,7 @@
  *   子どもの番号（例：5A12）ごとに保存する。
  *   iPad の Safari は GAS のページの中の保存（localStorage）を、Safari を閉じると消してしまうため。
  *   読み込んだ中身は画面の中（メモリ）に持ち、変えた分だけを少し待ってまとめて送る。
+ *   自分の作品を開く・保存するには、番号ごとの合言葉（数字4けた）がいる。
  *   友だちの番号で開いたときは「見るだけ」（書きかえない）。
  * - それ以外（手元・GitHub 版）：今までどおり端末の localStorage を使う。
  */
@@ -23,17 +24,24 @@ const RETRY_MS = 10000;
 type Items = Record<string, string>;
 type Changes = Record<string, string | null>;
 type SaveResult = { ok: boolean; reason?: string };
+type OpenResult = { ok: boolean; reason?: string; items?: Items };
 
 interface Server {
+  hasPin(id: string): Promise<boolean>;
+  setPin(id: string, pin: string): Promise<SaveResult>;
+  openMine(id: string, pin: string): Promise<OpenResult>;
   loadSave(id: string): Promise<Items>;
-  saveItems(id: string, changes: Changes): Promise<SaveResult>;
+  saveItems(id: string, pin: string, changes: Changes): Promise<SaveResult>;
 }
 
 interface GasRunner {
   withSuccessHandler(fn: (result: unknown) => void): GasRunner;
   withFailureHandler(fn: (error: unknown) => void): GasRunner;
+  hasPin(id: string): void;
+  setPin(id: string, pin: string): void;
+  openMine(id: string, pin: string): void;
   loadSave(id: string): void;
-  saveItems(id: string, changes: Changes): void;
+  saveItems(id: string, pin: string, changes: Changes): void;
 }
 
 declare const google: { script?: { run?: GasRunner } } | undefined;
@@ -46,8 +54,11 @@ function gasServer(): Server | null {
       fn(run.withSuccessHandler((v) => resolve(v as T)).withFailureHandler(reject));
     });
   return {
+    hasPin: (id) => call<boolean>((r) => r.hasPin(id)),
+    setPin: (id, pin) => call<SaveResult>((r) => r.setPin(id, pin)),
+    openMine: (id, pin) => call<OpenResult>((r) => r.openMine(id, pin)),
     loadSave: (id) => call<Items>((r) => r.loadSave(id)),
-    saveItems: (id, changes) => call<SaveResult>((r) => r.saveItems(id, changes)),
+    saveItems: (id, pin, changes) => call<SaveResult>((r) => r.saveItems(id, pin, changes)),
   };
 }
 
@@ -60,13 +71,31 @@ function fakeServer(): Server | null {
   if (!env?.DEV || !location.search.includes('cloud=fake')) return null;
   const wait = () => new Promise((r) => setTimeout(r, 300));
   const key = (id: string) => `kcfake.${id}`;
-  return {
+  const pinKey = (id: string) => `kcfake.pin.${id}`;
+  const pinOk = (id: string, pin: string) => localStorage.getItem(pinKey(id)) === pin;
+  const fake: Server = {
+    async hasPin(id) {
+      await wait();
+      return localStorage.getItem(pinKey(id)) !== null;
+    },
+    async setPin(id, pin) {
+      await wait();
+      if (localStorage.getItem(pinKey(id)) !== null) return { ok: false, reason: 'taken' };
+      localStorage.setItem(pinKey(id), pin);
+      return { ok: true };
+    },
+    async openMine(id, pin) {
+      if (!(await fake.hasPin(id))) return { ok: false, reason: 'none' };
+      if (!pinOk(id, pin)) return { ok: false, reason: 'wrong' };
+      return { ok: true, items: await fake.loadSave(id) };
+    },
     async loadSave(id) {
       await wait();
       return JSON.parse(localStorage.getItem(key(id)) ?? '{}') as Items;
     },
-    async saveItems(id, changes) {
+    async saveItems(id, pin, changes) {
       await wait();
+      if (!pinOk(id, pin)) return { ok: false, reason: 'pin' };
       const items = JSON.parse(localStorage.getItem(key(id)) ?? '{}') as Items;
       for (const [k, v] of Object.entries(changes)) {
         if (v === null) delete items[k];
@@ -76,6 +105,7 @@ function fakeServer(): Server | null {
       return { ok: true };
     },
   };
+  return fake;
 }
 
 const server: Server | null = gasServer() ?? fakeServer();
@@ -83,6 +113,8 @@ const server: Server | null = gasServer() ?? fakeServer();
 /** 自分の作品（番号を入れたあとに読み込む） */
 let mine: Map<string, string> | null = null;
 let ownerId: string | null = null;
+/** 自分の合言葉（保存するたびに Google で確かめる。端末には残さない） */
+let ownerPin = '';
 /** 友だちの作品（見るだけ）。null なら自分の作品を見ている */
 let friend: Map<string, string> | null = null;
 let friendId: string | null = null;
@@ -105,9 +137,12 @@ function schedule(ms = SEND_DELAY_MS): void {
   timer = window.setTimeout(() => void SaveStorage.flush(), ms);
 }
 
-async function load(id: string): Promise<Map<string, string>> {
-  const items = await server!.loadSave(id);
+function toMap(items: Items | undefined): Map<string, string> {
   return new Map(Object.entries(items ?? {}).filter(([k, v]) => isWork(k) && typeof v === 'string'));
+}
+
+async function load(id: string): Promise<Map<string, string>> {
+  return toMap(await server!.loadSave(id));
 }
 
 export const SaveStorage = {
@@ -146,14 +181,38 @@ export const SaveStorage = {
     return `${m[1]}${m[2]}${no}`;
   },
 
-  /** 自分の番号で作品を読み込む（それまでの自分の作品は、先に送り終えておく） */
-  async openMine(id: string): Promise<void> {
+  /** 合言葉（数字4けた）の形にそろえる。正しくなければ null。全角の数字も受け付ける */
+  normalizePin(raw: string): string | null {
+    const s = raw.replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).replace(/\s/g, '');
+    return /^[0-9]{4}$/.test(s) ? s : null;
+  },
+
+  /** その番号の合言葉が、もう決まっているか */
+  async hasPin(id: string): Promise<boolean> {
+    if (!server) return false;
+    return server.hasPin(id);
+  },
+
+  /** 合言葉を決める（まだ決まっていないときだけ）。ほかの子が先に決めていたら Error('taken') */
+  async makePin(id: string, pin: string): Promise<void> {
+    if (!server) return;
+    const res = await server.setPin(id, pin);
+    if (!res?.ok) throw new Error(res?.reason ?? 'bad');
+  },
+
+  /**
+   * 自分の番号と合言葉で作品を読み込む（それまでの自分の作品は、先に送り終えておく）。
+   * 合言葉がちがうときは Error('wrong')、まちがいが続いたときは Error('locked')。
+   */
+  async openMine(id: string, pin: string): Promise<void> {
     if (!server) return;
     await this.flush();
     if (pending.size > 0) throw new Error('not-saved');
-    const items = await load(id);
-    mine = items;
+    const res = await server.openMine(id, pin);
+    if (!res?.ok) throw new Error(res?.reason ?? 'wrong');
+    mine = toMap(res.items);
     ownerId = id;
+    ownerPin = pin;
     friend = null;
     friendId = null;
   },
@@ -166,7 +225,7 @@ export const SaveStorage = {
     friendId = id;
   },
 
-  /** 友だちの作品を見るのをやめて、自分の作品に戻る */
+  /** 友だちの作品を見るのをやめて、自分の作品に戻る（自分の番号をまだ開いていなければ、何も見ていない状態に） */
   backToMine(): void {
     friend = null;
     friendId = null;
@@ -239,14 +298,15 @@ export const SaveStorage = {
     window.clearTimeout(timer);
     if (!server || !ownerId || sending || pending.size === 0) return;
     const id = ownerId;
+    const pin = ownerPin;
     const batch: Changes = Object.fromEntries(pending);
     pending.clear();
     sending = true;
     try {
-      const res = await server.saveItems(id, batch);
+      const res = await server.saveItems(id, pin, batch);
       if (!res?.ok) {
-        // 大きすぎた：送り直しても入らないので、知らせて終わる
-        this.onError?.('too-big');
+        // 大きすぎた・合言葉が通らなかった：送り直しても入らないので、知らせて終わる
+        this.onError?.(res?.reason === 'pin' ? 'pin' : 'too-big');
       }
     } catch {
       // 送れなかった分は、あとからの変更を優先しつつ戻しておき、少し待って送り直す

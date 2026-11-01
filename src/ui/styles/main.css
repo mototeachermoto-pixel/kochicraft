@@ -1194,8 +1194,8 @@ canvas.kc-canvas {
 .spot-toolbar .kc-btn {
   pointer-events: auto;
 }
-/* 友だちの作品を見ているとき（見るだけ）は、Build ボタンを出さない */
-.spot-toolbar .kc-btn[data-role="build"].hidden {
+/* 隠したボタン（作る画面の Map・視点・キャラクター、見るだけのときの Build など）は出さない */
+.spot-toolbar .kc-btn.hidden {
   display: none;
 }
 .spot-toolbar__hint {
@@ -1548,6 +1548,14 @@ canvas.kc-canvas {
 }
 .num-panel__cancel {
   background: #8a8f98;
+}
+.num-panel__input--pin {
+  letter-spacing: 0.5em;
+  text-indent: 0.5em;
+}
+.num-panel__look {
+  margin-top: 12px;
+  background: #4a7fb5;
 }
 .num-panel__note {
   margin-top: 10px;
