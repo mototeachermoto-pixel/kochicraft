@@ -21,7 +21,7 @@ const PALETTE_KEYS = [
 ];
 
 /** 置き方の英語説明（小学5年生レベル・短く） */
-const HELP_TEXT = 'The blue box shows where. Hold 🧱 Place to build. ✋ Remove erases your blocks.';
+const HELP_TEXT = 'Tap a block to put one. Hold on your block to take it. The blue box shows where.';
 
 export class BuildPalette {
   private readonly root: HTMLElement;

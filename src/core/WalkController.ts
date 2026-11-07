@@ -50,6 +50,8 @@ const VIEW_SETUP: Record<ViewMode, { dist: number; up: number }> = {
 export class WalkController {
   enabled = false;
   onTap?: (ndcX: number, ndcY: number) => void;
+  /** 画面を長おししたとき（作る画面で、ブロックを消すのに使う）。無ければ長おしは何もしない */
+  onLongPress?: (ndcX: number, ndcY: number) => void;
   /** D＝Down（見下ろす）を使うか。編集モードでは D＝Done（編集をやめる）なので false */
   useDForLookDown = true;
   /** いまの視点（一人称／うしろ／三人称／正面） */
@@ -71,6 +73,11 @@ export class WalkController {
   /** 画面をなぞっている指の番号。ほかの指（JUMP・方向ボタンを押す指）の動きでは向きを変えない */
   private dragId = -1;
   private moved = false;
+  /** おし始めた所（なぞりと、タップ・長おしを見分けるため） */
+  private downX = 0;
+  private downY = 0;
+  private longTimer = 0;
+  private longFired = false;
   /** カメラを離している今の距離（壁で縮めたあと、急に戻らずなめらかに戻すため覚えておく） */
   private camDist = 0;
   /** 段差を自動で登ったときのカメラの遅れ（ガクッと上がらず、すっと追いつくように） */
@@ -308,6 +315,12 @@ export class WalkController {
     this.keys.delete(e.code);
   };
 
+  /** 画面の位置を -1〜1 の値にする（タップ・長おしで、どこを指したかを伝えるため） */
+  private toNdc(clientX: number, clientY: number): [number, number] {
+    const rect = this.el.getBoundingClientRect();
+    return [((clientX - rect.left) / rect.width) * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1];
+  }
+
   private onPointerDown = (e: PointerEvent): void => {
     if (!this.enabled) return;
     // すでに別の指で画面をなぞっているときは、あとから触れた指を使わない
@@ -315,8 +328,21 @@ export class WalkController {
     this.dragging = true;
     this.dragId = e.pointerId;
     this.moved = false;
+    this.longFired = false;
     this.lastX = e.clientX;
     this.lastY = e.clientY;
+    this.downX = e.clientX;
+    this.downY = e.clientY;
+    // 長おし：指を動かさずに約0.45秒おしつづけたら、長おしとして伝える（はなしてもタップにはしない）
+    window.clearTimeout(this.longTimer);
+    if (this.onLongPress) {
+      const id = e.pointerId;
+      this.longTimer = window.setTimeout(() => {
+        if (!this.dragging || this.dragId !== id || this.moved) return;
+        this.longFired = true;
+        this.onLongPress?.(...this.toNdc(this.downX, this.downY));
+      }, 450);
+    }
   };
   private onPointerMove = (e: PointerEvent): void => {
     if (!this.dragging || !this.enabled) return;
@@ -324,7 +350,8 @@ export class WalkController {
     if (e.pointerId !== this.dragId) return;
     const dx = e.clientX - this.lastX;
     const dy = e.clientY - this.lastY;
-    if (Math.abs(dx) + Math.abs(dy) > 4) this.moved = true;
+    // おした所から少し（約8px）以上動いたら「なぞり」＝タップ・長おしにはしない
+    if (Math.abs(e.clientX - this.downX) + Math.abs(e.clientY - this.downY) > 8) this.moved = true;
     this.player.yaw -= dx * 0.005;
     this.player.pitch -= dy * 0.005;
     this.clampPitch();
@@ -334,6 +361,7 @@ export class WalkController {
   /** ブラウザが指の操作を打ち切ったとき（画面の切りかえなど）は、なぞりをやめる */
   private onPointerCancel = (e: PointerEvent): void => {
     if (e.pointerId !== this.dragId) return;
+    window.clearTimeout(this.longTimer);
     this.dragging = false;
     this.dragId = -1;
   };
@@ -344,13 +372,9 @@ export class WalkController {
       this.dragging = false;
       return;
     }
+    window.clearTimeout(this.longTimer);
     const wasDragging = this.dragging;
     this.dragging = false;
-    if (wasDragging && !this.moved) {
-      const rect = this.el.getBoundingClientRect();
-      const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      const ndcY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-      this.onTap?.(ndcX, ndcY);
-    }
+    if (wasDragging && !this.moved && !this.longFired) this.onTap?.(...this.toNdc(e.clientX, e.clientY));
   };
 }

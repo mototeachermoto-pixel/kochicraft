@@ -40,7 +40,7 @@ export const STEP_HEIGHT = 1.05;
 /** マウス視点感度 */
 export const MOUSE_SENSITIVITY = 0.0022;
 /** ブロックに手が届く距離（建築の射程, ブロック数） */
-export const REACH = 6;
+export const REACH = 7;
 
 // ===== 描画 =====
 /** カメラ視野角 */

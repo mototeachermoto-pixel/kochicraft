@@ -50,8 +50,8 @@ const SECTIONS: { title: string; ja: string; rows: HowToRow[] }[] = [
     ja: 'ブロックでつくる',
     rows: [
       { what: 'Start building', ja: 'つくりはじめる', touch: '🧱 Build', keys: k('B') },
-      { what: 'Put a block', ja: 'ブロックをおく', touch: '🧱 Put', keys: k('P') },
-      { what: 'Take my block', ja: '自分のブロックをとる', touch: '✋ Take', keys: k('T') },
+      { what: 'Put a block', ja: 'ブロックをおく', touch: 'Tap a block ・ 🧱 Put', keys: k('P') },
+      { what: 'Take my block', ja: '自分のブロックをとる', touch: 'Hold on it ・ ✋ Take', keys: k('T') },
       { what: 'Choose a block', ja: 'ブロックをえらぶ', touch: 'Tap a color', keys: `${k('1')}…${k('9')}${k('0')}` },
       { what: 'Stop building', ja: 'つくるのをやめる', touch: '✓ Done', keys: k('D') },
     ],

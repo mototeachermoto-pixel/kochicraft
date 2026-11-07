@@ -876,10 +876,18 @@ export class Engine {
     this.orbit.enabled = mode === 'orbit';
     this.walk.enabled = walkLike;
 
-    // タップの役割：編集＝中央カーソルで設置、それ以外＝構造物の情報選択
+    // タップの役割：編集＝タップした所に置く（マインクラフトのタブレット版と同じ）、それ以外＝構造物の情報選択
     this.walk.onTap = building
-      ? () => void this.build.place()
+      ? (x, y) => {
+          if (!this.build.placeAt(x, y)) this.showToast('Tap on a block to put one');
+        }
       : (x, y) => this.worldManager.selectByRay(x, y);
+    // 長おし：編集のときだけ、長おしした所の（自分で置いた）ブロックを消す
+    this.walk.onLongPress = building
+      ? (x, y) => {
+          if (!this.build.removeAt(x, y)) this.showToast('You can take only your own blocks');
+        }
+      : undefined;
 
     // 編集モードでは D＝Done（編集をやめる）。歩行では D＝Down（見下ろす）
     this.walk.useDForLookDown = !building;
@@ -1184,7 +1192,7 @@ export class Engine {
 
     if (this.mode === 'build') {
       // 中央カーソルが指すマスのプレビュー枠を更新
-      this.build.update();
+      this.build.update(dt);
     } else {
       // 近くの対象を判定して英語名バナーを出す
       this.worldManager.updateNear();

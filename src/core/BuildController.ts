@@ -11,8 +11,11 @@ import { EditStore, type EditCell } from '@/data/EditStore';
 const MAX_BUILD_Y = WORLD_HEIGHT - 3;
 
 /**
- * 編集（Build）モードの中枢。マウス不使用の「中央カーソル方式」。
- * 画面中央からレイを飛ばし、見ているブロックの手前にブロックを置く／そのブロックを消す。
+ * 編集（Build）モードの中枢。マウス不使用。
+ * - キーボード（P/T）と「Put/Take」ボタン：画面中央の＋から、見ているブロックの手前に置く／消す。
+ * - 画面をタップ：タップした所のブロックの面に置く（マインクラフトのタブレット版と同じ）。
+ * - 画面を長おし：長おしした所のブロックを消す。
+ * 置くとブロックがぽんと出て、消すと小さなかけらになって散る（何をしたか目で分かるように）。
  *
  * ルール（「付け足し」方式）：
  *  - 置く：歩ける範囲（field）の中なら、地面・建物・木など**既存の何にでも付け足し**できる。
@@ -37,6 +40,15 @@ export class BuildController {
   onChange?: () => void;
 
   private readonly dir = new THREE.Vector3();
+  private readonly ray = new THREE.Raycaster();
+  private readonly ndc = new THREE.Vector2();
+  private readonly scene: THREE.Scene;
+
+  /** 置いたときに「ぽん」と出る光るブロック（使い回す） */
+  private readonly pops: { mesh: THREE.Mesh; life: number }[] = [];
+  /** 消したときに散るかけら（使い回す。数に上限あり） */
+  private readonly chips: { mesh: THREE.Mesh; vel: THREE.Vector3; life: number }[] = [];
+  private readonly chipGeo = new THREE.BoxGeometry(0.2, 0.2, 0.2);
   private readonly ghostFill: THREE.Mesh; // 設置プレビュー：半透明の色つきブロック
   private readonly ghostMat: THREE.MeshBasicMaterial;
   private readonly targetBox: THREE.LineSegments; // 設置プレビューのふち（水色）
@@ -48,6 +60,7 @@ export class BuildController {
     private readonly camera: THREE.PerspectiveCamera,
     private readonly player: Player,
   ) {
+    this.scene = scene;
     // これから置くマスのプレビュー：半透明の「色つきブロック」（選んだブロックの色）
     this.ghostMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.5, depthWrite: false });
     this.ghostMat.color.copy(blockRegistry.getColor(this.activeId));
@@ -102,7 +115,8 @@ export class BuildController {
   }
 
   /** 毎フレーム：中央カーソルが指すマスのプレビューを更新（設置＝色つきゴースト／削除＝赤枠） */
-  update(): void {
+  update(dt = 1 / 60): void {
+    this.updateEffects(dt);
     if (!this.field) {
       this.setGhost(false);
       this.removeBox.visible = false;
@@ -201,9 +215,20 @@ export class BuildController {
     this.stackDir = null;
   }
 
-  /** 中央カーソルの面の手前に1つ置く。置けたらセルと向きを返す。 */
-  private freshPlace(): { cell: { x: number; y: number; z: number }; dir: { x: number; y: number; z: number } } | null {
-    const hit = this.castCenter();
+  /** タップした所（画面の位置。-1〜1）のブロックの面に、1つ置く */
+  placeAt(ndcX: number, ndcY: number): boolean {
+    return this.freshPlace(this.castScreen(ndcX, ndcY)) !== null;
+  }
+
+  /** 長おしした所（画面の位置。-1〜1）のブロックを消す。自分で置いた物だけ */
+  removeAt(ndcX: number, ndcY: number): boolean {
+    return this.removeHit(this.castScreen(ndcX, ndcY));
+  }
+
+  /** 見ている（またはタップした）面の手前に1つ置く。置けたらセルと向きを返す。 */
+  private freshPlace(
+    hit = this.castCenter(),
+  ): { cell: { x: number; y: number; z: number }; dir: { x: number; y: number; z: number } } | null {
     if (!hit) return null;
     const cell = { x: hit.x + hit.nx, y: hit.y + hit.ny, z: hit.z + hit.nz };
     if (!this.canPlaceAt(cell.x, cell.y, cell.z)) return null;
@@ -226,25 +251,105 @@ export class BuildController {
   private putBlock(x: number, y: number, z: number): void {
     this.world.setBlock(x, y, z, this.activeId);
     this.edits.set(BuildController.key(x, y, z), { x, y, z, id: this.activeId });
+    this.spawnPop(x, y, z, this.activeId);
     this.persist();
   }
 
   /** 見ているブロックを消す。自分で置いた物だけ消せる（元の建物・地面は壊せない）。 */
   remove(): boolean {
-    const hit = this.castCenter();
+    return this.removeHit(this.castCenter());
+  }
+
+  private removeHit(hit: ReturnType<BuildController['castCenter']>): boolean {
     if (!hit) return false;
     const key = BuildController.key(hit.x, hit.y, hit.z);
-    if (!this.edits.has(key)) return false; // 自分で置いた物以外は壊せない
+    const cell = this.edits.get(key);
+    if (!cell) return false; // 自分で置いた物以外は壊せない
     this.world.setBlock(hit.x, hit.y, hit.z, AIR);
     this.edits.delete(key);
+    this.spawnChips(hit.x, hit.y, hit.z, cell.id);
     this.persist();
     return true;
+  }
+
+  // ===== 置いた・消したときの動き =====
+
+  /** 置いたブロックが、少し大きく光って出てきて、すっと元の大きさになる */
+  private spawnPop(x: number, y: number, z: number, id: number): void {
+    let pop = this.pops.find((p) => p.life <= 0);
+    if (!pop) {
+      const mat = new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false });
+      pop = { mesh: new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat), life: 0 };
+      pop.mesh.renderOrder = 997;
+      this.scene.add(pop.mesh);
+      this.pops.push(pop);
+    }
+    const mat = pop.mesh.material as THREE.MeshBasicMaterial;
+    mat.color.copy(blockRegistry.getColor(id)).lerp(new THREE.Color(0xffffff), 0.45);
+    pop.mesh.position.set(x + 0.5, y + 0.5, z + 0.5);
+    pop.mesh.visible = true;
+    pop.life = 0.22;
+  }
+
+  /** 消したブロックが、小さなかけらになって散り、落ちて消える */
+  private spawnChips(x: number, y: number, z: number, id: number): void {
+    const color = blockRegistry.getColor(id);
+    for (let i = 0; i < 8; i++) {
+      let chip = this.chips.find((c) => c.life <= 0);
+      if (!chip) {
+        if (this.chips.length >= 48) break; // かけらの数には上限
+        chip = {
+          mesh: new THREE.Mesh(this.chipGeo, new THREE.MeshLambertMaterial()),
+          vel: new THREE.Vector3(),
+          life: 0,
+        };
+        this.scene.add(chip.mesh);
+        this.chips.push(chip);
+      }
+      (chip.mesh.material as THREE.MeshLambertMaterial).color.copy(color);
+      const ox = ((i & 1) - 0.5) * 0.5;
+      const oy = (((i >> 1) & 1) - 0.5) * 0.5;
+      const oz = (((i >> 2) & 1) - 0.5) * 0.5;
+      chip.mesh.position.set(x + 0.5 + ox, y + 0.5 + oy, z + 0.5 + oz);
+      chip.vel.set(ox * 5, 2.5 + oy * 3, oz * 5);
+      chip.mesh.scale.setScalar(1);
+      chip.mesh.visible = true;
+      chip.life = 0.6;
+    }
+  }
+
+  private updateEffects(dt: number): void {
+    for (const p of this.pops) {
+      if (p.life <= 0) continue;
+      p.life -= dt;
+      const t = Math.max(0, p.life / 0.22); // 1 → 0
+      p.mesh.scale.setScalar(1 + 0.18 * t);
+      (p.mesh.material as THREE.MeshBasicMaterial).opacity = 0.7 * t;
+      if (p.life <= 0) p.mesh.visible = false;
+    }
+    for (const c of this.chips) {
+      if (c.life <= 0) continue;
+      c.life -= dt;
+      c.vel.y -= 18 * dt;
+      c.mesh.position.addScaledVector(c.vel, dt);
+      c.mesh.scale.setScalar(Math.max(0.01, c.life / 0.6));
+      if (c.life <= 0) c.mesh.visible = false;
+    }
   }
 
   // ===== 内部 =====
   private castCenter() {
     this.camera.getWorldDirection(this.dir);
     const hit = VoxelRaycaster.cast(this.world, this.camera.position, this.dir, REACH);
+    return hit.hit ? hit : null;
+  }
+
+  /** 画面の位置（-1〜1）から、その先のブロックを探す */
+  private castScreen(ndcX: number, ndcY: number) {
+    this.ndc.set(ndcX, ndcY);
+    this.camera.updateMatrixWorld(); // カメラを動かした直後でも、今の向きで正しく探せるように
+    this.ray.setFromCamera(this.ndc, this.camera);
+    const hit = VoxelRaycaster.cast(this.world, this.ray.ray.origin, this.ray.ray.direction, REACH);
     return hit.hit ? hit : null;
   }
 
