@@ -2453,3 +2453,128 @@ canvas.kc-canvas {
     grid-column: 1 / -1;
   }
 }
+
+/* ---------- 動き（ゲーム用スキルの基準：入るときはふわっと、出るときは速く） ---------- */
+/* 場所が切りかわるときの暗転の幕 */
+.kc-fade {
+  position: absolute;
+  inset: 0;
+  z-index: 99;
+  background: #0a1024;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s ease-out;
+}
+.kc-fade.is-on {
+  opacity: 0.85;
+  transition: opacity 0.15s ease-in;
+}
+
+@keyframes kc-slide-right {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes kc-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes kc-banner-pop {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.85);
+  }
+  70% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.05);
+  }
+  100% {
+    transform: translateX(-50%) scale(1);
+  }
+}
+@keyframes kc-toast-up {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+/* 説明パネルは右からすべりこむ */
+.info-panel:not(.hidden) {
+  animation: kc-slide-right 0.22s ease-out;
+}
+/* 行ける場所の一覧（Map）・せつめい・番号の画面は、ふわっと開く */
+.howto-panel:not(.hidden) .howto-panel__box,
+.num-panel:not(.hidden) .num-panel__box {
+  animation: kc-pop 0.22s ease-out;
+}
+/* Map の一覧は画面のまん中に置いてあるので、その位置のまま、ふわっと開く */
+@keyframes kc-pop-center {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.92);
+  }
+  70% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.02);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+.places-panel:not(.hidden) {
+  animation: kc-pop-center 0.22s ease-out;
+}
+/* 近づいたときに出る名前のラベルは、ぽんと出る */
+.name-banner:not(.hidden) {
+  animation: kc-banner-pop 0.25s ease-out;
+}
+/* 知らせ（Saved など）は下からすっと出る */
+.kc-toast:not(.hidden) {
+  animation: kc-toast-up 0.2s ease-out;
+}
+/* ボタンは、指やマウスをのせると少し浮き、押すと沈む */
+.kc-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+.kc-btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.96);
+}
+/* キーボードで選んでいるボタンが分かるように */
+.kc-btn:focus-visible {
+  outline: 3px solid #ffd24a;
+  outline-offset: 2px;
+}
+
+/* 動きをへらす設定の端末では、アニメーションをしない */
+@media (prefers-reduced-motion: reduce) {
+  .info-panel:not(.hidden),
+  .places-panel:not(.hidden),
+  .howto-panel:not(.hidden) .howto-panel__box,
+  .num-panel:not(.hidden) .num-panel__box,
+  .name-banner:not(.hidden),
+  .kc-toast:not(.hidden) {
+    animation: none;
+  }
+  .kc-fade {
+    transition: none;
+  }
+}

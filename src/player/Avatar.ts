@@ -49,6 +49,12 @@ export class Avatar {
   private swing: { armL?: THREE.Group; armR?: THREE.Group; legL?: THREE.Group; legR?: THREE.Group } = {};
   /** 歩いた距離に応じて進む位相（止まると 0 に戻る） */
   private phase = 0;
+  /** 手足のふりの大きさ（歩き出し・止まりでなめらかに変わる） */
+  private amp = 0;
+  /** 今キャラクターが向いている角度（向きをすっと変えるため） */
+  private turn = Number.NaN;
+  /** 息をする動きのための時間 */
+  private time = 0;
   /**
    * 足もとの丸いかげ。いつも地面にはりつき、ジャンプで高く上がるほど小さく・うすくなる。
    * かげがないと、キャラクターがういて見え、ジャンプでどこに下りるか分かりにくいため。
@@ -95,13 +101,24 @@ export class Avatar {
     this.shadow.position.set(pos.x, groundY + 0.02, pos.z);
     this.shadow.scale.set(k, k, k);
     (this.shadow.material as THREE.MeshBasicMaterial).opacity = 0.3 * k;
-    // カメラの yaw は「-Z を向く」基準なので、モデルもそれに合わせる
-    this.root.rotation.y = yaw;
+    // カメラの yaw は「-Z を向く」基準なので、モデルもそれに合わせる。
+    // 向きを変えるときは、パッと回らず、すっと回る（いちばん近い回り方で）
+    if (Number.isNaN(this.turn)) this.turn = yaw;
+    let diff = yaw - this.turn;
+    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+    this.turn += diff * (1 - Math.exp(-dt * 14));
+    this.root.rotation.y = this.turn;
 
-    if (moving) this.phase += dt * 9;
+    // 手足のふり：歩き出すと少しずつ大きく、止まると少しずつ小さくなる（ピタッと止まらない）
+    this.amp += ((moving ? 0.7 : 0) - this.amp) * (1 - Math.exp(-dt * 10));
+    if (this.amp > 0.01) this.phase += dt * 9;
     else this.phase = 0;
+    this.time += dt;
+    // 歩くと体が小さく上下にはずむ。止まっているときは、ゆっくり息をするように少しだけふくらむ
+    this.root.position.y = pos.y + Math.abs(Math.sin(this.phase)) * 0.07 * (this.amp / 0.7);
+    this.root.scale.y = 1 + Math.sin(this.time * 2.2) * 0.012 * (1 - this.amp / 0.7);
 
-    const a = Math.sin(this.phase) * 0.7; // 振れ幅
+    const a = Math.sin(this.phase) * this.amp; // 振れ幅
     const { armL, armR, legL, legR } = this.swing;
     if (armL) armL.rotation.x = a;
     if (armR) armR.rotation.x = -a;

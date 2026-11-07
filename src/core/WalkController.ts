@@ -93,7 +93,21 @@ export class WalkController {
     window.addEventListener('pointermove', this.onPointerMove);
     window.addEventListener('pointerup', this.onPointerUp);
     window.addEventListener('pointercancel', this.onPointerCancel);
+    // ほかのアプリに切りかえたとき、押していたキーやボタンを全部はなしたことにする
+    // （「はなした」合図が届かず、キャラクターが勝手に歩き続けるのを防ぐ）
+    window.addEventListener('blur', this.releaseAll);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') this.releaseAll();
+    });
   }
+
+  /** 押しているキー・方向ボタン・画面のなぞりを、すべてはなす */
+  releaseAll = (): void => {
+    this.keys.clear();
+    for (const k of Object.keys(this.pad) as MoveKey[]) this.pad[k] = false;
+    this.dragging = false;
+    this.dragId = -1;
+  };
 
   /** スポーン（位置・向き・上下の見上げ角）を設定 */
   spawn(pos: Vec3, yaw = 0, pitch = 0): void {

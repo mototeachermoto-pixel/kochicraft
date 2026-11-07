@@ -75,6 +75,9 @@ export class Engine {
   private fileInput!: HTMLInputElement;
   private toast!: HTMLElement;
   private toastTimer = 0;
+  /** 場所が切りかわるときの暗転の幕 */
+  private fade!: HTMLElement;
+  private fading = false;
   /** スタート地点から歩いて行ける場所（Map の立ち位置えらび用。観光地に入る・ブロックを置くと作り直す） */
   private reachCache: Set<string> | null = null;
   /** 番号（例：5A12）を入れる画面（GAS 版だけ） */
@@ -171,7 +174,7 @@ export class Engine {
 
     // 最初の画面の「How to play（せつめい）」＝操作方法の一覧
     const howTo = new HowToPlayPanel(this.hudRoot);
-    this.hub = new HubScreen(this.hudRoot, SPOTS, (spot) => this.enterSpot(spot), () => howTo.open());
+    this.hub = new HubScreen(this.hudRoot, SPOTS, (spot) => this.fadeThen(() => this.enterSpot(spot)), () => howTo.open());
     this.buildSpotUI();
 
     // GAS 版：子どもの番号ごとに大学の Google へ保存する（Safari を閉じても残るように）
@@ -219,7 +222,7 @@ export class Engine {
     this.buildBtn = this.toolbar.querySelector('[data-role="build"]') as HTMLButtonElement;
     this.buildBtn.addEventListener('click', () => this.setMode(this.mode === 'build' ? 'walk' : 'build'));
     this.restartBtn = this.toolbar.querySelector('[data-role="restart"]') as HTMLButtonElement;
-    this.restartBtn.addEventListener('click', () => this.returnToStart());
+    this.restartBtn.addEventListener('click', () => this.fadeThen(() => this.returnToStart()));
     this.mapBtn = this.toolbar.querySelector('[data-role="map"]') as HTMLButtonElement;
     this.mapBtn.addEventListener('click', () => this.places.toggle());
     this.viewBtn = this.toolbar.querySelector('[data-role="view"]') as HTMLButtonElement;
@@ -331,6 +334,11 @@ export class Engine {
     this.hudRoot.appendChild(this.fileInput);
 
     // 保存トースト
+    // 場所が切りかわるときの、画面のふわっとした暗転（いきなり別の場所に飛んで、どこか分からなくならないように）
+    this.fade = document.createElement('div');
+    this.fade.className = 'kc-fade';
+    this.hudRoot.appendChild(this.fade);
+
     this.toast = document.createElement('div');
     this.toast.className = 'kc-toast hidden';
     this.hudRoot.appendChild(this.toast);
@@ -376,7 +384,7 @@ export class Engine {
     // 歩ける範囲（フィールド外＝周りの空中へ落ちないよう見えない壁）
     this.walk.setBounds(spot.field ?? null);
     // 行ける場所の一覧を作る（選ぶとその場所へ移動して説明が出る）
-    this.places.setObjects(spot.name, spot.objects ?? [], (i) => this.goToObject(i));
+    this.places.setObjects(spot.name, spot.objects ?? [], (i) => this.fadeThen(() => this.goToObject(i)));
     this.hub.hide();
     this.toolbar.classList.remove('hidden');
     this.spawnPlayer(spot);
@@ -1098,6 +1106,31 @@ export class Engine {
     return p.y;
   }
 
+  /**
+   * 画面を少し暗くしてから cb（場所の切りかえ）を行い、また明るくする。
+   * 動きをへらす設定（prefers-reduced-motion）の端末では、暗転せずにすぐ切りかえる。
+   */
+  private fadeThen(cb: () => void): void {
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    if (reduce || this.fading) {
+      if (!this.fading) cb();
+      return;
+    }
+    this.fading = true;
+    this.fade.classList.add('is-on');
+    window.setTimeout(() => {
+      try {
+        cb();
+      } finally {
+        // 新しい場所が描かれてから、明るくもどす
+        window.setTimeout(() => {
+          this.fade.classList.remove('is-on');
+          this.fading = false;
+        }, 40);
+      }
+    }, 160);
+  }
+
   /** 短いトーストを表示（保存通知など） */
   private showToast(msg: string, ms = 1600): void {
     this.toast.textContent = msg;
@@ -1207,7 +1240,7 @@ export class Engine {
       } else if (e.code === 'KeyD' || e.code === 'KeyW' || e.code === 'KeyB' || e.code === 'KeyX' || e.code === 'Escape') {
         this.setMode('walk'); // D = Done（ボタンの表示と同じ）
       } else if (e.code === 'KeyH') {
-        this.returnToStart();
+        this.fadeThen(() => this.returnToStart());
       }
       return;
     }
@@ -1234,7 +1267,7 @@ export class Engine {
       this.setMode('build');
     } else if (e.code === 'KeyH') {
       // H = Home（スタート地点へ戻る）
-      if (this.walk.enabled) this.returnToStart();
+      if (this.walk.enabled) this.fadeThen(() => this.returnToStart());
     } else if (e.code === 'KeyV') {
       // V = View（見え方を変える：一人称→うしろ→遠く→正面）
       if (this.mode === 'walk') this.cycleView();

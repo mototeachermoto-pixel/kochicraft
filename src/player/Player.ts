@@ -91,8 +91,14 @@ export class Player {
       vz = (vz / len) * speed;
     }
 
-    this.velocity.x = vx;
-    this.velocity.z = vz;
+    // 歩き出し・止まりを少しだけなめらかに（約0.1秒で目標の速さになる）。
+    // いきなり最高速・いきなり停止だと、カクカクした手ざわりになるため
+    const stopping = vx === 0 && vz === 0;
+    const ease = 1 - Math.exp(-dt * (stopping ? 26 : 16)); // 止まるときは、歩き出しより早く止まる
+    this.velocity.x += (vx - this.velocity.x) * ease;
+    this.velocity.z += (vz - this.velocity.z) * ease;
+    if (vx === 0 && Math.abs(this.velocity.x) < 0.05) this.velocity.x = 0;
+    if (vz === 0 && Math.abs(this.velocity.z) < 0.05) this.velocity.z = 0;
     this.velocity.y -= GRAVITY * dt;
 
     if (input.jump && this.onGround) {
