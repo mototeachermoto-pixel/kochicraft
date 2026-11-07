@@ -1087,6 +1087,17 @@ export class Engine {
     bar.querySelector('[data-role="friend"]')?.addEventListener('click', () => this.numberPanel.open('friend'));
   }
 
+  /** プレイヤーの真下にある地面の上面の高さ（足もとのかげ用。下に何もなければ足元の高さ） */
+  private groundBelow(): number {
+    const p = this.player.position;
+    const x = Math.floor(p.x);
+    const z = Math.floor(p.z);
+    for (let y = Math.floor(p.y + 0.01) - 1; y >= Math.floor(p.y) - 12 && y >= 0; y--) {
+      if (this.world.isSolid(x, y, z)) return y + 1;
+    }
+    return p.y;
+  }
+
   /** 短いトーストを表示（保存通知など） */
   private showToast(msg: string, ms = 1600): void {
     this.toast.textContent = msg;
@@ -1133,7 +1144,7 @@ export class Engine {
     if (this.walk.enabled) {
       this.walk.update(dt);
       // キャラクターを足元の位置・向きに合わせ、歩くと手足を振らせる
-      this.avatar.update(this.player.position, this.player.yaw, this.walk.moving, dt);
+      this.avatar.update(this.player.position, this.player.yaw, this.walk.moving, dt, this.groundBelow());
     } else {
       this.orbit.update(dt);
     }

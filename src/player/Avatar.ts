@@ -49,10 +49,21 @@ export class Avatar {
   private swing: { armL?: THREE.Group; armR?: THREE.Group; legL?: THREE.Group; legR?: THREE.Group } = {};
   /** 歩いた距離に応じて進む位相（止まると 0 に戻る） */
   private phase = 0;
+  /**
+   * 足もとの丸いかげ。いつも地面にはりつき、ジャンプで高く上がるほど小さく・うすくなる。
+   * かげがないと、キャラクターがういて見え、ジャンプでどこに下りるか分かりにくいため。
+   */
+  private readonly shadow: THREE.Mesh;
 
   constructor(scene: THREE.Scene) {
     this.root.visible = false;
     scene.add(this.root);
+    const mat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3, depthWrite: false });
+    this.shadow = new THREE.Mesh(new THREE.CircleGeometry(0.42, 20), mat);
+    this.shadow.rotation.x = -Math.PI / 2;
+    this.shadow.renderOrder = 1;
+    this.shadow.visible = false;
+    scene.add(this.shadow);
     this.build();
   }
 
@@ -69,14 +80,21 @@ export class Avatar {
 
   setVisible(on: boolean): void {
     this.root.visible = on;
+    this.shadow.visible = on;
   }
 
   /**
    * 毎フレームの更新。
-   * pos＝足元の位置、yaw＝向き、moving＝動いているか。
+   * pos＝足元の位置、yaw＝向き、moving＝動いているか、groundY＝真下の地面の高さ（分からなければ足元）。
    */
-  update(pos: THREE.Vector3, yaw: number, moving: boolean, dt: number): void {
+  update(pos: THREE.Vector3, yaw: number, moving: boolean, dt: number, groundY = pos.y): void {
     this.root.position.set(pos.x, pos.y, pos.z);
+    // 足もとのかげ：地面の少し上に置き、高く上がるほど小さく・うすく
+    const height = Math.max(0, pos.y - groundY);
+    const k = Math.max(0.35, 1 - height / 4);
+    this.shadow.position.set(pos.x, groundY + 0.02, pos.z);
+    this.shadow.scale.set(k, k, k);
+    (this.shadow.material as THREE.MeshBasicMaterial).opacity = 0.3 * k;
     // カメラの yaw は「-Z を向く」基準なので、モデルもそれに合わせる
     this.root.rotation.y = yaw;
 
