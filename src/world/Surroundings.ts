@@ -429,11 +429,18 @@ export class Surroundings {
     if (bd.near === 'city') {
       // 10マスごとの区画（道3マス＋ビル7マス）。近くは低め、遠くほど高いビル
       const sidewalk = hexColor('#a7a7a2');
-      band(4, 100, 10, (x, z, d) => {
-        if (rand() < 0.12) return;
+      const parkGreen = hexColor('#6f9a55');
+      band(12, 100, 10, (x, z, d) => {
         const gx = Math.floor(x / 10) * 10 + 3;
         const gz = Math.floor(z / 10) * 10 + 3;
         if (!onLand(gx + 3.5, gz + 3.5, 5)) return;
+        // あくまで雰囲気なので、区画の半分以上は空ける（多いと、ごちゃついて観光地が見づらい）。
+        // 空いた区画は公園や空き地の色にする（道路の色のままだと、広い駐車場のように見えるため）
+        if (rand() < 0.56) {
+          curStyle = STYLE_SPECKLE;
+          top(gx - 1, gz - 1, gx + 8, gz + 8, base + 0.03, rand() < 0.6 ? parkGreen : sidewalk);
+          return;
+        }
         curStyle = STYLE_STONE;
         top(gx - 1, gz - 1, gx + 8, gz + 8, base + 0.03, sidewalk); // 歩道
         // 高知の街なので、高いビルは少なく、3〜15階くらいにする（ときどき少し高いビル）
@@ -446,25 +453,25 @@ export class Surroundings {
         }
       });
       // 道ばたの木を少し
-      band(4, 30, 10, (x, z) => {
-        if (rand() < 0.5) tree(Math.floor(x / 10) * 10 + 1, Math.floor(z / 10) * 10 + 1, 0);
+      band(12, 34, 10, (x, z) => {
+        if (rand() < 0.25) tree(Math.floor(x / 10) * 10 + 1, Math.floor(z / 10) * 10 + 1, 0);
       });
     } else if (bd.near === 'town') {
-      band(6, 90, 9, (x, z) => {
+      band(12, 90, 9, (x, z) => {
         const r = rand();
-        if (r < 0.32) house(x + Math.floor(rand() * 3), z + Math.floor(rand() * 3));
-        else if (r < 0.62) paddyField(x, z);
-        else if (r < 0.78) tree(x + 2, z + 2, 0);
+        if (r < 0.16) house(x + Math.floor(rand() * 3), z + Math.floor(rand() * 3));
+        else if (r < 0.31) paddyField(x, z);
+        else if (r < 0.39) tree(x + 2, z + 2, 0);
       });
     } else if (bd.near === 'village') {
-      band(6, 70, 6, (x, z) => {
+      band(12, 70, 6, (x, z) => {
         const r = rand();
-        if (r < 0.06) house(x, z);
-        else if (r < 0.5) tree(x + Math.floor(rand() * 3), z + Math.floor(rand() * 3), rand() < 0.3 ? 1 : 0);
+        if (r < 0.03) house(x, z);
+        else if (r < 0.25) tree(x + Math.floor(rand() * 3), z + Math.floor(rand() * 3), rand() < 0.3 ? 1 : 0);
       });
     } else if (bd.near === 'forest') {
-      band(7, 70, 5, (x, z, d) => {
-        if (rand() < (d < 15 ? 0.45 : 0.75)) tree(x + Math.floor(rand() * 3), z + Math.floor(rand() * 3), rand() < 0.4 ? 1 : 0);
+      band(12, 70, 5, (x, z, d) => {
+        if (rand() < (d < 20 ? 0.2 : 0.38)) tree(x + Math.floor(rand() * 3), z + Math.floor(rand() * 3), rand() < 0.4 ? 1 : 0);
       });
     }
 
@@ -473,7 +480,7 @@ export class Surroundings {
       const isMt = bd.far === 'mountains';
       for (const v of sides) {
         if (v.water) continue;
-        const count = isMt ? 5 : 4;
+        const count = 3;
         for (let k = 0; k < count; k++) {
           const along = (k + rand()) / count;
           const out = isMt ? 85 + rand() * 90 : 80 + rand() * 70;
@@ -492,7 +499,7 @@ export class Surroundings {
     // 遠くの低い街並み（山の上から町を見下ろす場所など）
     for (const fs of bd.farCity ?? []) {
       if (S[fs].water) continue;
-      for (let k = 0; k < 40; k++) {
+      for (let k = 0; k < 20; k++) {
         const along = rand() * 2.2 - 0.6;
         const out = 70 + rand() * 60;
         const bx = fs === 'w' ? x0 - out : fs === 'e' ? x1 + out : x0 + (x1 - x0) * along;
