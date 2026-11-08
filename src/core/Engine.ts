@@ -245,13 +245,16 @@ export class Engine {
     });
     this.hudRoot.appendChild(this.nameBanner);
 
-    // 移動スティック（タッチ移動用）。親指でなぞった向きへ歩く。少しかたむけるとゆっくり、大きくかたむけるとふつうの速さ。
-    // 4つの方向ボタンでは、ななめに歩けず、カクカクした歩き方になるため（マインクラフトのタブレット版と同じ考え方）
+    // 方向ボタン（タッチ移動用）
     this.movePad = document.createElement('div');
     this.movePad.className = 'move-pad hidden';
-    this.movePad.innerHTML = `<div class="stick" aria-label="Move"><div class="stick__knob"></div></div>`;
+    this.movePad.innerHTML = `
+      <button class="move-btn move-btn--up" data-move="forward">▲</button>
+      <button class="move-btn move-btn--left" data-move="left">◀</button>
+      <button class="move-btn move-btn--down" data-move="back">▼</button>
+      <button class="move-btn move-btn--right" data-move="right">▶</button>
+    `;
     this.hudRoot.appendChild(this.movePad);
-    this.setupStick(this.movePad.querySelector('.stick') as HTMLElement);
 
     // ジャンプボタン（右下・独立）＝移動しながら親指でジャンプできる
     this.jumpBtn = document.createElement('button');
@@ -1137,64 +1140,6 @@ export class Engine {
         }, 40);
       }
     }, 160);
-  }
-
-  /**
-   * 移動スティックの動き。おした指だけを追いかけ（ほかの指の動きは無視）、
-   * はしの近く（遊び15%）は動かないようにして、そこから先を0〜1にする。
-   */
-  private setupStick(base: HTMLElement): void {
-    const knob = base.querySelector('.stick__knob') as HTMLElement;
-    let id = -1;
-    let cx = 0;
-    let cy = 0;
-    const radius = () => base.clientWidth * 0.4;
-    const move = (clientX: number, clientY: number) => {
-      const r = radius();
-      let dx = clientX - cx;
-      let dy = clientY - cy;
-      const len = Math.hypot(dx, dy);
-      if (len > r) {
-        dx = (dx / len) * r;
-        dy = (dy / len) * r;
-      }
-      knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-      const m = Math.min(1, len / r);
-      const DEAD = 0.15; // 遊び（指がふるえても勝手に歩かない）
-      const k = m < DEAD ? 0 : (m - DEAD) / (1 - DEAD) / (m || 1);
-      this.walk.setStick((dx / r) * k, -(dy / r) * k); // 画面の上＝前
-    };
-    const end = (e: PointerEvent) => {
-      if (e.pointerId !== id) return;
-      id = -1;
-      base.classList.remove('is-active');
-      knob.style.transform = 'translate(-50%, -50%)';
-      this.walk.setStick(0, 0);
-    };
-    base.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (id !== -1) return;
-      id = e.pointerId;
-      const rect = base.getBoundingClientRect();
-      cx = rect.left + rect.width / 2;
-      cy = rect.top + rect.height / 2;
-      base.classList.add('is-active');
-      move(e.clientX, e.clientY);
-    });
-    window.addEventListener('pointermove', (e) => {
-      if (e.pointerId === id) move(e.clientX, e.clientY);
-    });
-    window.addEventListener('pointerup', end);
-    window.addEventListener('pointercancel', end);
-    // ほかのアプリに切りかえたら、スティックももどす
-    window.addEventListener('blur', () => {
-      if (id === -1) return;
-      id = -1;
-      base.classList.remove('is-active');
-      knob.style.transform = 'translate(-50%, -50%)';
-      this.walk.setStick(0, 0);
-    });
   }
 
   /** 短いトーストを表示（保存通知など） */

@@ -69,8 +69,6 @@ export class WalkController {
     right: false,
     jump: false,
   };
-  /** 画面のスティックのかたむき（-1〜1。y は +＝前） */
-  private stick = { x: 0, y: 0 };
   private dragging = false;
   /** 画面をなぞっている指の番号。ほかの指（JUMP・方向ボタンを押す指）の動きでは向きを変えない */
   private dragId = -1;
@@ -114,8 +112,6 @@ export class WalkController {
   releaseAll = (): void => {
     this.keys.clear();
     for (const k of Object.keys(this.pad) as MoveKey[]) this.pad[k] = false;
-    this.stick.x = 0;
-    this.stick.y = 0;
     this.dragging = false;
     this.dragId = -1;
   };
@@ -151,12 +147,6 @@ export class WalkController {
   /** 画面の方向ボタンから移動入力を受け取る */
   setMove(key: MoveKey, on: boolean): void {
     this.pad[key] = on;
-  }
-
-  /** 画面のスティックのかたむきを受け取る（-1〜1。y は +＝前。はなしたら 0, 0） */
-  setStick(x: number, y: number): void {
-    this.stick.x = x;
-    this.stick.y = y;
   }
 
   /**
@@ -199,12 +189,9 @@ export class WalkController {
       // ジャンプ：J＝Jump ／ スペース ／ 画面のJUMPボタン
       jump: this.pad.jump || this.keys.has('Space') || this.keys.has('KeyJ'),
       sprint: false,
-      stickX: this.stick.x,
-      stickY: this.stick.y,
     };
     // キャラクターの歩行アニメ用に「動いているか」を覚えておく
-    this.moving =
-      input.forward || input.back || input.left || input.right || Math.hypot(this.stick.x, this.stick.y) > 0.3;
+    this.moving = input.forward || input.back || input.left || input.right;
 
     const wasOnGround = this.player.onGround;
     const beforeY = this.player.position.y;
