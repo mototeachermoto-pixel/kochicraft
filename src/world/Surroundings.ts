@@ -839,6 +839,153 @@ uniform vec3 kcHaze;
       for (let k = 0; k < 5; k++) house(Math.round(x0 + 3 + rand() * (x1 - x0 - 10)), Math.round(z1 + 14 + rand() * 26));
     }
 
+    // ===== 室戸岬：実際の地形に寄せた景色（2026-11-08 調べて作り直し） =====
+    // 森の台地（海成段丘）が海のすぐそばまで切り立ち、ふもとの細い平地を国道55号が岬を回りこむように走る。
+    // 岩礁の海岸が両がわへ「ハの字」に遠ざかっていく。ゲームの奥（-z）が海なので、海を向いて左（-x）が実際の東がわ。
+    // 東がわ＝黒くごつごつした岩（斑れい岩・ビシャゴ岩）、西がわ＝すじの入った明るい岩（砂岩）と、港・低い町並み。位置はおおまか
+    if (bd.feature === 'muroto-cape') {
+      const seaTop = sea ? sea.h : 11;
+      const flat = surf(48, max.z - 3).h;
+      const grassC = keyColor('grass');
+      const forest = hexColor('#2f6b2a');
+      const forestLight = hexColor('#3a7a30');
+      const forestDark = hexColor('#478c3c'); // 斜面（海から見える面は影で暗くなるので、明るめの色にしておく）
+      const foam = hexColor('#c8dde8');
+      const concrete = hexColor('#b4b2aa');
+      const asphalt = colorOf(roadId);
+      const darkRocks = ['#3e3a35', '#4b4640', '#37342f'].map(hexColor);
+      const lightRocks = ['#7b7364', '#8a8171', '#6d675a'].map(hexColor);
+      const pick = (list: THREE.Color[]): THREE.Color => list[Math.floor(rand() * list.length)];
+      const foamAt = (ax: number, az: number, bx: number, bz: number): void => {
+        curStyle = STYLE_PLAIN;
+        top(ax, az, bx, bz, seaTop + 0.08, foam);
+      };
+      const rockBox = (ax: number, az: number, bx: number, bz: number, h: number, c: THREE.Color): void =>
+        box(ax, seaTop - 2, az, bx, h, bz, c, STYLE_STONE, c, STYLE_STONE);
+
+      /** 入口から奥へ d 進んだ所の、海岸線の位置（ハの字に遠ざかる。少しだけ出入りをつける） */
+      const fade = (d: number): number => Math.min(1, d / 12); // 入口のふちでは、観光地の陸の幅にぴったり合わせる
+      const clampX = (x: number): number => Math.max(x0 - REACH, Math.min(x1 + REACH, x));
+      const shoreL = (d: number): number => clampX(Math.round(x0 + 4 - d * 1.6 - fade(d) * (3 * Math.sin(d / 17) + 2 * Math.sin(d / 41))));
+      const shoreR = (d: number): number => clampX(Math.round(x1 - 4 + d * 1.6 + fade(d) * (3 * Math.sin(d / 19 + 1) + 2 * Math.sin(d / 37))));
+      const END = 300;
+      // 台地までは「地面」と同じあつかいにして淡くしすぎない（台地の緑が灰色に見えないように）
+      this.hazeBase.value = flat + 26;
+      const STEP = 4;
+
+      // 陸（ふもとの細い平地）と、海岸の岩・白い波
+      for (let d = 0; d < END; d += STEP) {
+        const a = shoreL(d + STEP / 2);
+        const b = shoreR(d + STEP / 2);
+        const z = z1 + d;
+        box(a, seaTop - 2, z, b, flat, z + STEP, grassC, STYLE_GRASS, hexColor('#6f6a5e'), STYLE_STONE);
+        if (d > 120) continue;
+        // 東がわ：黒いごつごつした岩のかたまり（海岸線の段のすきまができない長さにする）
+        const wl = 8 + Math.floor(rand() * 7);
+        rockBox(a - wl, z, a, z + STEP, seaTop + Math.floor(rand() * 3) + 1, pick(darkRocks));
+        if (rand() < 0.75) foamAt(a - wl - 2, z, a - wl, z + STEP);
+        // 西がわ：地層が立っているので、沖へのびる細いすじの岩（すきまを空ける）
+        if (d % 8 === 0) {
+          const wr = 11 + Math.floor(rand() * 10);
+          rockBox(b, z, b + wr, z + 2, seaTop + 1 + Math.floor(rand() * 2), pick(lightRocks));
+          if (rand() < 0.75) foamAt(b + wr, z - 1, b + wr + 2, z + 3);
+        }
+      }
+
+      // 国道55号：入口の少し奥を横切り、両がわの海岸に沿って続く
+      const ROAD_D = 14;
+      curStyle = styleOf(roadId);
+      top(shoreL(ROAD_D) + 5, z1 + ROAD_D, shoreR(ROAD_D) - 5, z1 + ROAD_D + STEP + 2, flat + 0.06, asphalt);
+      for (let d = ROAD_D + STEP; d < END - STEP; d += STEP) {
+        const z = z1 + d;
+        top(shoreL(d + STEP / 2) + 5, z, shoreL(d + STEP / 2) + 20, z + STEP, flat + 0.06, asphalt);
+        top(shoreR(d + STEP / 2) - 20, z, shoreR(d + STEP / 2) - 5, z + STEP, flat + 0.06, asphalt);
+      }
+
+      // 森の台地：海岸からも入口からも少し離れた所から、急な斜面で立ち上がり、上は平ら（高さが同じ所はまとめて軽くする）
+      const heightAt = (x: number, d: number): number => {
+        const front = d - 38 + 5 * Math.sin(x / 23) + 3 * Math.sin(x / 9);
+        const e = Math.min(front, x - shoreL(d) - 34, shoreR(d) - x - 34);
+        if (e < 0) return 0;
+        let h = e < 6 ? 6 : e < 12 ? 13 : e < 18 ? 20 : 24;
+        if (e >= 18 && Math.sin(x / 31) * Math.sin(d / 27) > 0.3) h += 2; // 台地の上のゆるいでこぼこ
+        if (d > 170 && e >= 24) h += 8; // 奥は一段高く
+        if (d > 225 && e >= 40) h += 12 + 4 * Math.round(2 * (1 + Math.sin(x / 47))); // いちばん奥の山地
+        return h;
+      };
+      const ROW = 6;
+      for (let d = 30; d < END; d += ROW) {
+        const z = z1 + d;
+        const xa = shoreL(d) + 28;
+        const xb = shoreR(d) - 28;
+        let runStart = xa;
+        let runH = heightAt(xa + ROW / 2, d + ROW / 2);
+        for (let x = xa + ROW; x <= xb + ROW; x += ROW) {
+          const h = x > xb ? -1 : heightAt(x + ROW / 2, d + ROW / 2);
+          if (h === runH) continue;
+          if (runH > 0) {
+            const tc = runH <= 13 ? forestLight : forest;
+            box(runStart, flat - 1, z, x, flat + runH, z + ROW, tc, STYLE_LEAVES, forestDark, STYLE_LEAVES);
+          }
+          runStart = x;
+          runH = h;
+        }
+      }
+
+      // ヤシ（ビロウ）：海岸の道ぞいに、少しだけ
+      const palmTree = (px: number, pz: number): void => {
+        const th = 5 + Math.floor(rand() * 2);
+        box(px, flat, pz, px + 1, flat + th, pz + 1, wood, STYLE_WOOD, wood, STYLE_WOOD);
+        const lc = pick(leafColors);
+        box(px - 2, flat + th, pz, px + 3, flat + th + 1, pz + 1, lc, STYLE_LEAVES, lc, STYLE_LEAVES);
+        box(px, flat + th, pz - 2, px + 1, flat + th + 1, pz + 3, lc, STYLE_LEAVES, lc, STYLE_LEAVES);
+        box(px, flat + th + 1, pz, px + 1, flat + th + 2, pz + 1, lc, STYLE_LEAVES, lc, STYLE_LEAVES);
+      };
+      for (let k = 0; k < 18; k++) {
+        const d = 22 + rand() * 80;
+        const off = 1 + Math.floor(rand() * 3);
+        palmTree(rand() < 0.5 ? shoreL(d) + off : shoreR(d) - off - 1, Math.round(z1 + d));
+      }
+
+      // 西がわの低い町並み（道の山がわ）と小さな港
+      for (let k = 0; k < 9; k++) {
+        const d = 30 + k * 9 + rand() * 4;
+        const hx = shoreR(d) - 29;
+        const hz = Math.round(z1 + d);
+        const pc = pick(plaster);
+        const rc = pick(roofs);
+        box(hx, flat, hz, hx + 5, flat + 3, hz + 4, pc, STYLE_PLASTER, pc, STYLE_PLASTER);
+        box(hx - 1, flat + 3, hz - 1, hx + 6, flat + 4, hz + 5, rc, STYLE_TILE, rc, STYLE_TILE);
+      }
+      const portD = 52;
+      const px = shoreR(portD);
+      const pz = z1 + portD;
+      box(px + 14, seaTop - 2, pz - 26, px + 40, seaTop + 2, pz - 23, concrete, STYLE_STONE, concrete, STYLE_STONE);
+      box(px + 37, seaTop - 2, pz - 23, px + 40, seaTop + 2, pz + 2, concrete, STYLE_STONE, concrete, STYLE_STONE);
+
+      // ビシャゴ岩：東がわの海岸に立つ、大きな黒い岩
+      const bx = x0 - 22;
+      const bz = z0 + 34;
+      foamAt(bx - 8, bz - 8, bx + 12, bz - 6);
+      foamAt(bx - 8, bz + 10, bx + 12, bz + 12);
+      foamAt(bx - 8, bz - 6, bx - 6, bz + 10);
+      foamAt(bx + 10, bz - 6, bx + 12, bz + 10);
+      rockBox(bx - 5, bz - 4, bx + 9, bz + 8, seaTop + 3, darkRocks[0]);
+      rockBox(bx - 2, bz - 2, bx + 6, bz + 6, seaTop + 9, darkRocks[1]);
+      rockBox(bx, bz, bx + 3, bz + 4, seaTop + 15, darkRocks[2]);
+
+      // 岬の左右の沖の岩礁（沖のまん中は、太平洋が広く見えるよう空けておく）
+      for (let k = 0; k < 16; k++) {
+        const west = k % 2 === 0;
+        const x = Math.round(west ? x0 - 10 - rand() * 55 : x1 + 10 + rand() * 55);
+        const z = Math.round(z0 - 14 + rand() * (z1 - z0 + 20));
+        const r = 1 + Math.floor(rand() * 3);
+        if (rand() < 0.7) foamAt(x - r - 1, z - r - 2, x + r + 2, z - r);
+        if (rand() < 0.7) foamAt(x - r - 1, z + r + 1, x + r + 2, z + r + 3);
+        rockBox(x - r, z - r, x + r + 1, z + r + 1, seaTop + 1 + Math.floor(rand() * 4), west ? pick(darkRocks) : pick(lightRocks));
+      }
+    }
+
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     geo.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));

@@ -1,6 +1,5 @@
 import type { World } from '@/world/World';
 import { Build } from './Build';
-import { kimonoFigure } from './statues';
 import type { SpotDefinition } from './SpotDefinition';
 
 /**
@@ -9,7 +8,6 @@ import type { SpotDefinition } from './SpotDefinition';
  *   - 海に突き出す岬と、波がつくった「ゴツゴツした暗い岩礁」（大地は今も隆起し続ける）。
  *   - 白い「室戸岬灯台」＝実物どおり高台（丘）の上。光の強さは日本一級。
  *   - あたたかい土地なので育つ「ヤシ（ビロウ）」と、根がタコの足のように広がる「アコウの木」。
- *   - 海を見つめる「中岡慎太郎像」（乱礁遊歩道の入口。坂本龍馬の盟友）。
  *   - 海辺の岩屋（御厨人窟ふう。若き日の空海が「空と海だけを見た」物語）。
  *   - 広い陸地は自由に建築できるスペース。
  *
@@ -60,13 +58,6 @@ function lighthouse(
   b.box(cx - 1, by + 9, cz - 1, cx + 1, by + 9, cz + 1, white); // 白い丸屋根
   b.set(cx, by + 10, cz, white);
   b.set(cx, by + 11, cz, dark); // 避雷針
-}
-
-/** 中岡慎太郎像（写真に合わせて：石を積んだ四角い台座の上に、海を見つめて立つ姿）。 */
-function statue(b: Build, x: number, z: number, stone: number, stoneW: number, bronze: number, dark: number): void {
-  b.box(x - 1, 9, z - 1, x + 1, LAND + 2, z + 1, stoneW); // 岩場から立ち上がる石積みの台座
-  b.box(x - 1, LAND + 3, z - 1, x + 1, LAND + 3, z + 1, stone); // 台座の上の石
-  kimonoFigure(b, x, LAND + 3, z, -1, bronze, dark, 'stand'); // 海（-z）を見つめる
 }
 
 /**
@@ -140,10 +131,7 @@ function build(world: World): void {
   const lantern = b.id('lantern'); // 灯台の灯り
   const wood = b.id('wood'); // 手すり・遊歩道・看板
   const leaves = b.id('leaves'); // ヤシの葉
-  const bronze = b.id('bronze'); // 銅像
-  const bronzeDark = b.id('bronzedark'); // 銅像の濃い所
   const darkRock = b.id('road'); // 黒っぽい岩（室戸の岩礁）
-  const stonewall = b.id('stonewall'); // 像の石積みの台座
   const road = b.id('road'); // 遊歩道（乱礁遊歩道）
   const flower = b.id('flower');
 
@@ -201,9 +189,6 @@ function build(world: World): void {
   // ===== 白い灯台（室戸岬灯台）＝丘の上。光の強さは日本一級 =====
   lighthouse(b, 57, 53, LAND + 6, castlewall, glass, lantern, tile);
 
-  // ===== 中岡慎太郎像（乱礁遊歩道の入口で海を見つめる） =====
-  statue(b, 42, 45, stone, stonewall, bronze, bronzeDark);
-
   // ===== 海辺の岩屋（御厨人窟ふう。空と海だけが見える洞窟の物語） =====
   b.mound(34, 47, 9, 17, 4, stone, grass);
   b.box(34, 13, 46, 34, 14, 50, AIR); // 入口の通路（手前から入れる）
@@ -242,8 +227,8 @@ export const muroto: SpotDefinition = {
   viewDistance: 60,
   spawn: { pos: { x: 48, y: LAND + 1, z: 66 }, yaw: 0 },
   field: { min: { x: 28, y: 0, z: 26 }, max: { x: 68, y: 0, z: 69 } },
-  // 太平洋につき出た岬。三方が海で、うしろに森と山
-  backdrop: { near: 'forest', far: 'mountains', sea: ['w', 'e', 'n'] },
+  // 実際の地形に合わせた専用の景色（Surroundings.ts の muroto-cape）
+  backdrop: { near: 'none', far: 'none', sea: ['w', 'e', 'n', 's'], feature: 'muroto-cape' },
   build,
   objects: [
     {
@@ -283,19 +268,6 @@ export const muroto: SpotDefinition = {
         canDo: 'You can look at the big blue ocean.',
         feature: 'It goes far, far away.',
         about: 'Big whales swim out there!',
-      },
-    },
-    {
-      id: 'statue',
-      name: 'Statue of Nakaoka Shintaro',
-      nameJa: '中岡慎太郎像',
-      region: { min: { x: 40, y: 12, z: 42 }, max: { x: 44, y: 25, z: 47 } },
-      focus: { x: 42, y: 19, z: 45 },
-      image: './photos/muroto/statue.jpg',
-      guide: {
-        canDo: 'You can see a bronze statue.',
-        feature: 'He looks at the sea.',
-        about: 'He is Nakaoka Shintaro, a friend of Ryoma.',
       },
     },
     {
