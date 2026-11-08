@@ -225,7 +225,7 @@ export const ashizuri: SpotDefinition = {
   spawn: { pos: { x: 48, y: CLIFF + 1, z: 66 }, yaw: 0 },
   field: { min: { x: 28, y: 0, z: 26 }, max: { x: 68, y: 0, z: 69 } },
   // 太平洋につき出た岬。三方が海で、うしろに森と山
-  backdrop: { near: 'forest', far: 'mountains', sea: ['n', 'w', 'e'] },
+  backdrop: { near: 'none', far: 'none', sea: ['n', 'w', 'e', 's'], feature: 'ashizuri-cape' },
   build,
   objects: [
     {

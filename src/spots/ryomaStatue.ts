@@ -138,7 +138,7 @@ export const ryomaStatue: SpotDefinition = {
   spawn: { pos: { x: 48, y: G + 1, z: 68 }, yaw: 0 },
   field: { min: { x: 28, y: 0, z: 26 }, max: { x: 68, y: 0, z: 69 } },
   // 桂浜の岬の上。前は太平洋、まわりは松の森
-  backdrop: { near: 'forest', far: 'hills' },
+  backdrop: { near: 'none', far: 'none', feature: 'katsurahama-park' },
   build,
   objects: [
     {

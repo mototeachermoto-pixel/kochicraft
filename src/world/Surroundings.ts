@@ -538,6 +538,212 @@ uniform vec3 kcHaze;
       }
     }
 
+    // ===== 足摺岬：太平洋につき出た、黒い岩の高い崖の岬（2026-11-08 調べて作り直し） =====
+    if (bd.feature === 'ashizuri-cape') {
+      const seaTop = sea ? sea.h : 9;
+      const cx = Math.round((x0 + x1) / 2);
+      const plateau = surf(cx, max.z - 3).h;
+      const rocks = ['#4b4640', '#5a544b', '#3e3a35', '#645d52'].map(hexColor);
+      const rockColor = (): THREE.Color => rocks[Math.floor(rand() * rocks.length)];
+      const green = keyColor('grass');
+      const forest = hexColor('#2f6b2a');
+      const foam = hexColor('#c8dde8');
+      const cliff = (ax: number, az: number, bx: number, bz: number, h: number, tc: THREE.Color, ts: number): void =>
+        box(ax, seaTop - 2, az, bx, h, bz, tc, ts, rockColor(), STYLE_STONE);
+      const surfAt = (ax: number, az: number, bx: number, bz: number): void => {
+        curStyle = STYLE_PLAIN;
+        top(ax, az, bx, bz, seaTop + 0.08, foam);
+      };
+      /** 陸の高さ（入口のあたりは台地と同じで、奥へ行くほど山になる。実物も白皇山へ上がっていく） */
+      const hAt = (d: number): number => plateau + (d < 70 ? 0 : Math.floor((d - 70) / 24) * 3);
+      // 岬のつけ根：入口から奥へ行くほど陸が広がる。左右のふちは、ぎざぎざの黒い崖
+      const halfBase = cx - x0 + 3;
+      for (let d = 0; d < 260; d += 8) {
+        const hl = Math.round(halfBase + d * 0.55 + rand() * 6);
+        const hr = Math.round(halfBase + d * 0.55 + rand() * 6);
+        const near = d < 16;
+        cliff(cx - hl, z1 + d, cx + hr, z1 + d + 8, hAt(d), near ? green : forest, near ? STYLE_GRASS : STYLE_LEAVES);
+        if (d < 170) {
+          surfAt(cx - hl - 1, z1 + d, cx - hl, z1 + d + 8);
+          surfAt(cx + hr, z1 + d, cx + hr + 1, z1 + d + 8);
+        }
+      }
+      // 観光地の入口の道を、岬のつけ根の森の中へ続ける
+      let roadA = -1;
+      let roadB = -1;
+      for (let x = min.x; x <= max.x; x++) {
+        if (surf(x, max.z).id !== roadId) continue;
+        if (roadA < 0) roadA = x;
+        roadB = x + 1;
+      }
+      if (roadA >= 0) {
+        curStyle = styleOf(roadId);
+        top(roadA, z1, roadB, z1 + 70, plateau + 0.06, colorOf(roadId));
+      }
+      // 岬の森（やぶ椿などの、こんもりした濃い緑）
+      for (let k = 0; k < 90; k++) {
+        const d = 10 + rand() * 140;
+        const x = Math.round(cx + (rand() - 0.5) * (2 * halfBase + d * 0.9));
+        if (roadA >= 0 && d < 74 && x > roadA - 5 && x < roadB + 5) continue;
+        const z = Math.round(z1 + d);
+        const h = hAt(d);
+        const r = 2 + Math.floor(rand() * 2);
+        const lc = leafColors[Math.floor(rand() * leafColors.length)];
+        box(x - r, h, z - r, x + r + 1, h + 3 + Math.floor(rand() * 2), z + r + 1, lc, STYLE_LEAVES, lc, STYLE_LEAVES);
+      }
+      // 観光地の左右のふち：まっすぐな壁に見えないよう、でこぼこの岩をつける。下には白い波
+      for (let z = min.z; z < z1; z += 3) {
+        for (const west of [true, false]) {
+          if (surf(west ? min.x : max.x, z).h < plateau - 1) continue;
+          const w = 1 + Math.floor(rand() * 4);
+          const h = plateau - Math.floor(rand() * 5);
+          const isGreen = rand() < 0.6;
+          const tc = isGreen ? forest : rockColor();
+          const ts = isGreen ? STYLE_LEAVES : STYLE_STONE;
+          if (west) {
+            cliff(x0 - w, z, x0, z + 3, h, tc, ts);
+            surfAt(x0 - w - 1, z, x0 - w, z + 3);
+          } else {
+            cliff(x1, z, x1 + w, z + 3, h, tc, ts);
+            surfAt(x1 + w, z, x1 + w + 1, z + 3);
+          }
+        }
+      }
+      // 沖の岩と、そのまわりの白い波
+      for (let k = 0; k < 16; k++) {
+        const where = rand();
+        const rx = where < 0.35 ? x0 - 12 - rand() * 60 : where < 0.7 ? x1 + 12 + rand() * 60 : cx + (rand() - 0.5) * 120;
+        const rz = where < 0.7 ? z0 - 30 + rand() * (z1 - z0 + 30) : z0 - 8 - rand() * 50;
+        const r = 1 + Math.floor(rand() * 3);
+        const x = Math.round(rx);
+        const z = Math.round(rz);
+        // 波は、岩のまわりに切れぎれに（四角い板に見えないように）
+        if (rand() < 0.7) surfAt(x - r - 1, z - r - 1, x + r + 2, z - r);
+        if (rand() < 0.7) surfAt(x - r - 1, z + r + 1, x + r + 2, z + r + 2);
+        if (rand() < 0.7) surfAt(x - r - 1, z - r, x - r, z + r + 1);
+        if (rand() < 0.7) surfAt(x + r + 1, z - r, x + r + 2, z + r + 1);
+        const rc = rockColor();
+        box(x - r, seaTop - 2, z - r, x + r + 1, seaTop + 1 + Math.floor(rand() * 5), z + r + 1, rc, STYLE_STONE, rc, STYLE_STONE);
+      }
+    }
+
+    // ===== 坂本龍馬像：桂浜公園の中の観光地（2026-11-08 調べて作り直し） =====
+    // 龍馬像は龍頭岬の上。そばに弓なりの桂浜、はしに龍王岬（海津見神社）、公園には松・休憩所やお店・水族館・駐車場、
+    // 高台に坂本龍馬記念館がある。ゲームの北（奥）が海なので、海を向いて左（西）に浜が続くように置く。位置はおおまか
+    if (bd.feature === 'katsurahama-park') {
+      const seaTop = sea ? sea.h : base;
+      const cx = Math.round((x0 + x1) / 2);
+      const sandId = blockRegistry.getByKey('sand')?.id ?? 4;
+      const sand = colorOf(sandId);
+      const waterC = colorOf(waterId);
+      const pave = hexColor('#b8b4aa');
+      const asphalt = colorOf(roadId);
+      const foam = hexColor('#c8dde8');
+      const white = hexColor('#eeeeea');
+      const pineC = hexColor('#2c5f2e');
+      const red = hexColor('#c63b2f');
+      const rock = hexColor('#4b4640');
+      const forest = hexColor('#2f6b2a');
+      const lay = (ax: number, az: number, bx: number, bz: number, y: number, c: THREE.Color, st: number): void => {
+        curStyle = st;
+        top(ax, az, bx, bz, y, c);
+      };
+      /** 弓なりの浜の、海が陸へ入りこむ深さ */
+      const bite = (x: number): number => Math.round(34 * Math.sin(Math.PI * Math.min(1, Math.max(0, (x0 - x) / 150))));
+      // 桂浜：弓なりの海岸線・砂浜・白い波
+      for (let x = x0 - 150; x < x0; x += 5) {
+        const b = bite(x + 2.5);
+        if (b > 0) lay(x, z0, x + 5, z0 + b, seaTop + 0.06, waterC, styleOf(waterId));
+        lay(x, z0 + b, x + 5, z0 + b + 14, base + 0.12, sand, styleOf(sandId));
+        lay(x, z0 + b, x + 5, z0 + b + 2, base + 0.18, foam, STYLE_PLAIN);
+      }
+      // 龍王岬：浜のはしの岩山と、上の赤いお宮と鳥居
+      const rx = x0 - 162;
+      const rz = z0 + 6;
+      box(rx - 14, seaTop - 2, rz - 16, rx + 14, base + 3, rz + 14, forest, STYLE_LEAVES, rock, STYLE_STONE);
+      box(rx - 8, base + 3, rz - 10, rx + 8, base + 7, rz + 8, forest, STYLE_LEAVES, rock, STYLE_STONE);
+      const y = base + 7;
+      box(rx - 2, y, rz - 2, rx + 2, y + 2, rz + 2, roofs[1], STYLE_TILE, red, STYLE_PLASTER);
+      box(rx - 2, y, rz + 5, rx - 1, y + 3, rz + 6, red, STYLE_PLASTER, red, STYLE_PLASTER);
+      box(rx + 1, y, rz + 5, rx + 2, y + 3, rz + 6, red, STYLE_PLASTER, red, STYLE_PLASTER);
+      box(rx - 3, y + 3, rz + 5, rx + 3, y + 4, rz + 6, red, STYLE_PLASTER, red, STYLE_PLASTER);
+      // 東がわの海岸の黒い岩と波
+      for (let x = x1; x < x1 + 120; x += 5) {
+        if (rand() < 0.35) continue;
+        const r = 1 + Math.floor(rand() * 2);
+        lay(x - r - 1, z0 - r - 1, x + r + 2, z0 - r, seaTop + 0.08, foam, STYLE_PLAIN);
+        box(x - r, seaTop - 2, z0 - r, x + r + 1, seaTop + 1 + Math.floor(rand() * 2), z0 + r, rock, STYLE_STONE, rock, STYLE_STONE);
+      }
+      /** 松（細い幹の上に、平たく広がる葉） */
+      const pine = (px: number, pz: number): void => {
+        const th = 5 + Math.floor(rand() * 3);
+        const ox = Math.floor(rand() * 3) - 1;
+        box(px, base, pz, px + 1, base + th, pz + 1, wood, STYLE_WOOD, wood, STYLE_WOOD);
+        box(px - 3 + ox, base + th, pz - 2, px + 4 + ox, base + th + 2, pz + 3, pineC, STYLE_LEAVES, pineC, STYLE_LEAVES);
+        box(px - 1 + ox, base + th + 2, pz - 1, px + 2 + ox, base + th + 3, pz + 2, pineC, STYLE_LEAVES, pineC, STYLE_LEAVES);
+      };
+      for (let k = 0; k < 30; k++) {
+        const x = Math.round(x0 - 6 - rand() * 135);
+        const z = Math.round(z0 + bite(x) + 18 + rand() * 45);
+        pine(x, z);
+      }
+      for (let k = 0; k < 24; k++) pine(Math.round(x1 + 6 + rand() * 95), Math.round(z0 + 6 + rand() * 70));
+      for (let k = 0; k < 14; k++) pine(Math.round(x0 - 36 + rand() * 42), Math.round(z1 + 6 + rand() * 54));
+      // 公園の遊歩道と広場
+      lay(cx - 3, z1, cx + 4, z1 + 34, base + 0.06, pave, STYLE_STONE);
+      lay(cx - 21, z1 + 34, cx + 22, z1 + 46, base + 0.06, pave, STYLE_STONE);
+      // 休憩所・お店（広場の奥に並ぶ、低い建物）
+      const awnings = ['#c0504d', '#3f7fbf', '#e0a030', '#4f9f6f'].map(hexColor);
+      for (const startX of [cx - 21, cx + 4]) {
+        for (let i = 0; i < 3; i++) {
+          const sx = startX + i * 6;
+          const pc = plaster[Math.floor(rand() * plaster.length)];
+          const ac = awnings[Math.floor(rand() * awnings.length)];
+          box(sx, base, z1 + 47, sx + 5, base + 3, z1 + 54, pc, STYLE_PLASTER, pc, STYLE_PLASTER);
+          box(sx - 1, base + 3, z1 + 46, sx + 6, base + 4, z1 + 55, roofs[0], STYLE_TILE, roofs[0], STYLE_TILE);
+          box(sx, base + 2, z1 + 45, sx + 5, base + 3, z1 + 47, ac, STYLE_PLAIN, ac, STYLE_PLAIN);
+        }
+      }
+      // 駐車場（白い線と車）と、そこへ来る道
+      const lotA = cx + 26;
+      const lotB = cx + 66;
+      lay(lotA, z1 + 12, lotB, z1 + 42, base + 0.06, asphalt, styleOf(roadId));
+      lay(lotB - 26, z1 + 42, lotB - 21, z1 + 260, base + 0.06, asphalt, styleOf(roadId));
+      const cars = ['#d8d8dc', '#c84a3a', '#3b6fb5', '#2c2f36', '#e8e4d8'].map(hexColor);
+      for (let row = 0; row < 3; row++) {
+        const rowZ = z1 + 15 + row * 9;
+        for (let c = 0; c < 11; c++) {
+          const px = lotA + 3 + c * 3;
+          lay(px - 1, rowZ, px - 0.75, rowZ + 5, base + 0.12, white, STYLE_PLAIN);
+          if (rand() > 0.55) continue;
+          const cc = cars[Math.floor(rand() * cars.length)];
+          box(px, base, rowZ + 1, px + 2, base + 1, rowZ + 4, cc, STYLE_PLAIN, cc, STYLE_PLAIN);
+          box(px, base + 1, rowZ + 2, px + 2, base + 2, rowZ + 3, cc, STYLE_PLAIN, hexColor('#3a4656'), STYLE_PLAIN);
+        }
+      }
+      // だんだんの丘
+      const stack = (hx: number, hz: number, r: number, height: number): number => {
+        const hc = keyColor('grass').multiplyScalar(0.85);
+        const steps = Math.max(3, Math.round(height / 4));
+        for (let k = 0; k < steps; k++) {
+          const rr = r * (1 - k / steps) + 8;
+          box(Math.round(hx - rr), Math.round(base - 1 + (height * k) / steps), Math.round(hz - rr * 0.85), Math.round(hx + rr), Math.round(base - 1 + (height * (k + 1)) / steps), Math.round(hz + rr * 0.85), hc, STYLE_GRASS, hc, STYLE_GRASS);
+        }
+        return Math.round(base - 1 + height);
+      };
+      // 水族館（浜の西のはしの近く）
+      const aqX = x0 - 118;
+      const aqZ = z0 + bite(aqX) + 24;
+      box(aqX, base, aqZ, aqX + 16, base + 5, aqZ + 11, hexColor('#3f8fc0'), STYLE_PLAIN, hexColor('#dfe9ee'), STYLE_PLASTER);
+      // 坂本龍馬記念館（高台の、ガラスの四角い建物）
+      const hillTop = stack(cx - 60, z1 + 75, 18, 14);
+      box(cx - 70, hillTop, z1 + 69, cx - 50, hillTop + 6, z1 + 81, hexColor('#8d9499'), STYLE_STONE, hexColor('#b9d4e2'), STYLE_WINDOWS);
+      // 遠くの低い山（内陸の側）
+      stack(cx + 10, z1 + 150, 34, 18);
+      stack(cx - 110, z1 + 165, 30, 20);
+      stack(cx + 120, z1 + 135, 30, 16);
+    }
+
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     geo.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
