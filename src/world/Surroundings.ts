@@ -106,11 +106,39 @@ function shade(c: THREE.Color, k: number): THREE.Color {
 export class Surroundings {
   readonly group = new THREE.Group();
   private readonly material = new THREE.MeshLambertMaterial({ vertexColors: true });
+  /** 淡くする計算で使う値：観光地の範囲（x0, z0, x1, z1）・外の地面の高さ・とかす色（地平線の空の色） */
+  private readonly hazeField = { value: new THREE.Vector4() };
+  private readonly hazeBase = { value: 10 };
+  private readonly hazeColor = { value: new THREE.Color('#87ceeb').lerp(new THREE.Color('#ffffff'), 0.28) };
 
   constructor() {
     this.group.name = 'Surroundings';
     // 観光地のブロックと同じ模様をつける（境目が目立たないように）
     applyBlockStyles(this.material);
+    // 外の景色を淡くする（空の色に少しとかす）。観光地から離れるほど淡く、建物や木は地面より強く淡くして、主役の観光地を目立たせる
+    const addStyles = this.material.onBeforeCompile.bind(this.material);
+    this.material.onBeforeCompile = (shader, renderer) => {
+      addStyles(shader, renderer);
+      shader.uniforms.kcField = this.hazeField;
+      shader.uniforms.kcBase = this.hazeBase;
+      shader.uniforms.kcHaze = this.hazeColor;
+      shader.fragmentShader =
+        `uniform vec4 kcField;
+uniform float kcBase;
+uniform vec3 kcHaze;
+` +
+        shader.fragmentShader.replace(
+          '#include <opaque_fragment>',
+          `{
+            float dx = max(max(kcField.x - vKcPos.x, vKcPos.x - kcField.z), 0.0);
+            float dz = max(max(kcField.y - vKcPos.z, vKcPos.z - kcField.w), 0.0);
+            float amount = (0.08 + 0.92 * smoothstep(0.0, 90.0, max(dx, dz))) * (vKcPos.y > kcBase + 0.5 ? 0.36 : 0.12);
+            outgoingLight = mix(outgoingLight, kcHaze, amount);
+          }
+          #include <opaque_fragment>`,
+        );
+    };
+    this.material.customProgramCacheKey = () => 'kc-surroundings-haze-2';
   }
 
   /** いまの観光地に合わせて作り直す */
@@ -322,6 +350,8 @@ export class Surroundings {
     const rand = rng(seed);
     const landSide = sides.find((v) => !v.water);
     const base = landSide ? landSide.h : 10;
+    this.hazeField.value.set(x0, z0, x1, z1);
+    this.hazeBase.value = base;
     /** その場所が陸の上か（海の上や、外へ続く道・川の上には物を置かない） */
     const onLand = (x: number, z: number, r: number): boolean => {
       const dx = Math.max(x0 - x, 0, x - x1);
