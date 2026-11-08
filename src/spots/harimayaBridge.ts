@@ -1,6 +1,5 @@
 ﻿import type { World } from '@/world/World';
 import { Build } from './Build';
-import { kimonoFigure } from './statues';
 import type { SpotDefinition } from './SpotDefinition';
 
 /**
@@ -10,7 +9,6 @@ import type { SpotDefinition } from './SpotDefinition';
  *   - 橋の下を流れる堀川（江戸時代は商売の舟が行き来した運河）。
  *   - そばに垂れ下がる「柳（やなぎ）」。
  *   - からくり時計（毎正時に人形が出て踊る）＝実物は交差点そばのビルにある名物。
- *   - 純信とお馬の像（かんざしの恋物語。よさこい節「坊さんかんざし買うを見た」）。
  *   - 奥に電車通り（とさでん風の路面電車＋レール）＝はりまや橋交差点の象徴。
  *   - まわりは広い平らな公園（自由に建築できるスペース）。
  *
@@ -88,25 +86,6 @@ function willow(b: Build, x: number, z: number, trunkH: number, wood: number, le
       for (let k = 1; k <= len; k++) b.set(x + dx, t - k, z + dz, leaf);
     }
   }
-}
-
-/**
- * 純信とお馬の像（かんざしの恋物語の2人）。写真に合わせて：
- * 低い石の台座の上に、銅像の2人が並んで立つ。お馬の手に金のかんざし。
- */
-function coupleMonument(
-  b: Build,
-  x: number,
-  z: number,
-  stoneW: number,
-  bronze: number,
-  dark: number,
-  gold: number,
-): void {
-  b.box(x - 3, GROUND + 1, z - 1, x + 3, GROUND + 2, z + 1, stoneW); // 低い石の台座
-  kimonoFigure(b, x - 2, GROUND + 2, z, 1, bronze, dark, 'stand'); // 純信（左）
-  kimonoFigure(b, x + 2, GROUND + 2, z, 1, bronze, dark, 'reach'); // お馬（右。手を前へ）
-  b.set(x, GROUND + 9, z + 2, gold); // お馬がさし出した手に金のかんざし（物語の主役）
 }
 
 /**
@@ -214,8 +193,6 @@ function build(world: World): void {
   const flower = b.id('flower');
   const bridgeWood = b.id('bridge'); // 橋の床板
   const bamboo = b.id('bamboo'); // 柳の明るい黄緑
-  const bronze = b.id('bronze'); // 銅像
-  const bronzeDark = b.id('bronzedark'); // 銅像の濃い所
   const glass = b.id('glass'); // 電車の窓
   const sakura = b.id('sakura'); // 桃色（お馬の着物・踊り子人形）
   const road = b.id('road'); // 電車通り
@@ -259,8 +236,7 @@ function build(world: World): void {
   // ===== からくり時計（手前の広場・左のふち。実物は交差点そばの名物） =====
   karakuriClock(b, 33, 54, castlewall, tile, lantern, wood, torii, sakura, glass);
 
-  // ===== 純信とお馬の像（手前の広場・左。かんざしの恋物語） =====
-  coupleMonument(b, 40, 61, stonewall, bronze, bronzeDark, lantern);
+  // （純信とお馬の像は、2026-11-08 先生の希望でなくした）
 
   // ===== 看板（入口・右） =====
   b.pillar(56, 64, GROUND + 1, GROUND + 2, wood);
@@ -334,19 +310,6 @@ export const harimayaBridge: SpotDefinition = {
         canDo: 'You can watch the clock show.',
         feature: 'It is a big, fun clock.',
         about: 'Dolls come out of the clock. They dance to music!',
-      },
-    },
-    {
-      id: 'couple',
-      name: 'Junshin and Ouma',
-      nameJa: '純信とお馬の像',
-      region: { min: { x: 37, y: 11, z: 60 }, max: { x: 44, y: 21, z: 63 } },
-      focus: { x: 40, y: 16, z: 61 },
-      image: './photos/harimaya-bridge/couple.jpg',
-      guide: {
-        canDo: 'You can see two statues.',
-        feature: 'A man and a woman stand together.',
-        about: 'They are Junshin and Ouma. People sing about them.',
       },
     },
     {
