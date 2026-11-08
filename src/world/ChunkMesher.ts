@@ -3,6 +3,7 @@ import { CHUNK_SIZE, WORLD_HEIGHT } from '@/config/constants';
 import { AIR, blockRegistry } from './BlockRegistry';
 import type { Chunk } from './Chunk';
 import { BARRIER_ID } from './blocks/blockTypes';
+import { styleOf } from './blockStyles';
 
 /**
  * チャンクのボクセルから描画用ジオメトリを生成する（グリーディメッシング方式）。
@@ -20,11 +21,13 @@ interface MeshBuffers {
   positions: number[];
   normals: number[];
   colors: number[];
+  /** 模様の番号（blockStyles.ts） */
+  styles: number[];
   indices: number[];
 }
 
 function createBuffers(): MeshBuffers {
-  return { positions: [], normals: [], colors: [], indices: [] };
+  return { positions: [], normals: [], colors: [], styles: [], indices: [] };
 }
 
 function toGeometry(buf: MeshBuffers): THREE.BufferGeometry | null {
@@ -33,6 +36,7 @@ function toGeometry(buf: MeshBuffers): THREE.BufferGeometry | null {
   geo.setAttribute('position', new THREE.Float32BufferAttribute(buf.positions, 3));
   geo.setAttribute('normal', new THREE.Float32BufferAttribute(buf.normals, 3));
   geo.setAttribute('color', new THREE.Float32BufferAttribute(buf.colors, 3));
+  geo.setAttribute('kcStyle', new THREE.Float32BufferAttribute(buf.styles, 1));
   geo.setIndex(buf.indices);
   geo.computeBoundingSphere();
   return geo;
@@ -49,9 +53,10 @@ function isFaceVisible(currentId: number, neighborId: number): boolean {
 
 /** 面の向き(d=0:x,1:y,2:z)と符号から陰影を決める（上を明るく、下を暗く） */
 function shadeFor(d: number, dir: number): number {
+  // 太陽は +x・+z の向きから当たるので、その向きの面を少し明るく、反対の面を少し暗くする（立体がはっきりする）
   if (d === 1) return dir > 0 ? 1.0 : 0.5; // 上 / 下
-  if (d === 0) return 0.82; // 左右
-  return 0.68; // 前後
+  if (d === 0) return dir > 0 ? 0.86 : 0.76; // 左右
+  return dir > 0 ? 0.8 : 0.66; // 前後
 }
 
 /**
@@ -112,6 +117,7 @@ export class ChunkMesher {
       const target = blockRegistry.isTransparent(id) ? transparent : opaque;
       color.copy(blockRegistry.getColor(id)).multiplyScalar(shadeFor(d, dir) * vary);
       const base = target.positions.length / 3;
+      const style = styleOf(id);
 
       const corners = [
         [p[0], p[1], p[2]],
@@ -128,6 +134,7 @@ export class ChunkMesher {
         target.positions.push(c[0], c[1], c[2]);
         target.normals.push(nx, ny, nz);
         target.colors.push(color.r * light, color.g * light, color.b * light);
+        target.styles.push(style);
       }
       // 角のかげが左右で違うときは、四角形を分ける斜めの線を入れかえて、かげに折り目ができないようにする
       const flip = ao[0] + ao[2] < ao[1] + ao[3];

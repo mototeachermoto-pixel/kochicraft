@@ -5,6 +5,7 @@ import { PhotoStore } from '@/data/PhotoStore';
 import { prefetchGasPhotos } from '@/data/GasPhotos';
 import { EditStore, type EditCell } from '@/data/EditStore';
 import type { OrbitCameraController } from './OrbitCameraController';
+import { Surroundings, padEdges } from '@/world/Surroundings';
 
 /** 「正面で向き合っている」と見なす、対象（領域のふち）までの最大距離（ブロック）。近くにいる時だけ反応する。 */
 const NEAR_FACE_MAX_DIST = 4;
@@ -41,6 +42,9 @@ export class WorldManager {
   private readonly hitPoint = new THREE.Vector3();
   private readonly forwardVec = new THREE.Vector3();
 
+  /** 観光地のまわりの景色（ふちの地面を外へ続け、遠くに山を置く。絵だけ） */
+  private readonly surroundings = new Surroundings();
+
   constructor(
     private readonly world: World,
     scene: THREE.Scene,
@@ -59,12 +63,20 @@ export class WorldManager {
     this.nearHighlight.visible = false;
     this.nearHighlight.renderOrder = 998;
     scene.add(this.nearHighlight);
+    scene.add(this.surroundings.group);
   }
 
   /** 観光地ワールドを読み込む */
   loadSpot(spot: SpotDefinition): void {
     this.world.clearAll();
     spot.build?.(this.world);
+    // ふちの低い所を内側の地面で埋め、まわりの景色を作る（子どもの作品を戻す前に。作品は変えない）
+    if (spot.field) {
+      padEdges(this.world, spot.field);
+      this.surroundings.build(this.world, spot.field, spot.id);
+    } else {
+      this.surroundings.clear();
+    }
     // 子どもが工作ひろばで積んだブロック（保存差分）を景観の上に復元する
     this.editCells = EditStore.load(spot.id);
     if (this.editCells.length > 0) this.world.setBlocksBatch(this.editCells);
@@ -89,6 +101,7 @@ export class WorldManager {
   /** ワールドを片付けてハブへ戻る準備 */
   unload(): void {
     this.world.clearAll();
+    this.surroundings.clear();
     this.objects = [];
     this.currentSpot = null;
     this.nearId = null;

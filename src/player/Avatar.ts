@@ -55,6 +55,9 @@ export class Avatar {
   private turn = Number.NaN;
   /** 息をする動きのための時間 */
   private time = 0;
+  /** まばたきする目（と目の光）。数秒に1回、さっと閉じる */
+  private eyes: THREE.Mesh[] = [];
+  private nextBlink = 2.5;
   /**
    * 足もとの丸いかげ。いつも地面にはりつき、ジャンプで高く上がるほど小さく・うすくなる。
    * かげがないと、キャラクターがういて見え、ジャンプでどこに下りるか分かりにくいため。
@@ -147,6 +150,14 @@ export class Avatar {
     this.root.position.y = pos.y + Math.abs(Math.sin(this.phase)) * 0.07 * (this.amp / 0.7);
     this.root.scale.y = 1 + Math.sin(this.time * 2.2) * 0.012 * (1 - this.amp / 0.7);
 
+    // まばたき：数秒に1回、0.12秒だけ目を細くする（間かくは毎回少し変える）
+    let open = 1;
+    if (this.time > this.nextBlink) {
+      open = 0.15;
+      if (this.time > this.nextBlink + 0.12) this.nextBlink = this.time + 2.5 + ((this.time * 7.31) % 2.5);
+    }
+    for (const e of this.eyes) e.scale.y = open;
+
     const a = Math.sin(this.phase) * this.amp; // 振れ幅
     const { armL, armR, legL, legR } = this.swing;
     if (armL) armL.rotation.x = a;
@@ -168,6 +179,7 @@ export class Avatar {
       });
     }
     this.swing = {};
+    this.eyes = [];
     // 新しいパーツはふつうの濃さで作るので、うすさも 1 に戻す（次の setFade でまた合わせる）
     this.fade = 1;
 
@@ -192,7 +204,21 @@ export class Avatar {
       const eye = part(0.1, 0.12, 0.04, 0x1b2440);
       eye.position.set(dx, 1.48, -0.38); // -Z が正面
       this.root.add(eye);
+      this.eyes.push(eye);
+      // 目の中の小さな光（いきいきして見える）
+      const shine = part(0.04, 0.04, 0.02, 0xffffff);
+      shine.position.set(dx + 0.025, 1.51, -0.405);
+      this.root.add(shine);
+      this.eyes.push(shine);
+      // ほっぺ（うすいピンク）
+      const cheek = part(0.1, 0.06, 0.03, girl ? 0xf29a9a : 0xe89a80);
+      cheek.position.set(dx * 1.7, 1.37, -0.375);
+      this.root.add(cheek);
     }
+    // 口（小さな笑顔）
+    const mouth = part(0.16, 0.04, 0.03, 0x8a3b2e);
+    mouth.position.set(0, 1.32, -0.375);
+    this.root.add(mouth);
     // 髪（前髪＋女の子は横にも）
     const bang = part(0.76, 0.16, 0.76, hair);
     bang.position.y = 1.76;
@@ -267,6 +293,7 @@ export class Avatar {
       const eye = part(0.08, 0.1, 0.04, dark);
       eye.position.set(dx, 0.82, -0.63);
       this.root.add(eye);
+      this.eyes.push(eye);
     }
     // 耳（たれ耳）
     for (const dx of [-0.22, 0.22]) {

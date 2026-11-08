@@ -14,6 +14,7 @@ import { Chunk } from './Chunk';
 import { ChunkMesher } from './ChunkMesher';
 import { TerrainGenerator, type VoxelWriter } from './TerrainGenerator';
 import { rleDecodeInto, rleEncode } from './VoxelData';
+import { applyBlockStyles } from './blockStyles';
 
 /**
  * ワールド全体の管理。
@@ -47,6 +48,9 @@ export class World implements VoxelWriter {
       opacity: 0.72,
       depthWrite: false, // 半透明の重なりを自然に
     });
+    // ブロックの表面に模様をつける（草のつぶつぶ・木目・レンガ・水のゆらぎ など。blockStyles.ts）
+    applyBlockStyles(this.opaqueMaterial);
+    applyBlockStyles(this.transparentMaterial);
 
     // 空のチャンクを並べる
     for (let cx = 0; cx < WORLD_CHUNKS_X; cx++) {

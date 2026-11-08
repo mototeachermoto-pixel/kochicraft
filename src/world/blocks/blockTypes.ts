@@ -39,8 +39,8 @@ export const BLOCK_TYPES: BlockType[] = [
 
   // ----- 像（観光地の景観専用。子どもの建築パレット PALETTE_KEYS には入れない） -----
   // 坂本龍馬像などの銅像を写真に近づけるための、青緑がかった銅の色と、目・髪・袴などの濃い色
-  { id: 22, key: 'bronze', name: '銅像', nameEn: 'Bronze', color: '#5f6e63', transparent: false, solid: true, category: 'decor' },
-  { id: 23, key: 'bronzedark', name: '銅像（濃い）', nameEn: 'Dark Bronze', color: '#262c29', transparent: false, solid: true, category: 'decor' },
+  { id: 22, key: 'bronze', name: '銅像', nameEn: 'Bronze', color: '#748679', transparent: false, solid: true, category: 'decor' },
+  { id: 23, key: 'bronzedark', name: '銅像（濃い）', nameEn: 'Dark Bronze', color: '#323a36', transparent: false, solid: true, category: 'decor' },
 
   // ----- 見えない壁（観光地の景観専用。パレットには入れない） -----
   // 高い所から落ちないための、目に見えないかべ。体はぶつかるが、絵はかかず、タップや視線は通りぬける。

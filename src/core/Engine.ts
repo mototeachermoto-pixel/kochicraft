@@ -1203,6 +1203,8 @@ export class Engine {
       this.worldManager.updateNear();
     }
 
+    // 空をカメラについてこさせ、雲を流す
+    this.sceneManager.update(dt, this.camera.position);
     this.renderer.render(this.sceneManager.scene, this.camera);
     requestAnimationFrame(this.loop);
   };
