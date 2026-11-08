@@ -155,8 +155,8 @@ export const shimanto: SpotDefinition = {
   viewDistance: 58,
   spawn: { pos: { x: 48, y: BANK + 1, z: 66 }, yaw: 0 },
   field: { min: { x: 28, y: 0, z: 26 }, max: { x: 68, y: 0, z: 69 } },
-  // 川ぞいの山里。川は外へ流れ、両がわに山
-  backdrop: { near: 'village', far: 'mountains' },
+  // 川が東西へ曲がりながら流れていく谷。両がわに森の山がせまり、川原と沈下橋がある
+  backdrop: { near: 'none', far: 'none', sea: ['w', 'e'], feature: 'shimanto-river' },
   build,
   objects: [
     {

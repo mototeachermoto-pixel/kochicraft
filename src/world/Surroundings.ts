@@ -744,6 +744,101 @@ uniform vec3 kcHaze;
       stack(cx + 120, z1 + 135, 30, 16);
     }
 
+    // ===== 四万十川：川が東西へゆったり曲がりながら流れていく谷（2026-11-08 作り直し） =====
+    // 外の土地は「海」の上に、川の両岸だけを陸として置く。川のふちは砂利の川原、両がわに森の山がせまる
+    if (bd.feature === 'shimanto-river') {
+      const waterTop = sea ? sea.h : base - 1;
+      const sandId = blockRegistry.getByKey('sand')?.id ?? 4;
+      const sandC = colorOf(sandId);
+      const grassC = colorOf(S.n.id);
+      const shallow = colorOf(waterId).lerp(sandC, 0.18);
+      const forest = hexColor('#2f6b2a');
+      const forestDark = hexColor('#2a5a28');
+      const concrete = hexColor('#b4b2aa');
+      const midZ = (z0 + 10 + z0 + 27) / 2; // 観光地の中の川のまん中（z36〜52）
+      /** ふちからの距離 s での、川のまん中の位置（観光地のすぐ外はまっすぐで、遠くほど大きく曲がる） */
+      const centerAt = (s: number, phase: number): number => {
+        const t = Math.min(1, s / 24);
+        return midZ + t * t * (3 - 2 * t) * 34 * Math.sin(s / 42 + phase);
+      };
+      const halfAt = (s: number): number => 8.5 + Math.min(4, s * 0.02);
+      const STEP = 5;
+      const paintSide = (west: boolean, phase: number): void => {
+        for (let s = 0; s < REACH; s += STEP) {
+          const a = west ? x0 - s - STEP : x1 + s;
+          const b = a + STEP;
+          const c = centerAt(s + STEP / 2, phase);
+          const h = halfAt(s);
+          const north = Math.round(c - h);
+          const south = Math.round(c + h);
+          box(a, waterTop - 2, z0 - REACH, b, base, north, grassC, STYLE_GRASS, sandC, styleOf(sandId));
+          box(a, waterTop - 2, south, b, base, z1 + REACH, grassC, STYLE_GRASS, sandC, styleOf(sandId));
+          // 川原（曲がりの内がわほど広い）と、岸近くの浅い所
+          const bend = Math.sin((s + STEP / 2) / 42 + phase);
+          const wn = 3 + Math.round(Math.max(0, bend) * 9);
+          const ws = 3 + Math.round(Math.max(0, -bend) * 9);
+          curStyle = styleOf(sandId);
+          top(a, north - wn, b, north, base + 0.06, sandC);
+          top(a, south, b, south + ws, base + 0.06, sandC);
+          curStyle = styleOf(waterId);
+          top(a, north, b, north + 2, waterTop + 0.04, shallow);
+          top(a, south - 2, b, south, waterTop + 0.04, shallow);
+        }
+      };
+      const westPhase = 0.6;
+      const eastPhase = 2.4;
+      paintSide(true, westPhase);
+      paintSide(false, eastPhase);
+
+      /** 森におおわれた山（だんだんの箱） */
+      const ridge = (rxc: number, rzc: number, r: number, height: number): void => {
+        const steps = Math.max(3, Math.round(height / 4));
+        for (let k = 0; k < steps; k++) {
+          const rr = r * (1 - k / steps) + 3;
+          box(Math.round(rxc - rr), Math.round(base - 1 + (height * k) / steps), Math.round(rzc - rr * 0.8),
+            Math.round(rxc + rr), Math.round(base - 1 + (height * (k + 1)) / steps), Math.round(rzc + rr * 0.8),
+            forest, STYLE_LEAVES, forestDark, STYLE_LEAVES);
+        }
+      };
+      /** ある x での川のまん中（観光地の中はまっすぐ） */
+      const centerForX = (x: number): number =>
+        x < x0 ? centerAt(x0 - x, westPhase) : x > x1 ? centerAt(x - x1, eastPhase) : midZ;
+      // 川の両がわにせまる山並み（川の曲がりに沿って続く）
+      for (let x = x0 - 270; x < x1 + 270; x += 40) {
+        const px = x + rand() * 18;
+        const c = centerForX(px);
+        const inField = px > x0 - 24 && px < x1 + 24;
+        const northZ = Math.min(c - 46 - rand() * 22, inField ? z0 - 46 : Infinity);
+        const southZ = Math.max(c + 46 + rand() * 22, inField ? z1 + 70 : -Infinity);
+        ridge(px, northZ, 22 + rand() * 12, 16 + rand() * 18);
+        ridge(px, southZ, 22 + rand() * 12, 16 + rand() * 18);
+      }
+      // 川岸の木（少しだけ）
+      for (let k = 0; k < 44; k++) {
+        const west = rand() < 0.5;
+        const s = 8 + rand() * 170;
+        const x = Math.round(west ? x0 - s : x1 + s);
+        const c = centerAt(s, west ? westPhase : eastPhase);
+        const off = halfAt(s) + 15 + rand() * 18;
+        const z = Math.round(rand() < 0.5 ? c - off : c + off);
+        const r = 1 + Math.floor(rand() * 2);
+        const lc = leafColors[Math.floor(rand() * leafColors.length)];
+        box(x, base, z, x + 1, base + 2, z + 1, wood, STYLE_WOOD, wood, STYLE_WOOD);
+        box(x - r, base + 2, z - r, x + r + 1, base + 5, z + r + 1, lc, STYLE_LEAVES, lc, STYLE_LEAVES);
+      }
+      // 川しもに見える、もう1本の沈下橋（手すりのない低い橋）
+      {
+        const s = 92;
+        const bx = x0 - s;
+        const c = Math.round(centerAt(s, westPhase));
+        const h = Math.ceil(halfAt(s)) + 4;
+        box(bx, base - 1, c - h, bx + 3, base, c + h, concrete, STYLE_STONE, concrete, STYLE_STONE);
+        for (let z = c - h + 4; z < c + h; z += 5) box(bx + 1, waterTop - 2, z, bx + 2, base - 1, z + 1, concrete, STYLE_STONE, concrete, STYLE_STONE);
+      }
+      // 手前の岸の、山里の家（少しだけ）
+      for (let k = 0; k < 5; k++) house(Math.round(x0 + 3 + rand() * (x1 - x0 - 10)), Math.round(z1 + 14 + rand() * 26));
+    }
+
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     geo.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));

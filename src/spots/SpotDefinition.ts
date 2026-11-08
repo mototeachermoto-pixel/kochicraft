@@ -59,7 +59,7 @@ export interface Backdrop {
   /** 遠くに低い街並みを見せる辺（例：山の上から町を見下ろす場所） */
   farCity?: ('w' | 'e' | 'n' | 's')[];
   /** その場所だけの作りこみ（足摺岬の崖／桂浜公園の浜・松・お店など） */
-  feature?: 'ashizuri-cape' | 'katsurahama-park';
+  feature?: 'ashizuri-cape' | 'katsurahama-park' | 'shimanto-river';
 }
 
 /** 1つの観光地＝1つのコンパクトワールド */
