@@ -1321,6 +1321,9 @@ canvas.kc-canvas {
   transform: translateX(-50%);
   /* 左のD-pad・右のボタンを避けた中央幅。足りなければ折り返してスクロールさせない */
   max-width: min(700px, calc(100vw - 360px));
+  /* 左端が画面のまん中にあるため、何もしないと「画面の半分」の幅で折れてしまう（Glass だけ下の段になっていた）。
+     中身の幅に合わせ、足りないときだけ max-width で折り返す */
+  width: max-content;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1367,6 +1370,12 @@ canvas.kc-canvas {
   color: #fff;
   cursor: pointer;
   touch-action: manipulation;
+}
+/* 10こが1列に入らない幅では、9こ＋1こではなく 5こ×2段 にそろえる */
+@media (max-width: 980px) {
+  .hotbar-slots {
+    max-width: calc(5 * 56px + 4 * 5px + 12px);
+  }
 }
 .hotbar-slot.is-active {
   border-color: #ffd24a;
@@ -1470,6 +1479,11 @@ canvas.kc-canvas {
 }
 .kc-toast.hidden {
   display: none;
+}
+/* 作る画面では下にブロックの棚があるので、知らせ（Saved など）は上のボタンの下に出す（棚に重ならないように） */
+.build-hotbar:not(.hidden) ~ .kc-toast {
+  bottom: auto;
+  top: calc(70px + env(safe-area-inset-top, 0px));
 }
 
 /* ---------- 番号を入れる画面（GAS 版：大学の Google に保存） ---------- */
@@ -2212,7 +2226,8 @@ canvas.kc-canvas {
 .hub-screen__keys {
   margin-top: 8px;
   font-size: 13px;
-  opacity: 0.9;
+  /* 暗い背景の上なので白っぽい文字にする（以前は濃い灰色でほとんど読めなかった） */
+  color: rgba(255, 255, 255, 0.85);
 }
 
 /* キーボードで選んでいる場所をはっきり見せる（マウス不使用のため必須） */
@@ -2590,5 +2605,78 @@ canvas.kc-canvas {
   }
   .kc-fade {
     transition: none;
+  }
+}
+
+/* ---------- 長おしの目印（作る画面でブロックを消すとき） ---------- */
+/* 指の所に出る輪。おしている間にぐるっと満ちる。タップでちらつかないよう 0.12 秒待ってから見せる */
+.hold-ring {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 64px;
+  height: 64px;
+  margin: -32px 0 0 -32px;
+  pointer-events: none;
+  z-index: 60;
+  opacity: 0;
+  transform: scale(0.7);
+}
+.hold-ring svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.hold-ring__bg {
+  fill: rgba(0, 0, 0, 0.25);
+  stroke: rgba(255, 255, 255, 0.45);
+  stroke-width: 4;
+}
+.hold-ring__fill {
+  fill: none;
+  stroke: #ff6b5b;
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 120 120;
+  stroke-dashoffset: 120;
+}
+.hold-ring.is-on {
+  animation: hold-ring-in 0.12s ease-out 0.12s forwards;
+}
+.hold-ring.is-on .hold-ring__fill {
+  animation: hold-ring-fill calc(var(--hold-ms, 450ms) - 120ms) linear 0.12s forwards;
+}
+.hold-ring.is-done {
+  opacity: 1;
+  animation: hold-ring-pop 0.25s ease-out forwards;
+}
+.hold-ring.is-done .hold-ring__fill {
+  stroke-dashoffset: 0;
+}
+@keyframes hold-ring-in {
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes hold-ring-fill {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes hold-ring-pop {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hold-ring.is-done {
+    animation: none;
+    opacity: 0;
   }
 }

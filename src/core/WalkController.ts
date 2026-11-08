@@ -47,6 +47,9 @@ const VIEW_SETUP: Record<ViewMode, { dist: number; up: number }> = {
   front: { dist: 3.0, up: 0.25 },
 };
 
+/** 長おしと決めるまでの時間（ミリ秒） */
+const LONG_PRESS_MS = 450;
+
 export class WalkController {
   enabled = false;
   onTap?: (ndcX: number, ndcY: number) => void;
@@ -80,6 +83,10 @@ export class WalkController {
   private longFired = false;
   /** カメラを離している今の距離（壁で縮めたあと、急に戻らずなめらかに戻すため覚えておく） */
   private camDist = 0;
+  /** いまカメラがキャラクターの目からどれだけ離れているか（一人称は 0）。近すぎるときにキャラクターをうすくするのに使う */
+  get cameraDistance(): number {
+    return this.camDist;
+  }
   /** 段差を自動で登ったときのカメラの遅れ（ガクッと上がらず、すっと追いつくように） */
   private stepLag = 0;
   private lastX = 0;
@@ -335,15 +342,53 @@ export class WalkController {
     this.downY = e.clientY;
     // 長おし：指を動かさずに約0.45秒おしつづけたら、長おしとして伝える（はなしてもタップにはしない）
     window.clearTimeout(this.longTimer);
+    this.hideHoldRing();
     if (this.onLongPress) {
       const id = e.pointerId;
+      this.showHoldRing(e.clientX, e.clientY);
       this.longTimer = window.setTimeout(() => {
         if (!this.dragging || this.dragId !== id || this.moved) return;
         this.longFired = true;
+        this.hideHoldRing(true);
         this.onLongPress?.(...this.toNdc(this.downX, this.downY));
-      }, 450);
+      }, LONG_PRESS_MS);
     }
   };
+
+  /**
+   * 長おしの目印：指の所に丸い輪を出し、おしている間にぐるっと満ちていく。
+   * 満ちたら（＝消える）ぽんと広がって消える。タップのときに一瞬ちらつかないよう、少し待ってから見せる（CSS）。
+   * どれくらいおせばいいかが目で分かるようにするため。
+   */
+  private holdRing: HTMLDivElement | null = null;
+  private showHoldRing(x: number, y: number): void {
+    if (!this.holdRing) {
+      const ring = document.createElement('div');
+      ring.className = 'hold-ring';
+      ring.innerHTML =
+        '<svg viewBox="0 0 48 48" aria-hidden="true"><circle class="hold-ring__bg" cx="24" cy="24" r="19"/>' +
+        '<circle class="hold-ring__fill" cx="24" cy="24" r="19"/></svg>';
+      document.body.appendChild(ring);
+      this.holdRing = ring;
+    }
+    const ring = this.holdRing;
+    ring.style.left = `${x}px`;
+    ring.style.top = `${y}px`;
+    ring.style.setProperty('--hold-ms', `${LONG_PRESS_MS}ms`);
+    ring.classList.remove('is-on', 'is-done');
+    void ring.offsetWidth; // アニメーションを最初からやり直す
+    ring.classList.add('is-on');
+  }
+  /** 目印を消す。done＝長おしが成立したとき（ぽんと広がって消える） */
+  private hideHoldRing(done = false): void {
+    const ring = this.holdRing;
+    if (!ring || !ring.classList.contains('is-on')) return;
+    ring.classList.remove('is-on');
+    if (done) {
+      ring.classList.add('is-done');
+      window.setTimeout(() => ring.classList.remove('is-done'), 260);
+    }
+  }
   private onPointerMove = (e: PointerEvent): void => {
     if (!this.dragging || !this.enabled) return;
     // JUMP・方向ボタンを押している別の指の動きで、向きが飛ばないようにする
@@ -351,7 +396,10 @@ export class WalkController {
     const dx = e.clientX - this.lastX;
     const dy = e.clientY - this.lastY;
     // おした所から少し（約8px）以上動いたら「なぞり」＝タップ・長おしにはしない
-    if (Math.abs(e.clientX - this.downX) + Math.abs(e.clientY - this.downY) > 8) this.moved = true;
+    if (Math.abs(e.clientX - this.downX) + Math.abs(e.clientY - this.downY) > 8) {
+      this.moved = true;
+      this.hideHoldRing();
+    }
     this.player.yaw -= dx * 0.005;
     this.player.pitch -= dy * 0.005;
     this.clampPitch();
@@ -362,6 +410,7 @@ export class WalkController {
   private onPointerCancel = (e: PointerEvent): void => {
     if (e.pointerId !== this.dragId) return;
     window.clearTimeout(this.longTimer);
+    this.hideHoldRing();
     this.dragging = false;
     this.dragId = -1;
   };
@@ -369,10 +418,12 @@ export class WalkController {
     if (e.pointerId !== this.dragId) return;
     this.dragId = -1;
     if (!this.enabled) {
+      this.hideHoldRing();
       this.dragging = false;
       return;
     }
     window.clearTimeout(this.longTimer);
+    this.hideHoldRing();
     const wasDragging = this.dragging;
     this.dragging = false;
     if (wasDragging && !this.moved && !this.longFired) this.onTap?.(...this.toNdc(e.clientX, e.clientY));

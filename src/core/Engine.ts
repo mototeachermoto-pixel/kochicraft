@@ -1189,6 +1189,8 @@ export class Engine {
       this.walk.update(dt);
       // キャラクターを足元の位置・向きに合わせ、歩くと手足を振らせる
       this.avatar.update(this.player.position, this.player.yaw, this.walk.moving, dt, this.groundBelow());
+      // カメラがキャラクターに近すぎる（うしろの木や壁で寄った）ときは、キャラクターをうすくして前を見えるようにする
+      this.avatar.setFade((this.walk.cameraDistance - 0.7) / 0.9);
     } else {
       this.orbit.update(dt);
     }

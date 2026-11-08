@@ -85,8 +85,37 @@ export class Avatar {
   }
 
   setVisible(on: boolean): void {
-    this.root.visible = on;
+    this.visibleWanted = on;
+    this.root.visible = on && this.fade > 0.05;
     this.shadow.visible = on;
+  }
+
+  /** 表示したいか（setVisible で決めたもの）と、今のうすさ（1＝ふつう、0＝見えない） */
+  private visibleWanted = false;
+  private fade = 1;
+
+  /**
+   * キャラクターのうすさを決める（1＝ふつう、0＝見えない）。
+   * うしろの木や壁でカメラがキャラクターのすぐ後ろまで寄ったとき、
+   * 頭で画面がふさがらないように、うすくして向こうが見えるようにする。足もとのかげはそのまま。
+   */
+  setFade(k: number): void {
+    k = Math.max(0, Math.min(1, k));
+    if (Math.abs(k - this.fade) < 0.01) return;
+    this.fade = k;
+    this.root.traverse((o) => {
+      if (o instanceof THREE.Mesh) {
+        const m = o.material as THREE.MeshLambertMaterial;
+        const wantT = k < 0.999;
+        if (m.transparent !== wantT) {
+          m.transparent = wantT;
+          m.needsUpdate = true;
+        }
+        m.opacity = k;
+        m.depthWrite = !wantT;
+      }
+    });
+    this.root.visible = this.visibleWanted && k > 0.05;
   }
 
   /**
@@ -139,6 +168,8 @@ export class Avatar {
       });
     }
     this.swing = {};
+    // 新しいパーツはふつうの濃さで作るので、うすさも 1 に戻す（次の setFade でまた合わせる）
+    this.fade = 1;
 
     if (this.skin === 'pet') this.buildPet();
     else if (this.skin === 'robot') this.buildRobot();
