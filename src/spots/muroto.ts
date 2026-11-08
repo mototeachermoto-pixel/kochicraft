@@ -242,6 +242,8 @@ export const muroto: SpotDefinition = {
   viewDistance: 60,
   spawn: { pos: { x: 48, y: LAND + 1, z: 66 }, yaw: 0 },
   field: { min: { x: 28, y: 0, z: 26 }, max: { x: 68, y: 0, z: 69 } },
+  // 太平洋につき出た岬。三方が海で、うしろに森と山
+  backdrop: { near: 'forest', far: 'mountains', sea: ['w', 'e', 'n'] },
   build,
   objects: [
     {

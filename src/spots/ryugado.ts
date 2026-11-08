@@ -153,6 +153,8 @@ export const ryugado: SpotDefinition = {
   viewDistance: 56,
   spawn: { pos: { x: 48, y: G + 1, z: 68 }, yaw: 0 },
   field: { min: { x: 24, y: 0, z: 24 }, max: { x: 72, y: 0, z: 72 } },
+  // 山の中の鍾乳洞。まわりは森と山
+  backdrop: { near: 'forest', far: 'mountains' },
   build,
   objects: [
     {

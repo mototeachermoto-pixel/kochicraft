@@ -1,8 +1,11 @@
 import * as THREE from 'three';
-import type { Region } from '@/spots/SpotDefinition';
+import type { Backdrop, Region } from '@/spots/SpotDefinition';
 import { AIR, blockRegistry } from './BlockRegistry';
 import type { World } from './World';
-import { applyBlockStyles, styleOf } from './blockStyles';
+import { STYLE, applyBlockStyles, styleOf } from './blockStyles';
+
+const { wood: STYLE_WOOD, leaves: STYLE_LEAVES, stone: STYLE_STONE, windows: STYLE_WINDOWS, plain: STYLE_PLAIN,
+  plaster: STYLE_PLASTER, tile: STYLE_TILE, speckle: STYLE_SPECKLE, grass: STYLE_GRASS } = STYLE;
 
 /**
  * 観光地のまわりの景色（2026-11-08 追加）。
@@ -111,7 +114,8 @@ export class Surroundings {
   }
 
   /** いまの観光地に合わせて作り直す */
-  build(world: World, field: Region, seed: string): void {
+  build(world: World, field: Region, seed: string, backdrop?: Backdrop): void {
+    const bd: Backdrop = backdrop ?? { near: 'none', far: 'hills' };
     this.clear();
     const ground = groundIds();
     const waterId = blockRegistry.getByKey('water')?.id ?? -1;
@@ -204,6 +208,22 @@ export class Surroundings {
         for (const v of sides) if (!v.water) [v.id, v.h] = [gid, hs[hs.length >> 1]];
       }
     }
+    // 観光地ごとに決めた「海にする辺」（岬など、実際は海に囲まれている所）
+    if (bd.sea?.length) {
+      const auto = sides.find((v) => v.water);
+      const landH = Math.min(...sides.filter((v) => !v.water).map((v) => v.h));
+      for (const v of sides) {
+        if (!bd.sea.includes(v.side) || v.water) continue;
+        v.water = true;
+        v.id = waterId;
+        v.h = auto ? auto.h : landH - 1;
+      }
+    }
+    // 街の中の観光地は、外の地面を道路（アスファルト）にする（ビルの区画のあいだが道になる）
+    if (bd.near === 'city') {
+      const roadKey = blockRegistry.getByKey('road')?.id;
+      if (roadKey !== undefined) for (const v of sides) if (!v.water) v.id = roadKey;
+    }
     const S = Object.fromEntries(sides.map((v) => [v.side, v])) as Record<Side, SideInfo>;
 
     // 海：海の側が1つでもあれば、その水面の高さで全体に広げる（陸の地面がその上にのる）
@@ -256,6 +276,8 @@ export class Surroundings {
 
     // 道と川：陸の側のふちを横切る道・川は、その幅のまま外へ続ける（道はまっすぐのび、川は流れていく）
     const roadId = blockRegistry.getByKey('road')?.id ?? -1;
+    /** 外へ続く道・川の場所（ここには建物や木を置かない） */
+    const strips: number[][] = [];
     for (const v of sides) {
       if (v.water) continue;
       const edge: { h: number; id: number }[] = [];
@@ -283,6 +305,10 @@ export class Surroundings {
           const c = colorOf(id);
           curStyle = styleOf(id);
           const wc = shade(colorOf(v.id), 0.78);
+          if (v.side === 'w') strips.push([x0 - REACH, a, x0, b]);
+          if (v.side === 'e') strips.push([x1, a, x1 + REACH, b]);
+          if (v.side === 'n') strips.push([a, z0 - REACH, b, z0]);
+          if (v.side === 's') strips.push([a, z1, b, z1 + REACH]);
           if (v.side === 'w') { top(x0 - REACH, a, x0, b, h, c); wall(x0 - REACH, a, x0, a, h, v.h, wc); wall(x0 - REACH, b, x0, b, h, v.h, wc); }
           if (v.side === 'e') { top(x1, a, x1 + REACH, b, h, c); wall(x1, a, x1 + REACH, a, h, v.h, wc); wall(x1, b, x1 + REACH, b, h, v.h, wc); }
           if (v.side === 'n') { top(a, z0 - REACH, b, z0, h, c); wall(a, z0 - REACH, a, z0, h, v.h, wc); wall(b, z0 - REACH, b, z0, h, v.h, wc); }
@@ -292,46 +318,186 @@ export class Surroundings {
       }
     }
 
-    // 遠くの低い山（陸の側だけ。海の側は水平線が見えるように何も置かない）
+    // ===== まわりの景色（観光地ごとに、実際の場所に近いもの） =====
     const rand = rng(seed);
-    const hillTop = blockRegistry.getColor(blockRegistry.getByKey('grass')?.id ?? 1).clone().multiplyScalar(0.85);
-    const hillSide = hillTop.clone().multiplyScalar(0.72);
-    const box = (bx0: number, by0: number, bz0: number, bx1: number, by1: number, bz1: number): void => {
-      top(bx0, bz0, bx1, bz1, by1, hillTop);
-      quad([[bx0, by0, bz1], [bx1, by0, bz1], [bx1, by1, bz1], [bx0, by1, bz1]], [0, 0, 1], hillSide);
-      quad([[bx1, by0, bz0], [bx0, by0, bz0], [bx0, by1, bz0], [bx1, by1, bz0]], [0, 0, -1], hillSide);
-      quad([[bx1, by0, bz1], [bx1, by0, bz0], [bx1, by1, bz0], [bx1, by1, bz1]], [1, 0, 0], shade(hillSide, 1.1));
-      quad([[bx0, by0, bz0], [bx0, by0, bz1], [bx0, by1, bz1], [bx0, by1, bz0]], [-1, 0, 0], shade(hillSide, 1.1));
+    const landSide = sides.find((v) => !v.water);
+    const base = landSide ? landSide.h : 10;
+    /** その場所が陸の上か（海の上や、外へ続く道・川の上には物を置かない） */
+    const onLand = (x: number, z: number, r: number): boolean => {
+      const dx = Math.max(x0 - x, 0, x - x1);
+      const dz = Math.max(z0 - z, 0, z - z1);
+      if (dx === 0 && dz === 0) return false; // 観光地の中
+      let ok: boolean;
+      if (dx > 0 && dz > 0) ok = !S[x < x0 ? 'w' : 'e'].water && !S[z < z0 ? 'n' : 's'].water;
+      else if (dx > dz) ok = !S[x < x0 ? 'w' : 'e'].water;
+      else ok = !S[z < z0 ? 'n' : 's'].water;
+      if (!ok) return false;
+      for (const [a, b, c, d] of strips) if (x + r > a - 1 && x - r < c + 1 && z + r > b - 1 && z - r < d + 1) return false;
+      return true;
     };
-    /** だんだんの山（下ほど広い箱を重ねる） */
-    const hill = (cx: number, cz: number, base: number, r: number, height: number): void => {
-      const steps = Math.max(2, Math.round(height / 4));
-      for (let k = 0; k < steps; k++) {
-        const rr = r * (1 - k / steps) + 2;
-        const y0 = base + (height * k) / steps;
-        const y1 = base + (height * (k + 1)) / steps;
-        box(Math.round(cx - rr), Math.round(y0), Math.round(cz - rr * 0.8), Math.round(cx + rr), Math.round(y1), Math.round(cz + rr * 0.8));
+    /** 観光地のふちからの距離 */
+    const dist = (x: number, z: number): number => Math.max(x0 - x, 0, x - x1, z0 - z, 0, z - z1);
+    const hexColor = (hex: string): THREE.Color => new THREE.Color(hex);
+    const keyColor = (k: string): THREE.Color => blockRegistry.getColor(blockRegistry.getByKey(k)?.id ?? 1).clone();
+    /** 箱（上の面と4つの横の面）。上と横で色・模様を変えられる */
+    const box = (
+      bx0: number, by0: number, bz0: number, bx1: number, by1: number, bz1: number,
+      tc: THREE.Color, ts: number, sc: THREE.Color, ss: number,
+    ): void => {
+      curStyle = ts;
+      top(bx0, bz0, bx1, bz1, by1, tc);
+      curStyle = ss;
+      quad([[bx0, by0, bz1], [bx1, by0, bz1], [bx1, by1, bz1], [bx0, by1, bz1]], [0, 0, 1], shade(sc, 0.8));
+      quad([[bx1, by0, bz0], [bx0, by0, bz0], [bx0, by1, bz0], [bx1, by1, bz0]], [0, 0, -1], shade(sc, 0.66));
+      quad([[bx1, by0, bz1], [bx1, by0, bz0], [bx1, by1, bz0], [bx1, by1, bz1]], [1, 0, 0], shade(sc, 0.86));
+      quad([[bx0, by0, bz0], [bx0, by0, bz1], [bx0, by1, bz1], [bx0, by1, bz0]], [-1, 0, 0], shade(sc, 0.76));
+    };
+    /** 外のまわりの、ある距離の帯の中を、格子に区切って順に回る */
+    const band = (d0: number, d1: number, step: number, fn: (x: number, z: number, d: number) => void): void => {
+      for (let x = x0 - d1; x <= x1 + d1; x += step) {
+        for (let z = z0 - d1; z <= z1 + d1; z += step) {
+          const d = dist(x, z);
+          if (d < d0 || d > d1) continue;
+          fn(x, z, d);
+        }
       }
     };
-    curStyle = styleOf(blockRegistry.getByKey('grass')?.id ?? 1);
-    for (const { side, water, h } of sides) {
-      if (water) continue;
-      const base = h - 1;
-      const count = 5;
-      for (let k = 0; k < count; k++) {
-        const along = (k + rand()) / count; // 辺にそって
-        const out = 80 + rand() * 80; // ふちからの距離（霧でかすみすぎない所）
-        const r = 10 + rand() * 22;
-        const height = 8 + rand() * 22;
-        const ax = x0 + (x1 - x0) * along;
-        const az = z0 + (z1 - z0) * along;
-        const span = 1.8; // 辺より少し広く並べる
-        const ox = (ax - (x0 + x1) / 2) * span + (x0 + x1) / 2;
-        const oz = (az - (z0 + z1) / 2) * span + (z0 + z1) / 2;
-        if (side === 'w') hill(x0 - out, oz, base, r, height);
-        if (side === 'e') hill(x1 + out, oz, base, r, height);
-        if (side === 'n') hill(ox, z0 - out, base, r, height);
-        if (side === 's') hill(ox, z1 + out, base, r, height);
+
+    const leafColors = ['#2f6b2a', '#3a7a30', '#2a5e2a', '#467f35'].map(hexColor);
+    const wood = keyColor('wood');
+    /** 木（幹と、葉のかたまり） */
+    const tree = (x: number, z: number, big: number): void => {
+      if (!onLand(x, z, 3)) return;
+      const lc = leafColors[Math.floor(rand() * leafColors.length)];
+      const th = 2 + Math.floor(rand() * 2);
+      const r = 1 + Math.floor(rand() * 2 + big);
+      box(x, base, z, x + 1, base + th, z + 1, wood, STYLE_WOOD, wood, STYLE_WOOD);
+      const lh = 2 + Math.floor(rand() * 2 + big);
+      box(x - r, base + th, z - r, x + 1 + r, base + th + lh, z + 1 + r, lc, STYLE_LEAVES, lc, STYLE_LEAVES);
+      if (r > 1 && rand() < 0.6) box(x - r + 1, base + th + lh, z - r + 1, x + r, base + th + lh + 2, z + r, lc, STYLE_LEAVES, lc, STYLE_LEAVES);
+    };
+    const wallColors = ['#e9e4d6', '#d8d2c4', '#c9c6be', '#b9c4cc', '#e2d6bf', '#a9b5bf', '#d9cfc0', '#c9c2b4', '#cfd6da', '#e4dfd2', '#a8644c'].map(hexColor);
+    const roofGray = hexColor('#7d7f82');
+    /** ビル（窓のならぶ箱）。屋上は灰色 */
+    const building = (bx: number, bz: number, w: number, d: number, h: number): void => {
+      if (!onLand(bx + w / 2, bz + d / 2, Math.max(w, d) / 2 + 1)) return;
+      const wc = wallColors[Math.floor(rand() * wallColors.length)];
+      box(bx, base, bz, bx + w, base + h, bz + d, roofGray, STYLE_STONE, wc, STYLE_WINDOWS);
+      // ときどき屋上に小さな出っぱり（階段室・看板）
+      if (h > 6 && rand() < 0.5) box(bx + 1, base + h, bz + 1, bx + 3, base + h + 2, bz + 3, roofGray, STYLE_STONE, wc, STYLE_PLAIN);
+    };
+    const plaster = ['#efeadf', '#e6dccb', '#d9d4c8'].map(hexColor);
+    const roofs = ['#4a5560', '#5a4038', '#3f4b5c', '#6b5a4a'].map(hexColor);
+    /** 家（白いかべに、だんだんの屋根） */
+    const house = (hx: number, hz: number): void => {
+      if (!onLand(hx + 2, hz + 2, 4)) return;
+      const w = 4 + Math.floor(rand() * 3);
+      const d = 4 + Math.floor(rand() * 2);
+      const pc = plaster[Math.floor(rand() * plaster.length)];
+      const rc = roofs[Math.floor(rand() * roofs.length)];
+      box(hx, base, hz, hx + w, base + 3, hz + d, pc, STYLE_PLASTER, pc, STYLE_PLASTER);
+      box(hx - 1, base + 3, hz - 1, hx + w + 1, base + 4, hz + d + 1, rc, STYLE_TILE, rc, STYLE_TILE);
+      box(hx, base + 4, hz + 1, hx + w, base + 5, hz + d - 1, rc, STYLE_TILE, rc, STYLE_TILE);
+    };
+    const paddy = hexColor('#7fae4a');
+    const paddy2 = hexColor('#9cbf5a');
+    /** 田んぼ・畑（平らな四角） */
+    const paddyField = (fx: number, fz: number): void => {
+      if (!onLand(fx + 4, fz + 3, 5)) return;
+      curStyle = STYLE_SPECKLE;
+      top(fx, fz, fx + 8, fz + 6, base + 0.03, rand() < 0.5 ? paddy : paddy2);
+    };
+    const forestTop = hexColor('#2d6a2b');
+    const forestSide = hexColor('#2a5a28');
+    const rockSide = hexColor('#6f6a5e');
+    /** 山（だんだんの箱を重ねたもの）。高い山は森の緑、低い丘は草の緑 */
+    const mountain = (cx: number, cz: number, r: number, height: number, forest: boolean): void => {
+      if (!onLand(cx, cz, 2)) return;
+      const steps = Math.max(3, Math.round(height / 4));
+      const tc = forest ? forestTop : keyColor('grass').multiplyScalar(0.85);
+      for (let k = 0; k < steps; k++) {
+        const rr = r * (1 - k / steps) + 2;
+        const y0 = base - 1 + (height * k) / steps;
+        const y1 = base - 1 + (height * (k + 1)) / steps;
+        const sc = forest ? (k > steps * 0.75 && height > 35 ? rockSide : forestSide) : tc;
+        box(Math.round(cx - rr), Math.round(y0), Math.round(cz - rr * 0.85), Math.round(cx + rr), Math.round(y1), Math.round(cz + rr * 0.85),
+          tc, forest ? STYLE_LEAVES : STYLE_GRASS, sc, forest ? STYLE_LEAVES : STYLE_GRASS);
+      }
+    };
+
+    // --- 近くの景色 ---
+    if (bd.near === 'city') {
+      // 10マスごとの区画（道3マス＋ビル7マス）。近くは低め、遠くほど高いビル
+      const sidewalk = hexColor('#a7a7a2');
+      band(4, 100, 10, (x, z, d) => {
+        if (rand() < 0.12) return;
+        const gx = Math.floor(x / 10) * 10 + 3;
+        const gz = Math.floor(z / 10) * 10 + 3;
+        if (!onLand(gx + 3.5, gz + 3.5, 5)) return;
+        curStyle = STYLE_STONE;
+        top(gx - 1, gz - 1, gx + 8, gz + 8, base + 0.03, sidewalk); // 歩道
+        // 高知の街なので、高いビルは少なく、3〜15階くらいにする（ときどき少し高いビル）
+        const tall = (d < 25 ? 3 + rand() * 4 : d < 60 ? 4 + rand() * 7 : 5 + rand() * 9) + (rand() < 0.08 ? 5 : 0);
+        if (rand() < 0.35) {
+          building(gx, gz, 7, 3, Math.round(tall));
+          building(gx, gz + 4, 7, 3, Math.round(tall * (0.6 + rand() * 0.6)));
+        } else {
+          building(gx, gz, 7, 7, Math.round(tall));
+        }
+      });
+      // 道ばたの木を少し
+      band(4, 30, 10, (x, z) => {
+        if (rand() < 0.5) tree(Math.floor(x / 10) * 10 + 1, Math.floor(z / 10) * 10 + 1, 0);
+      });
+    } else if (bd.near === 'town') {
+      band(6, 90, 9, (x, z) => {
+        const r = rand();
+        if (r < 0.32) house(x + Math.floor(rand() * 3), z + Math.floor(rand() * 3));
+        else if (r < 0.62) paddyField(x, z);
+        else if (r < 0.78) tree(x + 2, z + 2, 0);
+      });
+    } else if (bd.near === 'village') {
+      band(6, 70, 6, (x, z) => {
+        const r = rand();
+        if (r < 0.06) house(x, z);
+        else if (r < 0.5) tree(x + Math.floor(rand() * 3), z + Math.floor(rand() * 3), rand() < 0.3 ? 1 : 0);
+      });
+    } else if (bd.near === 'forest') {
+      band(7, 70, 5, (x, z, d) => {
+        if (rand() < (d < 15 ? 0.45 : 0.75)) tree(x + Math.floor(rand() * 3), z + Math.floor(rand() * 3), rand() < 0.4 ? 1 : 0);
+      });
+    }
+
+    // --- 遠くの景色 ---
+    if (bd.far !== 'none') {
+      const isMt = bd.far === 'mountains';
+      for (const v of sides) {
+        if (v.water) continue;
+        const count = isMt ? 5 : 4;
+        for (let k = 0; k < count; k++) {
+          const along = (k + rand()) / count;
+          const out = isMt ? 85 + rand() * 90 : 80 + rand() * 70;
+          const r = isMt ? 26 + rand() * 26 : 12 + rand() * 20;
+          const height = isMt ? 28 + rand() * 32 : 8 + rand() * 16;
+          const span = 1.9;
+          const ox = (x0 + (x1 - x0) * along - (x0 + x1) / 2) * span + (x0 + x1) / 2;
+          const oz = (z0 + (z1 - z0) * along - (z0 + z1) / 2) * span + (z0 + z1) / 2;
+          if (v.side === 'w') mountain(x0 - out, oz, r, height, isMt);
+          if (v.side === 'e') mountain(x1 + out, oz, r, height, isMt);
+          if (v.side === 'n') mountain(ox, z0 - out, r, height, isMt);
+          if (v.side === 's') mountain(ox, z1 + out, r, height, isMt);
+        }
+      }
+    }
+    // 遠くの低い街並み（山の上から町を見下ろす場所など）
+    for (const fs of bd.farCity ?? []) {
+      if (S[fs].water) continue;
+      for (let k = 0; k < 40; k++) {
+        const along = rand() * 2.2 - 0.6;
+        const out = 70 + rand() * 60;
+        const bx = fs === 'w' ? x0 - out : fs === 'e' ? x1 + out : x0 + (x1 - x0) * along;
+        const bz = fs === 'n' ? z0 - out : fs === 's' ? z1 + out : z0 + (z1 - z0) * along;
+        building(Math.round(bx), Math.round(bz), 4 + Math.floor(rand() * 4), 4 + Math.floor(rand() * 4), 3 + Math.floor(rand() * 9));
       }
     }
 

@@ -45,6 +45,21 @@ export interface SceneObject {
   viewFrom?: Vec3;
 }
 
+/**
+ * 観光地のまわりの景色の種類（実際の場所に近い背景にするため。2026-11-08 追加）。
+ * 外の景色は絵だけで、歩けない・置けない・保存されない。
+ */
+export interface Backdrop {
+  /** 近くの景色：city＝ビルの街並み／town＝家と田んぼ／village＝家が少しと林／forest＝森／none＝なし */
+  near: 'city' | 'town' | 'village' | 'forest' | 'none';
+  /** 遠くの景色：mountains＝高い山並み／hills＝低い丘／none＝なし */
+  far: 'mountains' | 'hills' | 'none';
+  /** 海にする辺（w＝西／e＝東／n＝北／s＝南）。書かない辺は、観光地のふちの様子から自動で決める */
+  sea?: ('w' | 'e' | 'n' | 's')[];
+  /** 遠くに低い街並みを見せる辺（例：山の上から町を見下ろす場所） */
+  farCity?: ('w' | 'e' | 'n' | 's')[];
+}
+
 /** 1つの観光地＝1つのコンパクトワールド */
 export interface SpotDefinition {
   id: string;
@@ -74,4 +89,6 @@ export interface SpotDefinition {
    * 作り込んだ地面の外周に合わせて設定する。未設定なら歩行制限なし＆編集不可。
    */
   field?: Region;
+  /** まわりの景色の種類（無ければ、草地と低い丘） */
+  backdrop?: Backdrop;
 }

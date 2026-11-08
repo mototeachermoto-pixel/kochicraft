@@ -176,6 +176,8 @@ export const nikobuchi: SpotDefinition = {
   viewDistance: 60,
   spawn: { pos: { x: 48, y: TOP + 1, z: 66 }, yaw: 0 },
   field: { min: { x: 28, y: 0, z: 26 }, max: { x: 68, y: 0, z: 69 } },
+  // 山おくの森の中の淵
+  backdrop: { near: 'forest', far: 'mountains' },
   build,
   objects: [
     {

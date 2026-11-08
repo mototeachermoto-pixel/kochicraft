@@ -137,6 +137,8 @@ export const ryomaStatue: SpotDefinition = {
   // 階段全体と像を見上げられるよう、階段からすこし離れた位置からスタート
   spawn: { pos: { x: 48, y: G + 1, z: 68 }, yaw: 0 },
   field: { min: { x: 28, y: 0, z: 26 }, max: { x: 68, y: 0, z: 69 } },
+  // 桂浜の岬の上。前は太平洋、まわりは松の森
+  backdrop: { near: 'forest', far: 'hills' },
   build,
   objects: [
     {

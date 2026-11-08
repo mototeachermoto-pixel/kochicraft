@@ -30,6 +30,8 @@ export const STYLE = {
   water: 13,
   glass: 14,
   speckle: 15,
+  /** ビルのかべ：窓がならぶ（まわりの景色の街並み用） */
+  windows: 16,
 } as const;
 
 const BY_KEY: Record<string, number> = {
@@ -187,6 +189,14 @@ const FRAG_BODY = /* glsl */ `
     else if (px.x == px.y || px.x == px.y + 1.0) { m = 1.12; }
   } else if (st == 15) {
     m = 0.9 + n * 0.2;
+  } else if (st == 16) {
+    // ビルのかべ：1マスに1つ窓（横の面だけ）。窓は青みがかった暗い色
+    if (side && px.x > 2.0 && px.x < 13.0 && px.y > 3.0 && px.y < 13.0) {
+      diffuseColor.rgb = mix(diffuseColor.rgb * 0.5, vec3(0.16, 0.24, 0.34), 0.55);
+      m = 0.9 + n * 0.25;
+    } else {
+      m = 0.95 + n * 0.06;
+    }
   }
   // どのブロックも、ふちの1点をほんの少し暗くして、ブロックの形がはっきり見えるように
   if (st != 13 && st != 14 && (px.x < 1.0 || px.x > 14.0 || px.y < 1.0 || px.y > 14.0)) m *= 0.93;

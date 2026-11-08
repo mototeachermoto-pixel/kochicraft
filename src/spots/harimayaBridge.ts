@@ -256,6 +256,8 @@ export const harimayaBridge: SpotDefinition = {
   spawn: { pos: { x: 48, y: 11, z: 67 }, yaw: 0 },
   // 歩ける範囲＝建築できる範囲。外の空中へは出られない
   field: { min: { x: 28, y: 0, z: 26 }, max: { x: 68, y: 0, z: 69 } },
+  // 高知市の中心の交差点。まわりはビルの街
+  backdrop: { near: 'city', far: 'mountains' },
   build,
   objects: [
     {

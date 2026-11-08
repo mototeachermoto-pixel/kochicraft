@@ -73,7 +73,7 @@ export class WorldManager {
     // ふちの低い所を内側の地面で埋め、まわりの景色を作る（子どもの作品を戻す前に。作品は変えない）
     if (spot.field) {
       padEdges(this.world, spot.field);
-      this.surroundings.build(this.world, spot.field, spot.id);
+      this.surroundings.build(this.world, spot.field, spot.id, spot.backdrop);
     } else {
       this.surroundings.clear();
     }

@@ -159,6 +159,8 @@ export const katsurahama: SpotDefinition = {
   spawn: { pos: { x: 48, y: 16, z: 64 }, yaw: 0 },
   // 歩ける範囲＝建築できる範囲＝作り込んだ地面（岩盤 x26–70, z26–70）。外の海の先（空中）へは出られない
   field: { min: { x: 26, y: 0, z: 26 }, max: { x: 70, y: 0, z: 70 } },
+  // 南に太平洋、うしろは松の森と低い山
+  backdrop: { near: 'forest', far: 'hills' },
   build,
   objects: [
     {

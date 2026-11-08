@@ -247,6 +247,8 @@ export const noichi: SpotDefinition = {
   viewDistance: 96,
   spawn: { pos: { x: 48, y: G + 1, z: 84 }, yaw: 0 },
   field: { min: { x: 6, y: 0, z: 6 }, max: { x: 90, y: 0, z: 90 } },
+  // 郊外の町。家と田んぼと低い丘
+  backdrop: { near: 'town', far: 'hills' },
   build,
   objects: [
     {

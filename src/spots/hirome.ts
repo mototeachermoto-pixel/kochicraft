@@ -197,6 +197,8 @@ export const hirome: SpotDefinition = {
   viewDistance: 70,
   spawn: { pos: { x: 48, y: G + 1, z: 78 }, yaw: 0 },
   field: { min: { x: 20, y: 0, z: 16 }, max: { x: 76, y: 0, z: 80 } },
+  // 高知市の中心の市場。まわりはビルの街
+  backdrop: { near: 'city', far: 'mountains' },
   build,
   objects: [
     {

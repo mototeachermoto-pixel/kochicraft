@@ -243,6 +243,8 @@ export const makino: SpotDefinition = {
   viewDistance: 96,
   spawn: { pos: { x: 48, y: G + 1, z: 88 }, yaw: 0 },
   field: { min: { x: 6, y: 0, z: 6 }, max: { x: 90, y: 0, z: 90 } },
+  // 五台山の上の植物園。まわりは森で、遠くに高知の町
+  backdrop: { near: 'forest', far: 'mountains', farCity: ['w'] },
   build,
   objects: [
     {

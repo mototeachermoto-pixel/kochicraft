@@ -353,6 +353,8 @@ export const kochiCastle: SpotDefinition = {
   spawn: { pos: { x: 63, y: 11, z: 67 }, yaw: 0.58 },
   // 歩ける範囲＝建築できる範囲＝作り込んだ地面（岩盤 x28–68, z26–69）。外の空中へは出られない
   field: { min: { x: 28, y: 0, z: 26 }, max: { x: 68, y: 0, z: 69 } },
+  // 高知市の中心。まわりは街で、遠くに山並み
+  backdrop: { near: 'city', far: 'mountains' },
   build,
   objects: [
     {
