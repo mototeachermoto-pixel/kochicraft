@@ -2469,6 +2469,20 @@ canvas.kc-canvas {
   opacity: 0.85;
   transition: opacity 0.15s ease-in;
 }
+/* 観光地に入るときだけ出す「Loading…」（組み立て中も止まっていないと分かるように） */
+.kc-fade__text {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  color: #aef0d6;
+  font-size: 24px;
+  font-weight: 800;
+  opacity: 0;
+}
+.kc-fade.is-on.with-text .kc-fade__text {
+  opacity: 1;
+}
 
 @keyframes kc-slide-right {
   from {
@@ -2577,4 +2591,41 @@ canvas.kc-canvas {
   .kc-fade {
     transition: none;
   }
+}
+
+/* ---------- 移動スティック（4つの方向ボタンの代わり） ---------- */
+.stick {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: rgba(15, 110, 86, 0.35);
+  border: 3px solid rgba(255, 255, 255, 0.55);
+  box-shadow: var(--kc-shadow);
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.stick.is-active {
+  background: rgba(15, 110, 86, 0.5);
+}
+.stick__knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: var(--kc-accent);
+  border: 3px solid #fff;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.stick:not(.is-active) .stick__knob {
+  transition: transform 0.12s ease-out; /* はなすと、すっと中央にもどる */
 }

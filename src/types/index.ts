@@ -41,6 +41,9 @@ export interface MoveInput {
   right: boolean;
   jump: boolean;
   sprint: boolean;
+  /** 画面のスティックのかたむき（-1〜1。stickY は +＝前）。無いか 0 なら、上の4方向を使う */
+  stickX?: number;
+  stickY?: number;
 }
 
 /** 表示言語 */

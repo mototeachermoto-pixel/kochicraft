@@ -90,6 +90,17 @@ export class Player {
       vx = (vx / len) * speed;
       vz = (vz / len) * speed;
     }
+    // 画面のスティック：かたむけた向きへ歩く。少しだけかたむけると、ゆっくり歩く
+    const sx = input.stickX ?? 0;
+    const sy = input.stickY ?? 0;
+    const mag = Math.min(1, Math.hypot(sx, sy));
+    if (mag > 0) {
+      const ax = forwardX * sy + rightX * sx;
+      const az = forwardZ * sy + rightZ * sx;
+      const al = Math.hypot(ax, az) || 1;
+      vx = (ax / al) * speed * mag;
+      vz = (az / al) * speed * mag;
+    }
 
     // 歩き出し・止まりを少しだけなめらかに（約0.1秒で目標の速さになる）。
     // いきなり最高速・いきなり停止だと、カクカクした手ざわりになるため

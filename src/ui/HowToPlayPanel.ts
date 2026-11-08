@@ -29,7 +29,7 @@ const SECTIONS: { title: string; ja: string; rows: HowToRow[] }[] = [
     title: '2. Walk',
     ja: 'あるく',
     rows: [
-      { what: 'Walk', ja: 'あるく', touch: '▲ ▼ ◀ ▶ buttons', keys: `${k('↑')}${k('↓')}${k('←')}${k('→')}` },
+      { what: 'Walk', ja: 'あるく（スティックを指でうごかす）', touch: 'Slide the stick', keys: `${k('↑')}${k('↓')}${k('←')}${k('→')}` },
       { what: 'Look around', ja: 'まわりを見る', touch: 'Slide on the screen', keys: `${k('Shift')}+${k('←')}${k('→')} ・ ${k('U')} ${k('D')}` },
       { what: 'Jump', ja: 'ジャンプ', touch: 'JUMP button', keys: k('J') },
       { what: 'Map', ja: '行ける場所の一覧', touch: '🗺️ Map', keys: k('M') },
