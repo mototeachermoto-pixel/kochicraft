@@ -3,6 +3,7 @@ import { PLAYER_HALF_WIDTH } from '@/config/constants';
 import type { MoveInput, Vec3 } from '@/types';
 import type { Player } from '@/player/Player';
 import type { World } from '@/world/World';
+import { BARRIER_ID } from '@/world/blocks/blockTypes';
 import type { Region } from '@/spots/SpotDefinition';
 
 /**
@@ -294,7 +295,11 @@ export class WalkController {
     for (const dx of [-r, r]) {
       for (const dy of [-r, r]) {
         for (const dz of [-r, r]) {
-          if (this.world.isSolid(Math.floor(x + dx), Math.floor(y + dy), Math.floor(z + dz))) {
+          const bx = Math.floor(x + dx);
+          const by = Math.floor(y + dy);
+          const bz = Math.floor(z + dz);
+          // 見えない壁はカメラが通りぬける（見えない物で画面が寄ってしまわないように）
+          if (this.world.isSolid(bx, by, bz) && this.world.getBlock(bx, by, bz) !== BARRIER_ID) {
             return true;
           }
         }

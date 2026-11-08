@@ -1,11 +1,10 @@
 import type { World } from '@/world/World';
 import { Build } from './Build';
-import { ryomaFigure } from './ryomaFigure';
 import type { SpotDefinition } from './SpotDefinition';
 
 /**
  * 桂浜（Katsurahama）— 高知の代表的な浜。「月の名所」としてよさこい節にも歌われる。
- * 海・砂浜（五色石）・坂本龍馬像・竜王宮（赤い鳥居＋小さなほこら。浜から石の道で渡れる）・
+ * 海・砂浜（五色石）・竜王宮（赤い鳥居＋小さなほこら。浜から石の道で渡れる）・
  * 岬の岩（龍頭岬・龍王岬）・松林・遊歩道・看板を子どもが見て楽しめるように作り込んだコンパクトワールド。
  * ※実物の桂浜は波が高く遊泳禁止（海のガイド英文で「浜から見る」ことを伝える）。
  *
@@ -35,30 +34,6 @@ function toriiGate(b: Build, x: number, baseY: number, z: number, red: number, d
   b.set(x - 3, baseY + 7, z, dark); // はしが反り上がる
   b.set(x + 3, baseY + 7, z, dark);
   b.set(x, baseY + 4, z, red); // 額束（まん中の短い柱）
-}
-
-/**
- * 坂本龍馬像（実物に忠実に）。
- * 実物：像5.3m＋台座8.2m＝総高13.5m。台座が像より高い。
- * 和服に懐手・ブーツ姿で、太平洋（-Z方向）を見つめる。
- * → 写真に合わせて、石の土台＋太い台座＋笠石の上に、袴・着物・懐手の立ち姿（ryomaFigure）を置く。
- *   世界の高さ（40マス）に収まるよう、台座は龍馬像のスポットより少し低くしている。
- */
-function ryomaStatue(
-  b: Build,
-  x: number,
-  z: number,
-  stonewall: number,
-  stone: number,
-  body: number,
-  dark: number,
-): void {
-  b.box(x - 3, TOP, z - 3, x + 3, TOP, z + 3, stonewall); // 7x7 土台
-  b.box(x - 2, TOP + 1, z - 2, x + 2, TOP + 4, z + 2, stonewall); // 5x5 の太い台座
-  b.box(x, TOP + 2, z - 2, x, TOP + 3, z - 2, dark); // 台座の前（海側）の銘板
-  b.box(x - 3, TOP + 5, z - 3, x + 3, TOP + 5, z + 3, stone); // 7x7 笠石（少し明るい石）
-  b.box(x - 2, TOP + 6, z - 2, x + 2, TOP + 6, z + 2, stonewall); // 5x5 像の足もとの台
-  ryomaFigure(b, x, TOP + 6, z, -1, body, dark); // 立ち姿（海＝-z を見つめる。y23〜37）
 }
 
 function build(world: World): void {
@@ -144,8 +119,7 @@ function build(world: World): void {
   b.set(59, TOP, 38, stonewall); // 参道の石（左右）
   b.set(61, TOP, 38, stonewall);
 
-  // ===== 坂本龍馬像（砂浜の中央、海を見つめる） =====
-  ryomaStatue(b, 48, 48, stonewall, stone, b.id('bronze'), b.id('bronzedark'));
+  // （坂本龍馬像は、2026-11-08 先生の希望で桂浜からはなくした。「坂本龍馬像」のカードと重なるため）
 
   // ===== 松林（後方のふちに数本だけ・中央は開けて建築スペースに） =====
   const grove: [number, number, number][] = [
@@ -187,19 +161,6 @@ export const katsurahama: SpotDefinition = {
   field: { min: { x: 26, y: 0, z: 26 }, max: { x: 70, y: 0, z: 70 } },
   build,
   objects: [
-    {
-      id: 'ryoma',
-      name: 'Statue of Sakamoto Ryoma',
-      nameJa: '坂本龍馬像',
-      region: { min: { x: 45, y: 16, z: 45 }, max: { x: 51, y: 37, z: 51 } },
-      focus: { x: 48, y: 30, z: 48 },
-      image: './photos/katsurahama/ryoma.jpg',
-      guide: {
-        canDo: 'You can see the big statue of Ryoma.',
-        feature: 'He looks at the big sea.',
-        about: 'Ryoma is a hero of Kochi. He had a big dream.',
-      },
-    },
     {
       id: 'sea',
       name: 'The Pacific Ocean',

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { CHUNK_SIZE, WORLD_HEIGHT } from '@/config/constants';
 import { AIR, blockRegistry } from './BlockRegistry';
 import type { Chunk } from './Chunk';
+import { BARRIER_ID } from './blocks/blockTypes';
 
 /**
  * チャンクのボクセルから描画用ジオメトリを生成する（グリーディメッシング方式）。
@@ -90,7 +91,11 @@ export class ChunkMesher {
     const ox = chunk.originX;
     const oz = chunk.originZ;
     // ローカル座標→グローバルでブロック取得（チャンク外は隣チャンク/ワールド境界を参照）
-    const voxel = (lx: number, ly: number, lz: number): number => getBlock(ox + lx, ly, oz + lz);
+    // 見えない壁は、絵の上では空気と同じにあつかう（面をかかず、となりのブロックの面もかく）
+    const voxel = (lx: number, ly: number, lz: number): number => {
+      const id = getBlock(ox + lx, ly, oz + lz);
+      return id === BARRIER_ID ? AIR : id;
+    };
 
     // 1枚の矩形（マージ済みの面）を出力。key＝ブロックID＋角のかげ＋明るさのちがい（下の mask を参照）
     const emit = (

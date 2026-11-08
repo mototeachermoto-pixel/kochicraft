@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { World } from '@/world/World';
+import { BARRIER_ID } from '@/world/blocks/blockTypes';
 
 /**
  * ボクセル空間に対するレイキャスト（Amanatides & Woo の DDA アルゴリズム）。
@@ -47,6 +48,9 @@ export class VoxelRaycaster {
     const tDeltaY = dir.y !== 0 ? Math.abs(1 / dir.y) : Infinity;
     const tDeltaZ = dir.z !== 0 ? Math.abs(1 / dir.z) : Infinity;
 
+    // 見えない壁はタップが通りぬける（向こうの龍馬像などを選べるように）
+    const hits = (x: number, y: number, z: number): boolean =>
+      world.isSolid(x, y, z) && world.getBlock(x, y, z) !== BARRIER_ID;
     let tMaxX = VoxelRaycaster.firstBoundary(origin.x, dir.x, tDeltaX);
     let tMaxY = VoxelRaycaster.firstBoundary(origin.y, dir.y, tDeltaY);
     let tMaxZ = VoxelRaycaster.firstBoundary(origin.z, dir.z, tDeltaZ);
@@ -57,7 +61,7 @@ export class VoxelRaycaster {
     let t = 0;
 
     // 始点がすでにブロック内なら即ヒット
-    if (world.isSolid(x, y, z)) {
+    if (hits(x, y, z)) {
       return { hit: true, x, y, z, nx: 0, ny: 0, nz: 0 };
     }
 
@@ -88,7 +92,7 @@ export class VoxelRaycaster {
       }
 
       if (t > maxDist) break;
-      if (world.isSolid(x, y, z)) {
+      if (hits(x, y, z)) {
         return { hit: true, x, y, z, nx, ny, nz };
       }
     }

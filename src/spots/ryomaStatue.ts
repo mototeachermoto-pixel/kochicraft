@@ -1,6 +1,7 @@
 import type { World } from '@/world/World';
 import { Build } from './Build';
 import { ryomaFigure } from './ryomaFigure';
+import { BARRIER_ID } from '@/world/blocks/blockTypes';
 import type { SpotDefinition } from './SpotDefinition';
 
 /**
@@ -61,7 +62,6 @@ function build(world: World): void {
   const tile = b.id('tile'); // 碑の文字
   const bronze = b.id('bronze'); // 像（青緑がかった銅像の色）
   const bronzeDark = b.id('bronzedark'); // 像の濃い所（袴・髪・目）・台座の銘板
-  const glass = b.id('glass'); // デッキの柵（見える・落ちない）
   const lantern = b.id('lantern');
   const castlewall = b.id('castlewall'); // 看板
   const flower = b.id('flower');
@@ -87,14 +87,19 @@ function build(world: World): void {
     b.box(44, G, z, 52, ty, z, stonewall); // 段（中央・幅9）
     b.box(43, ty + 1, z, 43, ty + 2, z, stonewall); // 左の手すり
     b.box(53, ty + 1, z, 53, ty + 2, z, stonewall); // 右の手すり
+    // 手すりの上に見えない壁（ジャンプしても階段の外へ落ちない）
+    b.box(43, ty + 3, z, 43, ty + 7, z, BARRIER_ID);
+    b.box(53, ty + 3, z, 53, ty + 7, z, BARRIER_ID);
   }
   // 上のデッキ（像の手前・顔の高さ y29）
-  b.box(44, 29, 40, 52, 29, 41, wood); // デッキ床（階段の天端と段差なし）
-  b.box(43, 30, 40, 43, 31, 41, glass); // 左の柵
-  b.box(53, 30, 40, 53, 31, 41, glass); // 右の柵
-  // 像側（北端）の柵＝のぞきこんでも落ちない。階段側（z41〜42）は開けて出入りできる。
-  // 目の高さに柵があると龍馬の顔がガラス越しにくもって見えるので、像側は1段だけにする
-  b.box(44, 30, 40, 52, 30, 40, glass);
+  // デッキ床（階段の天端と段差なし）。像の顔の近くまで張り出す（z39。下にすき間が見えないように）
+  b.box(44, 29, 39, 52, 29, 41, wood);
+  // まわりは見えない高い壁（2026-11-08 先生の希望：龍馬の前で下に落ちてしまうので、高く・透明に）。
+  // 像側は z39 の上＝立つと龍馬の顔が目の前（約2マス先）に来る。左右も高くして、ジャンプしても落ちない。
+  // 階段側（z42）は開けて出入りできる。ガラスの柵だと顔がくもって見えるので使わない
+  b.box(44, 30, 39, 52, 36, 39, BARRIER_ID); // 像側
+  b.box(43, 29, 39, 43, 36, 41, BARRIER_ID); // 左
+  b.box(53, 29, 39, 53, 36, 41, BARRIER_ID); // 右
 
   // ===== 記念碑（左の広場） =====
   monument(b, 34, 52, stonewall, tile);
@@ -151,7 +156,7 @@ export const ryomaStatue: SpotDefinition = {
       id: 'deck',
       name: 'Viewing Deck',
       nameJa: '展望デッキ（龍馬に大接近）',
-      region: { min: { x: 44, y: 29, z: 40 }, max: { x: 52, y: 32, z: 41 } },
+      region: { min: { x: 44, y: 29, z: 39 }, max: { x: 52, y: 32, z: 41 } },
       focus: { x: 48, y: 30, z: 41 },
       // Map で来たら、デッキの上（龍馬の顔の前）に立つ
       viewFrom: { x: 48.5, y: 30, z: 41.5 },

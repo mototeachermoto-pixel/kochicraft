@@ -41,4 +41,11 @@ export const BLOCK_TYPES: BlockType[] = [
   // 坂本龍馬像などの銅像を写真に近づけるための、青緑がかった銅の色と、目・髪・袴などの濃い色
   { id: 22, key: 'bronze', name: '銅像', nameEn: 'Bronze', color: '#5f6e63', transparent: false, solid: true, category: 'decor' },
   { id: 23, key: 'bronzedark', name: '銅像（濃い）', nameEn: 'Dark Bronze', color: '#262c29', transparent: false, solid: true, category: 'decor' },
+
+  // ----- 見えない壁（観光地の景観専用。パレットには入れない） -----
+  // 高い所から落ちないための、目に見えないかべ。体はぶつかるが、絵はかかず、タップや視線は通りぬける。
+  { id: 24, key: 'barrier', name: '見えない壁', nameEn: 'Barrier', color: '#ffffff', transparent: true, solid: true, category: 'decor' },
 ];
+
+/** 見えない壁のブロックID（絵をかかない・タップや視線やカメラは通りぬける。体だけぶつかる） */
+export const BARRIER_ID = 24;
