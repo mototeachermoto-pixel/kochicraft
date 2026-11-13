@@ -9,7 +9,7 @@ import type { SpotDefinition } from './SpotDefinition';
  * （桂浜の中の像とは別カード。ここでは大きな像へ正面の大階段で近づく。）
  *   - スタート地点の正面から「大きな階段」がまっすぐ伸び、上ると龍馬の顔の高さの展望デッキに到達。
  *   - 像はこちら（上ってくる人）を向き、上りきると龍馬と対面できる（海は像の背景）。
- *   - 太平洋・記念碑、階段の両わきは広い平らな広場（建築スペース）。
+ *   - 太平洋、階段の両わきは広い平らな広場（建築スペース）。
  *
  * 実物の豆知識（英語ガイドに反映）：
  *   - 像5.3m＋台座＝総高13.5m。昭和3年(1928)に高知の青年たちの募金で建立。
@@ -44,13 +44,6 @@ function buildRyoma(
   ryomaFigure(b, cx, G + 8, cz, 1, body, dark); // 立ち姿（y19〜33）
 }
 
-/** 記念碑（石の台座＋石碑＋濃い色の文字） */
-function monument(b: Build, x: number, z: number, stone: number, dark: number): void {
-  b.box(x - 1, G + 1, z - 1, x + 1, G + 1, z + 1, stone);
-  b.box(x - 1, G + 2, z, x + 1, G + 4, z, stone);
-  b.set(x, G + 3, z, dark);
-}
-
 function build(world: World): void {
   const b = new Build();
   const stone = b.id('stone');
@@ -59,7 +52,6 @@ function build(world: World): void {
   const water = b.id('water');
   const grass = b.id('grass');
   const wood = b.id('wood'); // デッキ・看板・灯籠
-  const tile = b.id('tile'); // 碑の文字
   const bronze = b.id('bronze'); // 像（青緑がかった銅像の色）
   const bronzeDark = b.id('bronzedark'); // 像の濃い所（袴・髪・目）・台座の銘板
   const lantern = b.id('lantern');
@@ -101,8 +93,7 @@ function build(world: World): void {
   b.box(43, 29, 39, 43, 36, 41, BARRIER_ID); // 左
   b.box(53, 29, 39, 53, 36, 41, BARRIER_ID); // 右
 
-  // ===== 記念碑（左の広場） =====
-  monument(b, 34, 52, stonewall, tile);
+  // 記念碑は、本物の写真がないのでなくした（2026-11-14 先生の希望）
 
   // ===== 松＋石灯籠＋花（広場のふち。中央の階段は空ける） =====
   b.pine(32, G, 44, 4, 4, 2);
@@ -119,9 +110,6 @@ function build(world: World): void {
   b.set(38, G, 58, flower);
   b.set(58, G, 56, flower);
 
-  // ===== 看板（入口・右） =====
-  b.pillar(62, 66, G + 1, G + 2, wood);
-  b.box(61, G + 3, 66, 63, G + 4, 66, castlewall);
 
   world.setBlocksBatch(b.cells);
 }
@@ -150,8 +138,8 @@ export const ryomaStatue: SpotDefinition = {
       image: './photos/ryoma-statue/statue.jpg',
       guide: {
         canDo: 'You can look up at the huge Ryoma statue.',
-        feature: 'He is very, very tall.',
-        about: 'Young people of Kochi made it about 100 years ago.',
+        feature: 'He is very tall.',
+        about: 'He is Sakamoto Ryoma.',
       },
     },
     {
@@ -165,8 +153,8 @@ export const ryomaStatue: SpotDefinition = {
       image: './photos/ryoma-statue/deck.jpg',
       guide: {
         canDo: 'You can climb the big steps to his face.',
-        feature: 'His face is right there!',
-        about: 'In spring and fall, you can go up and see his face!',
+        feature: 'His face is there!',
+        about: 'You can go up in spring and fall.',
       },
     },
     {
@@ -179,33 +167,7 @@ export const ryomaStatue: SpotDefinition = {
       guide: {
         canDo: 'You can see the sea behind Ryoma.',
         feature: 'It is big and blue.',
-        about: 'The sea is behind Ryoma. He had a big dream!',
-      },
-    },
-    {
-      id: 'monument',
-      name: 'Stone Monument',
-      nameJa: '記念碑',
-      region: { min: { x: 32, y: 10, z: 50 }, max: { x: 36, y: 15, z: 54 } },
-      focus: { x: 34, y: 13, z: 52 },
-      image: './photos/ryoma-statue/monument.jpg',
-      guide: {
-        canDo: 'You can find a stone with words.',
-        feature: 'It is a stone with words.',
-        about: 'Let\'s read the words on it!',
-      },
-    },
-    {
-      id: 'sign',
-      name: 'Information Sign',
-      nameJa: '看板',
-      region: { min: { x: 61, y: 10, z: 65 }, max: { x: 63, y: 15, z: 67 } },
-      focus: { x: 62, y: 12, z: 66 },
-      image: './photos/ryoma-statue/sign.jpg',
-      guide: {
-        canDo: 'You can read about this place.',
-        feature: 'It is about Sakamoto Ryoma.',
-        about: 'Let\'s read the sign!',
+        about: 'Ryoma looks at the sea.',
       },
     },
   ],

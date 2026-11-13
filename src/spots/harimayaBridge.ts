@@ -88,61 +88,6 @@ function willow(b: Build, x: number, z: number, trunkH: number, wood: number, le
   }
 }
 
-/**
- * からくり時計（毎正時に人形が出て踊る名物の時計台）。写真に合わせて：
- *   - 下は木の板張り、上に白いしっくいの帯
- *   - 広い木の台（ベランダ）の上に、扉が左右に開いた人形の舞台（色とりどりの人形）
- *   - 白壁と木の柱の上の階、2段の瓦屋根
- * cz+ 側＝手前を正面に。
- */
-function karakuriClock(
-  b: Build,
-  cx: number,
-  cz: number,
-  white: number,
-  dark: number,
-  gold: number,
-  wood: number,
-  red: number,
-  pink: number,
-  blue: number,
-): void {
-  // 下の段：木の板張り＋白い帯
-  b.box(cx - 1, GROUND + 1, cz - 1, cx + 1, GROUND + 3, cz + 1, wood);
-  b.box(cx - 1, GROUND + 4, cz - 1, cx + 1, GROUND + 4, cz + 1, white);
-  // 広い木の台（人形の舞台のゆか）
-  b.box(cx - 2, GROUND + 5, cz - 2, cx + 2, GROUND + 5, cz + 2, wood);
-  // 人形の舞台：うしろと横は木、前は開いている
-  b.box(cx - 1, GROUND + 6, cz - 1, cx + 1, GROUND + 7, cz - 1, wood);
-  b.box(cx - 1, GROUND + 6, cz, cx - 1, GROUND + 7, cz, white);
-  b.box(cx + 1, GROUND + 6, cz, cx + 1, GROUND + 7, cz, white);
-  // 左右に開いた扉
-  b.box(cx - 2, GROUND + 6, cz + 1, cx - 2, GROUND + 7, cz + 1, wood);
-  b.box(cx + 2, GROUND + 6, cz + 1, cx + 2, GROUND + 7, cz + 1, wood);
-  // よさこいを踊る人形（赤・桃・青）
-  b.set(cx - 1, GROUND + 6, cz + 1, red);
-  b.set(cx, GROUND + 6, cz + 1, pink);
-  b.set(cx + 1, GROUND + 6, cz + 1, blue);
-  b.set(cx, GROUND + 6, cz, red);
-  // 1段目の屋根
-  b.box(cx - 2, GROUND + 8, cz - 2, cx + 2, GROUND + 8, cz + 2, dark);
-  // 上の階：白壁＋木の柱、正面に時計
-  b.box(cx - 1, GROUND + 9, cz - 1, cx + 1, GROUND + 10, cz + 1, white);
-  for (const [dx, dz] of [
-    [-1, -1],
-    [1, -1],
-    [-1, 1],
-    [1, 1],
-  ]) {
-    b.box(cx + dx, GROUND + 9, cz + dz, cx + dx, GROUND + 10, cz + dz, wood);
-  }
-  b.set(cx, GROUND + 10, cz + 1, dark); // 時計の文字盤
-  b.set(cx, GROUND + 9, cz + 1, gold); // 針
-  // 2段目の屋根（大きく張り出し、てっぺんに棟）
-  b.box(cx - 2, GROUND + 11, cz - 2, cx + 2, GROUND + 11, cz + 2, dark);
-  b.box(cx - 1, GROUND + 12, cz - 1, cx + 1, GROUND + 12, cz + 1, dark);
-  b.box(cx, GROUND + 13, cz - 1, cx, GROUND + 13, cz + 1, dark);
-}
 
 /**
  * 路面電車（写真に合わせて：下が緑、窓のまわりがクリーム色、屋根が緑。屋根の上にパンタグラフ）。
@@ -189,12 +134,10 @@ function build(world: World): void {
   const wood = b.id('wood');
   const leaves = b.id('leaves'); // 柳の緑
   const stonewall = b.id('stonewall'); // 台座・土台
-  const castlewall = b.id('castlewall'); // 白（時計台・電車・看板）
   const flower = b.id('flower');
   const bridgeWood = b.id('bridge'); // 橋の床板
   const bamboo = b.id('bamboo'); // 柳の明るい黄緑
   const glass = b.id('glass'); // 電車の窓
-  const sakura = b.id('sakura'); // 桃色（お馬の着物・踊り子人形）
   const road = b.id('road'); // 電車通り
 
   // ===== 地面（広い平らな公園＝建築スペース） =====
@@ -233,14 +176,10 @@ function build(world: World): void {
   b.set(40, GROUND, 37, flower);
   b.set(56, GROUND, 37, flower);
 
-  // ===== からくり時計（手前の広場・左のふち。実物は交差点そばの名物） =====
-  karakuriClock(b, 33, 54, castlewall, tile, lantern, wood, torii, sakura, glass);
+  // （からくり時計は、2026-11-13 なくした。自由に使える本物の写真がなかったため）
 
   // （純信とお馬の像は、2026-11-08 先生の希望でなくした）
 
-  // ===== 看板（入口・右） =====
-  b.pillar(56, 64, GROUND + 1, GROUND + 2, wood);
-  b.box(55, GROUND + 3, 64, 57, GROUND + 4, 64, castlewall);
 
   world.setBlocksBatch(b.cells);
 }
@@ -269,49 +208,11 @@ export const harimayaBridge: SpotDefinition = {
       // 写真と同じく、水路の岸からななめに橋を見る場所に立つ（橋のたもとからだと、橋の床しか見えない）
       viewFrom: { x: 57.5, y: 11, z: 45.5 },
       image: './photos/harimaya-bridge/bridge.jpg',
+      credit: 'Photo: Higa4 / CC0 / Wikimedia Commons',
       guide: {
         canDo: 'You can walk over the red bridge.',
-        feature: 'It is small, red, and round.',
-        about: 'Long ago, a young man bought a pretty present here. People sing about it!',
-      },
-    },
-    {
-      id: 'stream',
-      name: 'Horikawa Canal',
-      nameJa: '堀川',
-      region: { min: { x: 28, y: 8, z: 38 }, max: { x: 68, y: 10, z: 42 } },
-      focus: { x: 40, y: 9, z: 40 },
-      image: './photos/harimaya-bridge/stream.jpg',
-      guide: {
-        canDo: 'You can look at the water under the bridge.',
-        feature: 'It is small and blue.',
-        about: 'This is Horikawa. Boats went here long ago.',
-      },
-    },
-    {
-      id: 'willows',
-      name: 'Willow Trees',
-      nameJa: '柳',
-      region: { min: { x: 31, y: 11, z: 31 }, max: { x: 65, y: 19, z: 49 } },
-      focus: { x: 34, y: 15, z: 46 },
-      image: './photos/harimaya-bridge/willows.jpg',
-      guide: {
-        canDo: 'You can stand under the willow trees.',
-        feature: 'The green leaves go down, down.',
-        about: 'They look nice with the red bridge. Take a photo!',
-      },
-    },
-    {
-      id: 'clock',
-      name: 'Karakuri Clock',
-      nameJa: 'からくり時計',
-      region: { min: { x: 31, y: 11, z: 52 }, max: { x: 35, y: 23, z: 56 } },
-      focus: { x: 33, y: 17, z: 54 },
-      image: './photos/harimaya-bridge/clock.jpg',
-      guide: {
-        canDo: 'You can watch the clock show.',
-        feature: 'It is a big, fun clock.',
-        about: 'Dolls come out of the clock. They dance to music!',
+        feature: 'It is small and red.',
+        about: 'It is a famous bridge in Kochi.',
       },
     },
     {
@@ -321,23 +222,11 @@ export const harimayaBridge: SpotDefinition = {
       region: { min: { x: 54, y: 11, z: 29 }, max: { x: 63, y: 17, z: 30 } },
       focus: { x: 58, y: 14, z: 30 },
       image: './photos/harimaya-bridge/tram.jpg',
+      credit: 'Photo: Rsa / CC BY-SA 3.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can see a tram on the street.',
-        feature: 'It is green and white. It runs on the road.',
-        about: 'It is a small train. People ride it every day.',
-      },
-    },
-    {
-      id: 'sign',
-      name: 'Information Sign',
-      nameJa: '看板',
-      region: { min: { x: 55, y: 11, z: 63 }, max: { x: 57, y: 16, z: 65 } },
-      focus: { x: 56, y: 13, z: 64 },
-      image: './photos/harimaya-bridge/sign.jpg',
-      guide: {
-        canDo: 'You can read about this place.',
-        feature: 'It is about Harimaya Bridge.',
-        about: 'Let\'s read the sign!',
+        feature: 'It is green and white.',
+        about: 'People ride it every day.',
       },
     },
   ],

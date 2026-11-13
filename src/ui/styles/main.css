@@ -2680,3 +2680,350 @@ canvas.kc-canvas {
     opacity: 0;
   }
 }
+
+/* ===== 入口をえらぶ画面（2026-11-13：Practice & Build ／ Tour Guide） ===== */
+.mode-chooser {
+  position: absolute;
+  inset: 0;
+  z-index: 92; /* 番号の画面（90）より上 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(6, 12, 28, 0.78);
+  pointer-events: auto;
+}
+.mode-chooser.hidden {
+  display: none;
+}
+.mode-chooser__box {
+  width: min(640px, 100%);
+  text-align: center;
+  animation: kc-pop 0.22s ease-out;
+}
+.mode-chooser__title {
+  font-size: 30px;
+  font-weight: 900;
+  color: #aef0d6;
+}
+.mode-chooser__sub {
+  margin-bottom: 18px;
+  font-size: 14px;
+  color: #fff;
+  opacity: 0.85;
+}
+.mode-chooser__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 16px;
+}
+.mode-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 22px 16px;
+  border: 3px solid transparent;
+  border-radius: 20px;
+  background: #fff;
+  color: #0a1024;
+  box-shadow: var(--kc-shadow);
+  cursor: pointer;
+  transition: transform 0.15s ease-out, border-color 0.15s ease-out;
+}
+.mode-card:hover,
+.mode-card:focus-visible {
+  transform: translateY(-3px);
+  border-color: #ffd24a;
+  outline: none;
+}
+.mode-card:active {
+  transform: translateY(1px) scale(0.97);
+}
+.mode-card__icon {
+  font-size: 48px;
+  line-height: 1;
+}
+.mode-card__name {
+  font-size: 24px;
+  font-weight: 900;
+}
+.mode-card--practice .mode-card__name {
+  color: var(--kc-accent-dark);
+}
+.mode-card--guide .mode-card__name {
+  color: #b35a00;
+}
+.mode-card__what {
+  font-size: 16px;
+  font-weight: 700;
+}
+.mode-card__ja {
+  font-size: 13px;
+  color: #555;
+}
+.mode-chooser__keys {
+  margin-top: 16px;
+  font-size: 13px;
+  color: #fff;
+  opacity: 0.85;
+}
+
+/* 一覧の上：いまの入口と Change ボタン */
+.hub-mode {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  margin: 6px 0 4px;
+}
+.hub-mode__name {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+  background: rgba(29, 158, 117, 0.9);
+}
+.hub-mode__name.is-guide {
+  background: rgba(222, 120, 20, 0.95);
+}
+
+/* ===== 案内モードの下のバー（いま何か所目か・Back・Next） ===== */
+.tour-bar {
+  position: absolute;
+  left: 50%;
+  bottom: calc(14px + var(--kc-safe-b));
+  transform: translateX(-50%);
+  /* 左のジャンプ・右の方向ボタンをよけた幅 */
+  width: max-content;
+  max-width: calc(100vw - 340px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 27;
+  pointer-events: none;
+  animation: kc-tour-in 0.3s ease-out;
+}
+.tour-bar.hidden {
+  display: none;
+}
+/* 説明パネルが開いているときは、パネルにかからないよう左へよせる */
+.info-panel:not(.hidden) ~ .tour-bar {
+  left: calc((100vw - 336px + 130px) / 2);
+  max-width: calc(100vw - 336px - 140px);
+}
+/* 案内モードでは、知らせ（Saved など）は案内バーの上に出す（重ならないように） */
+.tour-bar:not(.hidden) ~ .kc-toast {
+  bottom: calc(150px + var(--kc-safe-b));
+}
+.tour-bar__line {
+  max-width: 100%;
+  padding: 8px 20px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(222, 120, 20, 0.95);
+  color: #fff;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.3;
+  box-shadow: var(--kc-shadow);
+  cursor: pointer;
+  pointer-events: auto;
+  animation: kc-pop 0.25s ease-out;
+}
+.tour-bar__line.is-end {
+  background: rgba(29, 158, 117, 0.95);
+}
+.tour-bar__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+}
+.tour-bar__btn {
+  font-size: 16px;
+  white-space: nowrap;
+}
+.tour-bar__btn.is-off {
+  opacity: 0.45;
+}
+.tour-bar__next {
+  background: #de7814;
+}
+.tour-bar__next:hover:not(:disabled) {
+  background: #c46610;
+}
+.tour-bar__dots {
+  display: flex;
+  gap: 5px;
+}
+.tour-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+}
+.tour-dot.is-done {
+  background: #aef0d6;
+}
+.tour-dot.is-now {
+  background: #ffd24a;
+  transform: scale(1.3);
+}
+.tour-bar__count {
+  min-width: 44px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  text-align: center;
+}
+
+/* 説明パネルの写真（タップで大きく） */
+.info-panel__photo {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: zoom-in;
+}
+.info-panel__photo .info-panel__img {
+  display: block;
+}
+.info-panel__zoom {
+  position: absolute;
+  right: 8px;
+  bottom: 18px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ===== 写真を画面いっぱいに ===== */
+.photo-view {
+  position: absolute;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.92);
+  pointer-events: auto;
+  cursor: zoom-out;
+  animation: kc-photo-in 0.2s ease-out;
+}
+.photo-view.hidden {
+  display: none;
+}
+.photo-view__img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.photo-view__close {
+  position: absolute;
+  top: calc(14px + env(safe-area-inset-top, 0px));
+  right: 14px;
+  background: rgba(255, 255, 255, 0.18);
+}
+.photo-view__bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px calc(12px + var(--kc-safe-b));
+  background: rgba(0, 0, 0, 0.6);
+}
+.photo-view__name {
+  flex: 1;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+/* せまい画面（iPad のたてなど）：案内バーを少し小さく */
+@media (max-width: 900px) {
+  .tour-bar {
+    max-width: calc(100vw - 220px);
+  }
+  /* 説明パネルが開いているときは、パネルの左の空いている所（ジャンプボタンの上）に出す */
+  .info-panel:not(.hidden) ~ .tour-bar {
+    left: calc((100vw - 336px) / 2);
+    bottom: calc(140px + var(--kc-safe-b));
+    max-width: calc(100vw - 336px - 20px);
+  }
+  .info-panel:not(.hidden) ~ .tour-bar .tour-bar__dots {
+    display: none;
+  }
+  .tour-bar__line {
+    font-size: 18px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mode-chooser__box,
+  .tour-bar,
+  .tour-bar__line,
+  .photo-view {
+    animation: none;
+  }
+}
+@keyframes kc-tour-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+@keyframes kc-photo-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 写真を撮った人と、使ってよい条件（ウィキメディア・コモンズの写真。2026-11-13） */
+.info-panel__credit {
+  margin: -6px 0 10px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  word-break: break-all;
+}
+.photo-view__credit {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+}
+
+/* You can・Special・About：タップで読み上げ（2026-11-13） */
+.info-say {
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.info-block__text[data-say] {
+  cursor: pointer;
+}
+.info-block.is-saying .info-block__text {
+  color: #ffd24a;
+  transition: color 0.15s ease-out;
+}

@@ -226,9 +226,6 @@ function build(world: World): void {
     }
   }
 
-  // ===== 看板（入口） =====
-  b.pillar(54, 88, G + 1, G + 2, wood);
-  b.box(53, G + 3, 88, 55, G + 4, 88, castlewall);
 
   world.setBlocksBatch(b.cells);
 }
@@ -254,10 +251,11 @@ export const makino: SpotDefinition = {
       region: { min: { x: 38, y: 10, z: 28 }, max: { x: 62, y: 19, z: 44 } },
       focus: { x: 50, y: 13, z: 36 },
       image: './photos/makino/greenhouse.jpg',
+      credit: 'Photo: 663highland / CC BY-SA 4.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can see jungle plants in the glass house.',
-        feature: 'It is big. It is all glass.',
-        about: 'It is warm in there, like a jungle!',
+        feature: 'It is a glass house.',
+        about: 'It is warm inside.',
       },
     },
     {
@@ -267,10 +265,11 @@ export const makino: SpotDefinition = {
       region: { min: { x: 6, y: 10, z: 62 }, max: { x: 44, y: 18, z: 90 } },
       focus: { x: 24, y: 13, z: 76 },
       image: './photos/makino/plants.jpg',
+      credit: 'Photo: 663highland / CC BY-SA 4.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can find many kinds of plants.',
-        feature: 'There are trees, flowers, and bamboo.',
-        about: 'About 3,000 kinds of plants are here!',
+        feature: 'There are many flowers.',
+        about: 'There are many trees, too.',
       },
     },
     {
@@ -280,10 +279,11 @@ export const makino: SpotDefinition = {
       region: { min: { x: 13, y: 9, z: 42 }, max: { x: 31, y: 12, z: 66 } },
       focus: { x: 22, y: 11, z: 54 },
       image: './photos/makino/pond.jpg',
+      credit: 'Photo: NevinThompson / CC BY-SA 4.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can walk over the pond on the wood path.',
         feature: 'The water is clean.',
-        about: 'Walk on the wood path. Go slowly and look!',
+        about: 'Let\'s walk slowly.',
       },
     },
     {
@@ -293,10 +293,11 @@ export const makino: SpotDefinition = {
       region: { min: { x: 64, y: 10, z: 45 }, max: { x: 84, y: 17, z: 60 } },
       focus: { x: 74, y: 13, z: 53 },
       image: './photos/makino/hall.jpg',
+      credit: 'Photo: 663highland / CC BY-SA 4.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can visit the Makino museum.',
-        feature: 'It has a nice wood roof.',
-        about: 'Dr. Makino loved plants. He gave names to about 1,500 plants!',
+        feature: 'It has a wood roof.',
+        about: 'This is Dr. Makino\'s museum.',
       },
     },
     {
@@ -306,23 +307,11 @@ export const makino: SpotDefinition = {
       region: { min: { x: 67, y: 10, z: 59 }, max: { x: 75, y: 14, z: 64 } },
       focus: { x: 71, y: 12, z: 62 },
       image: './photos/makino/sueko.jpg',
+      credit: 'Photo: 663highland / CC BY-SA 4.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can find a small bamboo grass.',
-        feature: 'It is short and green.',
-        about: 'Sueko was his wife. This plant has her name.',
-      },
-    },
-    {
-      id: 'sign',
-      name: 'Information Sign',
-      nameJa: '看板',
-      region: { min: { x: 53, y: 10, z: 87 }, max: { x: 55, y: 15, z: 89 } },
-      focus: { x: 54, y: 12, z: 88 },
-      image: './photos/makino/sign.jpg',
-      guide: {
-        canDo: 'You can read about this place.',
-        feature: 'It is about this garden.',
-        about: 'Let\'s read the sign!',
+        feature: 'It is small and green.',
+        about: 'Its name is Sueko Bamboo.',
       },
     },
   ],

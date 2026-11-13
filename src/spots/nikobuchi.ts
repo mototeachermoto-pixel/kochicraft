@@ -47,6 +47,7 @@ function build(world: World): void {
   b.box(28, 22, 26, 68, 22, 30, grass);
 
   // ===== 下りの石段（z52→z45 で y17→y10 へ1段ずつ下る）＝実物どおり細い道＋木の手すり =====
+  // 本物の写真がないので見どころの説明はなくした（2026-11-14）。淵へおりるただ1つの道なので、3Dは残す
   for (let i = 0; i < 8; i++) {
     const z = 52 - i;
     const sy = 17 - i;
@@ -159,9 +160,6 @@ function build(world: World): void {
   b.set(43, POND, 43, flower);
   b.set(53, POND, 43, flower);
 
-  // ===== 看板（入口の広場） =====
-  b.pillar(56, 64, TOP + 1, TOP + 2, wood);
-  b.box(55, TOP + 3, 64, 57, TOP + 4, 64, castlewall);
 
   world.setBlocksBatch(b.cells);
 }
@@ -181,29 +179,17 @@ export const nikobuchi: SpotDefinition = {
   build,
   objects: [
     {
-      id: 'steps',
-      name: 'Stone Steps',
-      nameJa: '下りの石段',
-      region: { min: { x: 42, y: 10, z: 45 }, max: { x: 54, y: 18, z: 52 } },
-      focus: { x: 48, y: 14, z: 49 },
-      image: './photos/nikobuchi/steps.jpg',
-      guide: {
-        canDo: 'You can walk down to the blue pond.',
-        feature: 'The steps go down to the water.',
-        about: 'Go down, down, down. The blue water is there!',
-      },
-    },
-    {
       id: 'pond',
       name: 'Nikobuchi Pond',
       nameJa: 'にこ淵（仁淀ブルー）',
       region: { min: { x: 42, y: 9, z: 31 }, max: { x: 54, y: 11, z: 42 } },
       focus: { x: 48, y: 11, z: 36 },
       image: './photos/nikobuchi/pond.jpg',
+      credit: 'Photo: Dokudami / CC BY-SA 4.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can look into the clear blue water.',
-        feature: 'It is very blue. We call this blue "Niyodo Blue."',
-        about: 'People say a big snake lives here. Be quiet, please.',
+        feature: 'It is very blue.',
+        about: 'We call it "Niyodo Blue."',
       },
     },
     {
@@ -213,10 +199,11 @@ export const nikobuchi: SpotDefinition = {
       region: { min: { x: 45, y: 10, z: 29 }, max: { x: 50, y: 22, z: 32 } },
       focus: { x: 48, y: 15, z: 30 },
       image: './photos/nikobuchi/waterfall.jpg',
+      credit: 'Photo: Dokudami / CC BY-SA 4.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can watch the falling water.',
-        feature: 'It is white. It goes straight down.',
-        about: 'The water is very clean. So the pond is blue!',
+        feature: 'It is white.',
+        about: 'The water is clean.',
       },
     },
     {
@@ -226,23 +213,11 @@ export const nikobuchi: SpotDefinition = {
       region: { min: { x: 28, y: 18, z: 31 }, max: { x: 41, y: 23, z: 52 } },
       focus: { x: 35, y: 20, z: 45 },
       image: './photos/nikobuchi/rocks.jpg',
+      credit: 'Photo: Dokudami / CC BY-SA 4.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can see big rocks and green trees.',
-        feature: 'They are big and tall.',
-        about: 'It is cool and quiet here.',
-      },
-    },
-    {
-      id: 'sign',
-      name: 'Information Sign',
-      nameJa: '看板',
-      image: './photos/nikobuchi/sign.jpg',
-      region: { min: { x: 55, y: 19, z: 63 }, max: { x: 57, y: 24, z: 65 } },
-      focus: { x: 56, y: 21, z: 64 },
-      guide: {
-        canDo: 'You can read about this place.',
-        feature: 'It is about Nikobuchi.',
-        about: 'Let\'s read the sign!',
+        feature: 'They are big.',
+        about: 'It is cool and quiet.',
       },
     },
   ],

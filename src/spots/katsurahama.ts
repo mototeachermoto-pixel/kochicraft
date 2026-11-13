@@ -43,7 +43,6 @@ function build(world: World): void {
   const water = b.id('water');
   const stonewall = b.id('stonewall');
   const wood = b.id('wood');
-  const roof = b.id('roof'); // ブロンズ風の濃い茶
   const tile = b.id('tile');
   const torii = b.id('torii');
   const lantern = b.id('lantern');
@@ -109,15 +108,15 @@ function build(world: World): void {
   b.box(60, 11, 41, 60, SAND, 44, stonewall); // 浜からわたる石だたみの道（鳥居へ続く）
   b.box(59, SAND, 39, 61, SAND, 40, stonewall);
   toriiGate(b, 60, TOP, 40, torii, tile); // 道の上に立つ鳥居（くぐれる）
-  // ほこら（写真のように、朱色の小さな社。屋根は赤茶で、前に白いしめなわ）
-  b.box(59, TOP, 35, 61, TOP + 1, 37, torii);
-  b.box(60, TOP, 37, 60, TOP, 37, wood); // 扉
-  b.set(60, TOP + 1, 38, castlewall); // しめなわ
-  b.box(58, TOP + 2, 34, 62, TOP + 2, 38, roof); // 屋根（張り出す）
-  b.box(59, TOP + 3, 34, 61, TOP + 3, 38, roof);
-  b.box(60, TOP + 4, 34, 60, TOP + 4, 38, roof); // 棟
-  b.set(59, TOP, 38, stonewall); // 参道の石（左右）
-  b.set(61, TOP, 38, stonewall);
+  // ほこら（2026-11-13 本物の写真に合わせて：白いかべに朱色の柱と扉、朱色のはりの上に灰色の反った屋根。まわりに石の柵）
+  b.box(59, TOP, 35, 61, TOP + 1, 37, castlewall); // 白いかべ
+  for (const x of [59, 61]) for (const z of [35, 37]) b.box(x, TOP, z, x, TOP + 1, z, torii); // 朱色の柱
+  b.box(60, TOP, 37, 60, TOP + 1, 37, torii); // 朱色の扉
+  b.box(59, TOP + 2, 35, 61, TOP + 2, 37, torii); // 朱色のはり
+  b.box(58, TOP + 3, 34, 62, TOP + 3, 38, tile); // 灰色の屋根（大きく張り出す）
+  b.box(59, TOP + 4, 34, 61, TOP + 4, 38, tile);
+  b.box(60, TOP + 5, 34, 60, TOP + 5, 38, tile); // 棟
+  for (const [x, z] of [[58, 38], [59, 38], [61, 38], [62, 38], [58, 37], [62, 37], [58, 36], [62, 36]] as const) b.set(x, TOP, z, stonewall); // 石の柵（正面のまん中はあける）
 
   // （坂本龍馬像は、2026-11-08 先生の希望で桂浜からはなくした。「坂本龍馬像」のカードと重なるため）
 
@@ -141,9 +140,6 @@ function build(world: World): void {
   b.set(45, TOP, 64, lantern);
   b.set(51, TOP, 64, lantern);
 
-  // ===== 看板（入口） =====
-  b.pillar(53, 66, TOP, TOP + 1, wood);
-  b.box(52, TOP + 2, 66, 54, TOP + 3, 66, castlewall);
 
   world.setBlocksBatch(b.cells);
 }
@@ -170,10 +166,11 @@ export const katsurahama: SpotDefinition = {
       region: { min: { x: 27, y: 12, z: 26 }, max: { x: 69, y: 15, z: 44 } },
       focus: { x: 48, y: 15, z: 35 },
       image: './photos/katsurahama/sea.jpg',
+      credit: 'Photo: 京浜にけ / CC BY-SA 3.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can watch the big waves.',
-        feature: 'It is blue and very big.',
-        about: 'The sea is strong here. Do not swim.',
+        feature: 'It is big and blue.',
+        about: 'Do not swim here.',
       },
     },
     {
@@ -183,23 +180,25 @@ export const katsurahama: SpotDefinition = {
       region: { min: { x: 28, y: 15, z: 45 }, max: { x: 68, y: 16, z: 67 } },
       focus: { x: 48, y: 16, z: 57 },
       image: './photos/katsurahama/beach.jpg',
+      credit: 'Photo: 京浜にけ / CC BY-SA 3.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can walk on the sand.',
-        feature: 'It has small stones of five colors.',
-        about: 'The moon is very pretty here. People sing about it!',
+        feature: 'It has colorful stones.',
+        about: 'The moon is pretty here.',
       },
     },
     {
       id: 'torii',
       name: 'Ryuogu Shrine',
       nameJa: '竜王宮',
-      region: { min: { x: 56, y: 12, z: 35 }, max: { x: 64, y: 22, z: 44 } },
+      region: { min: { x: 56, y: 12, z: 34 }, max: { x: 64, y: 22, z: 44 } },
       focus: { x: 60, y: 18, z: 39 },
       image: './photos/katsurahama/torii.jpg',
+      credit: 'Photo: ブルーノ・プラス / CC BY-SA 4.0 / Wikimedia Commons',
       guide: {
-        canDo: 'You can walk through the red gate to the small shrine.',
-        feature: 'It is on a rock by the sea.',
-        about: 'People come here and say thank you to the sea.',
+        canDo: 'You can go up the steps to the small shrine.',
+        feature: 'It is on a big rock.',
+        about: 'It is red and white.',
       },
     },
     {
@@ -209,10 +208,11 @@ export const katsurahama: SpotDefinition = {
       region: { min: { x: 28, y: 15, z: 57 }, max: { x: 68, y: 24, z: 67 } },
       focus: { x: 33, y: 19, z: 64 },
       image: './photos/katsurahama/pines.jpg',
+      credit: 'Photo: NevinThompson / CC BY-SA 4.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can see many pine trees.',
-        feature: 'They are green all year.',
-        about: 'Green trees and white sand are very pretty.',
+        feature: 'They are green.',
+        about: 'I like the green trees.',
       },
     },
     {
@@ -222,23 +222,11 @@ export const katsurahama: SpotDefinition = {
       region: { min: { x: 24, y: 11, z: 26 }, max: { x: 37, y: 25, z: 42 } },
       focus: { x: 30, y: 20, z: 34 },
       image: './photos/katsurahama/cape.jpg',
+      credit: 'Photo: Paul Coster / CC BY 2.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can see big rocks by the sea.',
-        feature: 'They are on the two sides of the beach.',
-        about: 'Their names are Dragon Head and Dragon King!',
-      },
-    },
-    {
-      id: 'sign',
-      name: 'Information Sign',
-      nameJa: '看板',
-      region: { min: { x: 52, y: 15, z: 65 }, max: { x: 54, y: 20, z: 67 } },
-      focus: { x: 53, y: 18, z: 66 },
-      image: './photos/katsurahama/sign.jpg',
-      guide: {
-        canDo: 'You can read about this place.',
-        feature: 'It is about Katsurahama.',
-        about: 'Let\'s read the sign!',
+        feature: 'They are big rocks.',
+        about: 'Their names are Dragon Head and Dragon King.',
       },
     },
   ],

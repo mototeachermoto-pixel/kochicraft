@@ -5,7 +5,8 @@ import type { SpotDefinition } from './SpotDefinition';
 /**
  * ひろめ市場（Hirome Market）— 高知の中心（高知城のそば）にある、にぎやかな屋内市場。
  * 実物（約60店の屋台村。名は土佐藩家老・深尾弘人の屋敷跡から）の特徴を色ボクセルで再現：
- *   - たくさんの「お店（屋台）」が並ぶ（色とりどりの背板・庇・赤提灯。計12店）。
+ *   - たくさんの「お店（屋台）」が並ぶ（色とりどりの背板・庇・赤提灯。計21店。通路の両がわに並ぶ）。
+ *   - 天井いっぱいの赤提灯。
  *   - 名物「カツオのたたき」の藁焼きのお店（豪快に立ちのぼる炎）。
  *   - 中央に「横長の机」＋座れる「椅子」＝どの店で買ってもここで相席で食べるスタイル。
  *   - 屋根つき（中央は吹き抜けで中が見える）。入口に大きな暖簾。
@@ -124,28 +125,26 @@ function build(world: World): void {
   b.box(63, G + 1, 73, 72, G + 4, 73, wood);
   b.box(63, G + 5, 73, 72, G + 6, 73, castlewall);
 
-  // ===== 中の通路の上に、赤提灯をずらりと吊るす（写真の天井） =====
-  for (let z = 41; z <= 61; z += 2) {
-    b.set(38, G + 6, z, torii);
-    b.set(58, G + 6, z, torii);
-    b.set(38, G + 7, z, tile); // 吊るすひも
-    b.set(58, G + 7, z, tile);
-  }
+  // （天井の赤ちょうちんは、2026-11-13 なくした。実物の写真では、天井に赤ちょうちんは並んでいないため）
 
   // ===== 屋台（お店）：色とりどりに10店 =====
   // 奥の列（手前＝+zを向く）
   stall(b, 32, 21, 0, 1, brick, castlewall, wood, leaves, torii);
-  stall(b, 42, 21, 0, 1, sakura, castlewall, wood, flower, torii);
+  stall(b, 42, 21, 0, 1, sakura, castlewall, wood, brick, torii); // カツオのたたきが食べられる店（赤い身）
   stall(b, 52, 21, 0, 1, tile, castlewall, wood, brick, torii); // カツオのたたきの店（魚＝赤）
-  stall(b, 62, 21, 0, 1, turf, castlewall, wood, leaves, torii);
+  stall(b, 62, 21, 0, 1, turf, castlewall, wood, lantern, torii); // ウツボのからあげの店（きつね色）
   // 左の列（+xを向く）
   stall(b, 25, 34, 1, 0, sakura, castlewall, wood, brick, torii);
-  stall(b, 25, 46, 1, 0, roof, castlewall, wood, leaves, torii);
+  stall(b, 25, 46, 1, 0, roof, castlewall, wood, castlewall, torii); // 貝焼きの店（白い貝）
   stall(b, 25, 58, 1, 0, brick, castlewall, wood, flower, torii);
   // 右の列（-xを向く）
   stall(b, 71, 34, -1, 0, torii, castlewall, wood, flower, torii);
   stall(b, 71, 46, -1, 0, turf, castlewall, wood, brick, torii);
   stall(b, 71, 58, -1, 0, brick, castlewall, wood, leaves, torii);
+  // 内側にもう1列（写真のように、通路の両がわに店が並ぶ。2026-11-13 足した）
+  for (const x of [32, 42, 62]) stall(b, x, 31, 0, -1, [turf, brick, sakura][(x / 10) % 3 | 0], castlewall, wood, [flower, leaves, brick][(x / 10) % 3 | 0], torii);
+  for (const z of [34, 46, 58]) stall(b, 31, z, -1, 0, [brick, turf, sakura][(z / 12) % 3 | 0], castlewall, wood, [leaves, flower, brick][(z / 12) % 3 | 0], torii);
+  for (const z of [34, 46, 58]) stall(b, 65, z, 1, 0, [sakura, brick, turf][(z / 12) % 3 | 0], castlewall, wood, [brick, leaves, flower][(z / 12) % 3 | 0], torii);
   // 入口わきの2店（中の通路を向く）
   stall(b, 32, 68, 0, -1, turf, castlewall, wood, flower, torii);
   stall(b, 62, 68, 0, -1, sakura, castlewall, wood, brick, torii);
@@ -157,32 +156,24 @@ function build(world: World): void {
   b.set(51, G + 2, 23, lantern); // 炎の明るい部分
   b.set(52, G + 2, 23, lantern);
   b.set(53, G + 2, 23, lantern);
-  b.set(52, G + 3, 23, brick); // 高く上がる炎の先
+  b.set(51, G + 3, 23, brick); // 高く上がる炎
+  b.set(52, G + 3, 23, lantern);
+  b.set(53, G + 3, 23, brick);
+  b.set(52, G + 4, 23, brick); // 炎の先
 
   // ===== 中央：横長の机＋座れる椅子（椅子は机より低い） =====
   diningSet(b, 40, 56, 44, lightWood, lightWood);
   diningSet(b, 40, 56, 50, lightWood, lightWood);
   diningSet(b, 40, 56, 56, lightWood, lightWood);
 
-  // ===== 入口（写真に合わせて：上に赤提灯が2段ずらり、その下に濃い赤の大きな暖簾） =====
-  // 木の格子の中に、赤提灯が2段に並ぶ
-  b.box(34, G + 5, 73, 62, G + 7, 73, wood); // 格子の木枠
-  for (let x = 35; x <= 61; x += 2) {
-    b.set(x, G + 5, 74, torii); // 下の段の提灯（少し前に出す）
-    b.set(x, G + 6, 74, torii); // 上の段の提灯
-  }
-  // 入口の上の瓦のひさし
+  // ===== 入口（実物の写真に合わせて：入口の上に「ひろめ市場」の大きな緑の看板、四すみに赤い丸。2026-11-13） =====
+  b.box(36, G + 5, 74, 60, G + 7, 74, leaves); // 緑の大きな看板
+  b.box(36, G + 5, 74, 60, G + 5, 74, lantern); // 看板の下のふち（金色）
+  b.box(36, G + 7, 74, 60, G + 7, 74, lantern); // 看板の上のふち
+  for (const x of [36, 60]) for (const y of [G + 5, G + 7]) b.set(x, y, 74, torii); // 四すみの赤い丸
+  for (let x = 39; x <= 57; x += 3) b.set(x, G + 6, 74, brick); // 看板の文字（オレンジ）
+  // 入口の上の屋根
   b.box(23, G + 8, 73, 73, G + 8, 75, tile);
-  // 濃い赤の暖簾（何枚かに分かれて垂れる。まん中は高く上がって通れる）
-  for (let x = 34; x <= 62; x++) {
-    if ((x - 34) % 4 === 3) continue; // 暖簾の切れ目
-    const low = x >= 44 && x <= 52 ? G + 4 : G + 3; // まん中はくぐれるように短く
-    b.box(x, low, 74, x, G + 4, 74, roof);
-  }
-
-  // ===== 広場の看板（プラザ・手前） =====
-  b.pillar(66, 79, G + 1, G + 2, wood);
-  b.box(65, G + 3, 79, 67, G + 4, 79, castlewall);
 
   world.setBlocksBatch(b.cells);
 }
@@ -207,11 +198,13 @@ export const hirome: SpotDefinition = {
       nameJa: 'ひろめ市場（入口）',
       region: { min: { x: 34, y: 11, z: 73 }, max: { x: 62, y: 17, z: 76 } },
       focus: { x: 48, y: 14, z: 74 },
+      viewFrom: { x: 48.5, y: G + 1, z: 79.5 }, // 正面の広場から
       image: './photos/hirome/entrance.jpg',
+      credit: 'Photo: Higa4 / CC0 / Wikimedia Commons',
       guide: {
         canDo: 'You can walk into the market.',
-        feature: 'It has many shops and red lights.',
-        about: 'Long ago, Mr. Hirome lived here. That is the name!',
+        feature: 'It has a big green sign.',
+        about: 'It has many shops.',
       },
     },
     {
@@ -221,23 +214,11 @@ export const hirome: SpotDefinition = {
       region: { min: { x: 50, y: 11, z: 21 }, max: { x: 54, y: 15, z: 24 } },
       focus: { x: 52, y: 13, z: 23 },
       image: './photos/hirome/katsuo.jpg',
+      credit: 'Photo: NevinThompson / CC BY-SA 4.0 / Wikimedia Commons',
       guide: {
-        canDo: 'You can watch the fish cooking show.',
-        feature: 'The fire is big and hot.',
-        about: 'They cook fish on a big fire. Whoosh!',
-      },
-    },
-    {
-      id: 'shops',
-      name: 'Food Shops',
-      nameJa: 'お店（屋台）',
-      region: { min: { x: 25, y: 11, z: 32 }, max: { x: 29, y: 15, z: 60 } },
-      focus: { x: 27, y: 13, z: 46 },
-      image: './photos/hirome/shops.jpg',
-      guide: {
-        canDo: 'You can look at many small shops.',
-        feature: 'They are colorful.',
-        about: 'About 60 shops are here. What do you want to eat?',
+        canDo: 'You can buy katsuo here.',
+        feature: 'They cook it on a fire.',
+        about: 'It is a fish shop.',
       },
     },
     {
@@ -247,36 +228,53 @@ export const hirome: SpotDefinition = {
       region: { min: { x: 38, y: 11, z: 42 }, max: { x: 58, y: 13, z: 59 } },
       focus: { x: 48, y: 12, z: 50 },
       image: './photos/hirome/tables.jpg',
+      credit: 'Photo: Higa4 / CC0 / Wikimedia Commons',
       guide: {
         canDo: 'You can sit and eat at the long tables.',
-        feature: 'The tables are long. The chairs are low.',
-        about: 'Buy food you like. Eat together here!',
+        feature: 'The tables are long.',
+        about: 'Let\'s eat together!',
       },
     },
     {
-      id: 'lanterns',
-      name: 'Red Lanterns',
-      nameJa: '赤提灯',
-      region: { min: { x: 30, y: 14, z: 71 }, max: { x: 66, y: 17, z: 72 } },
-      focus: { x: 48, y: 16, z: 72 },
-      image: './photos/hirome/lanterns.jpg',
+      id: 'tataki',
+      name: 'Katsuo no Tataki',
+      nameJa: 'カツオのたたき',
+      region: { min: { x: 41, y: 11, z: 21 }, max: { x: 43, y: 15, z: 22 } },
+      focus: { x: 42, y: 13, z: 22 },
+      image: './photos/hirome/tataki.jpg',
+      credit: 'Photo: NevinThompson / CC BY-SA 4.0 / Wikimedia Commons',
       guide: {
-        canDo: 'You can see many red lanterns.',
-        feature: 'They are red and round.',
-        about: 'They make the market fun!',
+        canDo: 'You can eat katsuo no tataki here.',
+        feature: 'It is fish.',
+        about: 'It is a famous food of Kochi.',
       },
     },
     {
-      id: 'sign',
-      name: 'Information Sign',
-      nameJa: '看板',
-      region: { min: { x: 65, y: 11, z: 78 }, max: { x: 67, y: 16, z: 80 } },
-      focus: { x: 66, y: 13, z: 79 },
-      image: './photos/hirome/sign.jpg',
+      id: 'utsubo',
+      name: 'Fried Utsubo',
+      nameJa: 'ウツボのからあげ',
+      region: { min: { x: 61, y: 11, z: 21 }, max: { x: 63, y: 15, z: 22 } },
+      focus: { x: 62, y: 13, z: 22 },
+      image: './photos/hirome/utsubo.jpg',
+      credit: 'Photo: Totti / CC BY-SA 4.0 / Wikimedia Commons',
       guide: {
-        canDo: 'You can read about this place.',
-        feature: 'It is about Hirome Market.',
-        about: 'Let\'s read the sign!',
+        canDo: 'You can eat utsubo here.',
+        feature: 'It is a long fish.',
+        about: 'It is crispy and good.',
+      },
+    },
+    {
+      id: 'shellfish',
+      name: 'Grilled Shellfish',
+      nameJa: '貝焼き',
+      region: { min: { x: 25, y: 11, z: 45 }, max: { x: 26, y: 15, z: 47 } },
+      focus: { x: 26, y: 13, z: 46 },
+      image: './photos/hirome/shellfish.jpg',
+      credit: 'Photo: Higa4 / CC0 / Wikimedia Commons',
+      guide: {
+        canDo: 'You can cook shellfish on a grill.',
+        feature: 'They are hot and good.',
+        about: 'Let\'s cook at the table!',
       },
     },
   ],

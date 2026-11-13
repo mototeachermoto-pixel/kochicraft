@@ -9,6 +9,8 @@ export class HubScreen {
   private readonly root: HTMLElement;
   /** 一番上の「だれの作品か」を出す場所（GAS 版だけ Engine が中身を入れる） */
   readonly whoBar: HTMLElement;
+  /** いまの入口（Practice & Build ／ Tour Guide）と、切りかえボタンを出す場所（Engine が中身を入れる） */
+  readonly modeBar: HTMLElement;
 
   constructor(
     parent: HTMLElement,
@@ -36,6 +38,7 @@ export class HubScreen {
       <div class="hub-who hidden"></div>
       <div class="hub-screen__head">
         <div class="hub-screen__title">Kochi Tourist Spots</div>
+        <div class="hub-mode"></div>
         <div class="hub-screen__sub">Choose a place to visit</div>
         <div class="hub-screen__keys">
           Push <kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> to choose, then <kbd>Enter</kbd> to go.
@@ -46,6 +49,7 @@ export class HubScreen {
     `;
     parent.appendChild(this.root);
     this.whoBar = this.root.querySelector('.hub-who') as HTMLElement;
+    this.modeBar = this.root.querySelector('.hub-mode') as HTMLElement;
     this.root.querySelector('[data-role="howto"]')!.addEventListener('click', () => onHowTo?.());
 
     for (const btn of Array.from(this.root.querySelectorAll<HTMLButtonElement>('.spot-card'))) {

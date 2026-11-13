@@ -99,25 +99,28 @@ function palm(b: Build, x: number, z: number, h: number, wood: number, frond: nu
   b.set(x, t + 1, z, frond);
 }
 
-/** アコウの木：太い幹＋タコの足のように広がる根＋丸い樹冠（実物は天然記念物の大樹）。 */
+/**
+ * アコウの木：写真に合わせて、根がタコの足のように大きく広がり、太い幹に大きな樹冠がのる大木（天然記念物）。
+ * 2026-11-13 大きく作り直し（前は小さな木で、写真とちがっていた）。
+ */
 function akouTree(b: Build, x: number, z: number, wood: number, leaf: number): void {
-  // タコの足のような根（地面の上を四方へ這う）
+  // タコの足のような根（地面の上を四方へ、くねりながら長く這う）
   for (const [dx, dz] of [
-    [-2, 0],
-    [-1, 0],
-    [1, 0],
-    [2, 0],
-    [0, -2],
-    [0, -1],
-    [0, 1],
-    [0, 2],
-    [-1, -1],
-    [1, 1],
+    [1, 0], [0, 1], [-1, 0], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1],
   ] as const) {
-    b.set(x + dx, LAND + 1, z + dz, wood);
+    for (let k = 1; k <= 4; k++) {
+      const wob = k % 2 === 0 ? 1 : 0; // 少しくねらせる
+      b.set(x + dx * k + (dz !== 0 && dx === 0 ? wob : 0), LAND + 1, z + dz * k + (dx !== 0 && dz === 0 ? wob : 0), wood);
+    }
+    b.set(x + dx, LAND + 2, z + dz, wood); // 幹のつけ根は高く盛り上がる
   }
-  b.box(x, LAND + 1, z, x, LAND + 4, z, wood); // 幹
-  b.sphere(x, LAND + 6, z, 2, leaf); // 丸い樹冠
+  b.box(x, LAND + 1, z, x + 1, LAND + 6, z + 1, wood); // 太い幹（2×2）
+  b.box(x - 1, LAND + 6, z, x + 2, LAND + 6, z + 1, wood); // 枝分かれ
+  b.box(x, LAND + 6, z - 1, x + 1, LAND + 6, z + 2, wood);
+  // 大きく広がる樹冠（平たく横に広い）
+  b.box(x - 4, LAND + 7, z - 3, x + 5, LAND + 8, z + 4, leaf);
+  b.box(x - 3, LAND + 9, z - 2, x + 4, LAND + 9, z + 3, leaf);
+  b.box(x - 1, LAND + 10, z - 1, x + 2, LAND + 10, z + 2, leaf);
 }
 
 function build(world: World): void {
@@ -210,9 +213,6 @@ function build(world: World): void {
   b.set(42, LAND, 50, flower);
   b.set(42, LAND, 62, flower);
 
-  // ===== 看板（入口・右） =====
-  b.pillar(56, 64, LAND + 1, LAND + 2, wood);
-  b.box(55, LAND + 3, 64, 57, LAND + 4, 64, castlewall);
 
   world.setBlocksBatch(b.cells);
 }
@@ -238,10 +238,11 @@ export const muroto: SpotDefinition = {
       region: { min: { x: 30, y: 9, z: 24 }, max: { x: 66, y: 19, z: 43 } },
       focus: { x: 48, y: 13, z: 33 },
       image: './photos/muroto/rocks.jpg',
+      credit: 'Photo: Nagono / CC BY-SA 3.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can walk on the wild rocks.',
-        feature: 'They are big and dark.',
-        about: 'Long ago, these rocks were under the sea!',
+        feature: 'They are big and black.',
+        about: 'They are very old.',
       },
     },
     {
@@ -249,12 +250,13 @@ export const muroto: SpotDefinition = {
       name: 'Muroto Lighthouse',
       nameJa: '室戸岬灯台',
       image: './photos/muroto/lighthouse.jpg',
+      credit: 'Photo: Kzaral / CC BY 2.0 / Wikimedia Commons',
       region: { min: { x: 54, y: 17, z: 50 }, max: { x: 60, y: 29, z: 56 } },
       focus: { x: 57, y: 25, z: 53 },
       guide: {
         canDo: 'You can climb the hill to the lighthouse.',
-        feature: 'It is white. It is on a hill.',
-        about: 'Its light is very, very strong. It helps ships at night.',
+        feature: 'It is white.',
+        about: 'It is bright at night.',
       },
     },
     {
@@ -264,23 +266,25 @@ export const muroto: SpotDefinition = {
       region: { min: { x: 28, y: 9, z: 26 }, max: { x: 68, y: 11, z: 42 } },
       focus: { x: 30, y: 10, z: 34 },
       image: './photos/muroto/sea.jpg',
+      credit: 'Photo: Motokoka / CC BY-SA 4.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can look at the big blue ocean.',
-        feature: 'It goes far, far away.',
-        about: 'Big whales swim out there!',
+        feature: 'It is big and blue.',
+        about: 'You can see whales!',
       },
     },
     {
       id: 'akou',
       name: 'Akou Tree',
       nameJa: 'アコウの木',
-      region: { min: { x: 33, y: 12, z: 49 }, max: { x: 41, y: 21, z: 57 } },
+      region: { min: { x: 32, y: 12, z: 49 }, max: { x: 43, y: 22, z: 58 } },
       focus: { x: 37, y: 16, z: 53 },
       image: './photos/muroto/akou.jpg',
+      credit: 'Photo: inunami / CC BY 2.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can see a big old tree.',
         feature: 'Its roots are like octopus legs.',
-        about: 'It is a big old tree. It is a treasure of Muroto.',
+        about: 'It is very big and old.',
       },
     },
     {
@@ -290,10 +294,11 @@ export const muroto: SpotDefinition = {
       region: { min: { x: 30, y: 12, z: 43 }, max: { x: 38, y: 18, z: 51 } },
       focus: { x: 34, y: 14, z: 48 },
       image: './photos/muroto/cave.jpg',
+      credit: 'Photo: Reggaeman / CC BY-SA 3.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can go into the small cave.',
-        feature: 'It is dark and quiet.',
-        about: 'A young man lived here long ago. He saw only the sky and the sea.',
+        feature: 'It is dark.',
+        about: 'It is a famous cave.',
       },
     },
     {
@@ -303,23 +308,11 @@ export const muroto: SpotDefinition = {
       region: { min: { x: 30, y: 12, z: 58 }, max: { x: 42, y: 20, z: 68 } },
       focus: { x: 34, y: 16, z: 62 },
       image: './photos/muroto/palms.jpg',
+      credit: 'Photo: Motokoka / CC BY-SA 4.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can see palm trees.',
-        feature: 'They are tall. They have big leaves.',
-        about: 'Muroto is warm. So they are happy here!',
-      },
-    },
-    {
-      id: 'sign',
-      name: 'Information Sign',
-      nameJa: '看板',
-      region: { min: { x: 55, y: 13, z: 63 }, max: { x: 57, y: 18, z: 65 } },
-      focus: { x: 56, y: 15, z: 64 },
-      image: './photos/muroto/sign.jpg',
-      guide: {
-        canDo: 'You can read about this place.',
-        feature: 'It is about Cape Muroto.',
-        about: 'Let\'s read the sign!',
+        feature: 'They are tall.',
+        about: 'Muroto is warm.',
       },
     },
   ],

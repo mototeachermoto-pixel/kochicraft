@@ -14,6 +14,7 @@ import { EditStore } from '@/data/EditStore';
 import { SaveStorage } from '@/data/SaveStorage';
 import { NumberPanel } from '@/ui/NumberPanel';
 import { HowToPlayPanel } from '@/ui/HowToPlayPanel';
+import { ModeChooser, type AppMode } from '@/ui/ModeChooser';
 import { Avatar, SKIN_LABEL, type SkinKind } from '@/player/Avatar';
 import { SceneManager } from './SceneManager';
 import { OrbitCameraController } from './OrbitCameraController';
@@ -82,6 +83,20 @@ export class Engine {
   private reachCache: Set<string> | null = null;
   /** 番号（例：5A12）を入れる画面（GAS 版だけ） */
   private readonly numberPanel: NumberPanel;
+  /** 入口をえらぶ画面（Practice & Build ／ Tour Guide） */
+  private readonly chooser: ModeChooser;
+  /** いまの入口。guide＝案内モード（置く・消すはできない。見どころを順に案内する） */
+  private appMode: AppMode = ((): AppMode => {
+    try {
+      return localStorage.getItem('kc.appmode') === 'guide' ? 'guide' : 'practice';
+    } catch {
+      return 'practice';
+    }
+  })();
+  /** 案内モードの下のバー（いま何か所目か・Back・Next） */
+  private tourBar!: HTMLElement;
+  /** 案内の順番で、いま何番目の見どころか（-1＝はじめの Welcome、物の数＝おわりの Thank you） */
+  private tourIndex = -1;
 
   private mode: Mode = 'walk';
   private lastTime = 0;
@@ -154,8 +169,17 @@ export class Engine {
       },
     });
     this.worldManager.onSelect = (obj) => {
-      if (obj) this.infoPanel.show(obj, this.worldManager.currentSpot?.id ?? '');
-      else this.infoPanel.hide();
+      if (obj) {
+        // 案内モードでは、どの物を開いても、案内の順番をその物に合わせる（下のバーに Look! This is ～. が出る）
+        if (this.guide) {
+          const i = this.worldManager.getObjects().indexOf(obj);
+          if (i >= 0) this.tourIndex = i;
+          this.updateTourBar();
+        }
+        this.infoPanel.show(obj, this.worldManager.currentSpot?.id ?? '');
+      } else {
+        this.infoPanel.hide();
+      }
     };
     // 正面で向き合ったら英語名バナーを出す（タップ／クリックで、その対象の説明を右に開けるように）
     this.worldManager.onNear = (obj) => {
@@ -176,6 +200,9 @@ export class Engine {
     const howTo = new HowToPlayPanel(this.hudRoot);
     this.hub = new HubScreen(this.hudRoot, SPOTS, (spot) => this.fadeThen(() => this.enterSpot(spot), true), () => howTo.open());
     this.buildSpotUI();
+    this.chooser = new ModeChooser(this.hudRoot, (m) => this.setAppMode(m));
+    this.renderModeBar();
+    this.infoPanel.readOnly = this.guide;
 
     // GAS 版：子どもの番号ごとに大学の Google へ保存する（Safari を閉じても残るように）
     this.numberPanel = new NumberPanel(this.hudRoot, {
@@ -333,6 +360,24 @@ export class Engine {
     this.fileInput.addEventListener('change', () => this.openFromFile());
     this.hudRoot.appendChild(this.fileInput);
 
+    // 案内モードの下のバー（今の観光地・説明パネル・Map の飛び方をそのまま使って、見どころを順に回る）
+    this.tourBar = document.createElement('div');
+    this.tourBar.className = 'tour-bar hidden';
+    this.tourBar.innerHTML = `
+      <button class="tour-bar__line" data-role="line" title="Listen"></button>
+      <div class="tour-bar__row">
+        <button class="kc-btn tour-bar__btn" data-role="prev">◀ Back<kbd>P</kbd></button>
+        <span class="tour-bar__dots" data-role="dots"></span>
+        <span class="tour-bar__count" data-role="count"></span>
+        <button class="kc-btn tour-bar__btn tour-bar__next" data-role="next"><span data-label="next">Next ▶</span><kbd>N</kbd></button>
+      </div>`;
+    this.hudRoot.appendChild(this.tourBar);
+    this.tourBar.querySelector('[data-role="prev"]')!.addEventListener('click', () => this.tourGo(-1));
+    this.tourBar.querySelector('[data-role="next"]')!.addEventListener('click', () => this.tourGo(1));
+    this.tourBar.querySelector('[data-role="line"]')!.addEventListener('click', () =>
+      this.speech.speak(this.tourLineText(), 'en'),
+    );
+
     // 保存トースト
     // 場所が切りかわるときの、画面のふわっとした暗転（いきなり別の場所に飛んで、どこか分からなくならないように）
     this.fade = document.createElement('div');
@@ -348,8 +393,9 @@ export class Engine {
   async start(): Promise<void> {
     document.getElementById('loading')?.classList.add('hidden');
     this.hub.show();
-    // GAS 版は、最初に自分の番号を入れてもらう（入れるまで閉じられない）
+    // GAS 版は、最初に自分の番号を入れてもらう（入れるまで閉じられない）。入口は番号のあとに選ぶ
     if (SaveStorage.cloud) this.numberPanel.open('me', this.lastNumber(), false);
+    else this.chooser.open(this.appMode);
 
     if ((import.meta as { env?: { DEV?: boolean } }).env?.DEV) {
       (window as unknown as { kc: unknown }).kc = {
@@ -389,7 +435,95 @@ export class Engine {
     this.hub.hide();
     this.toolbar.classList.remove('hidden');
     this.spawnPlayer(spot);
+    this.tourIndex = -1;
     this.setMode('walk'); // 歩いて回るのを既定に
+    this.tourBar.classList.toggle('hidden', !this.guide);
+    this.updateTourBar();
+  }
+
+  // ===== 案内モード（2026-11-13 追加） =====
+
+  private get guide(): boolean {
+    return this.appMode === 'guide';
+  }
+
+  /** 入口を決める（入口をえらぶ画面から） */
+  private setAppMode(m: AppMode): void {
+    this.appMode = m;
+    try {
+      localStorage.setItem('kc.appmode', m);
+    } catch {
+      // 覚えられなくても続ける
+    }
+    this.infoPanel.readOnly = SaveStorage.readOnly || this.guide;
+    this.renderModeBar();
+    if (!this.worldManager.currentSpot) this.hub.show(); // 一覧のカードにフォーカスを当て直す
+  }
+
+  /** 一覧の上に、いまの入口と「Change」ボタンを出す */
+  private renderModeBar(): void {
+    const bar = this.hub.modeBar;
+    bar.innerHTML = this.guide
+      ? `<span class="hub-mode__name is-guide">🎤 Tour Guide</span>`
+      : `<span class="hub-mode__name">🧱 Practice &amp; Build</span>`;
+    bar.innerHTML += `<button class="kc-btn hub-mode__change" data-role="change">🔄 Change</button>`;
+    bar.querySelector('[data-role="change"]')!.addEventListener('click', () => this.chooser.open(this.appMode));
+  }
+
+  /** 案内バーの上の行の英文（画面に出す文と読み上げる文は同じにする） */
+  private tourLineText(): string {
+    const spot = this.worldManager.currentSpot;
+    const objects = this.worldManager.getObjects();
+    if (!spot) return '';
+    if (this.tourIndex < 0) return `Welcome to ${spot.name}!`;
+    if (this.tourIndex >= objects.length) return 'Thank you!';
+    return `Look! This is ${objects[this.tourIndex].name}.`;
+  }
+
+  /** 案内バーの表示（英文・何か所目か・ボタンの文字）を今の順番に合わせる */
+  private updateTourBar(): void {
+    if (!this.guide) return;
+    const n = this.worldManager.getObjects().length;
+    const i = this.tourIndex;
+    const line = this.tourBar.querySelector('[data-role="line"]')!;
+    line.textContent = `🔊 ${this.tourLineText()}`;
+    line.classList.toggle('is-end', i >= n);
+    const dots = this.tourBar.querySelector('[data-role="dots"]')!;
+    dots.innerHTML = Array.from({ length: n }, (_, k) =>
+      `<span class="tour-dot${k < i ? ' is-done' : k === i ? ' is-now' : ''}"></span>`,
+    ).join('');
+    this.tourBar.querySelector('[data-role="count"]')!.textContent =
+      i < 0 ? `0 / ${n}` : `${Math.min(i + 1, n)} / ${n}`;
+    (this.tourBar.querySelector('[data-role="prev"]') as HTMLButtonElement).classList.toggle('is-off', i < 0);
+    this.tourBar.querySelector('[data-label="next"]')!.textContent =
+      i < 0 ? 'Start ▶' : i >= n ? '↺ Again' : i === n - 1 ? 'Finish ▶' : 'Next ▶';
+  }
+
+  /**
+   * 案内の順番で、次（+1）／前（-1）の見どころへ。
+   * 見どころへは Map と同じしくみでキャラクターが移り、いつもの説明パネルが出る。
+   * 最後の次は「Thank you!」、そのあとは最初（Welcome）にもどる。
+   */
+  private tourGo(dir: number): void {
+    if (!this.guide || this.fading) return;
+    const spot = this.worldManager.currentSpot;
+    if (!spot) return;
+    const n = this.worldManager.getObjects().length;
+    let next = this.tourIndex + dir;
+    if (this.tourIndex >= n && dir > 0) next = -1; // Again
+    if (next < -1) return;
+    next = Math.min(next, n);
+    this.tourIndex = next;
+    this.infoPanel.closePhoto();
+    // iPad はボタンを押したその場でないと声が出ないので、移る前に読み上げを始める
+    this.speech.speak(this.tourLineText(), 'en');
+    if (next >= 0 && next < n) {
+      this.fadeThen(() => this.goToObject(next));
+    } else {
+      this.worldManager.clearSelection();
+      if (next < 0) this.fadeThen(() => this.returnToStart());
+    }
+    this.updateTourBar();
   }
 
   /**
@@ -426,7 +560,7 @@ export class Engine {
     const pitch = Math.max(-SPAWN_PITCH_CLAMP, Math.min(SPAWN_PITCH_CLAMP, rawPitch));
     this.walk.spawn(best, yaw, pitch);
     this.worldManager.selectIndex(index); // 説明パネルを出す
-    this.showToast(`Welcome to ${obj.name}!`);
+    if (!this.guide) this.showToast(`Welcome to ${obj.name}!`); // 案内モードは下の案内バーに英文が出る
   }
 
   /** その物がよく見える立ち位置を、点数をつけて選ぶ（くわしくは goToObject の説明） */
@@ -684,6 +818,7 @@ export class Engine {
     this.palette.hide();
     this.build.hide();
     this.places.hide();
+    this.tourBar.classList.add('hidden');
     this.mode = 'walk';
     this.hub.show();
   }
@@ -825,6 +960,26 @@ export class Engine {
       row(k('J'), '<b>J</b>ump'),
     ];
 
+    // 案内モード：見どころを順に案内する（ブロックは置けない）
+    if (this.guide) {
+      return [
+        ...move,
+        head('Tour'),
+        row(k('N'), '<b>N</b>ext place'),
+        row(k('P'), '<b>P</b>revious place'),
+        row(k('F'), 'Big photo'),
+        row(k('E'), 'Listen in <b>E</b>nglish'),
+        head('You'),
+        row(k('C'), '<b>C</b>hange Character'),
+        row(k('V'), 'Change <b>V</b>iew'),
+        head('Go'),
+        row(k('M'), '<b>M</b>ap: go to a place'),
+        row(k('L'), '<b>L</b>ook from the sky'),
+        row(k('H'), '<b>H</b>ome (start)'),
+        row(k('X'), 'Back to list'),
+      ].join('');
+    }
+
     const rest = building
       ? [
           head('Blocks'),
@@ -868,7 +1023,7 @@ export class Engine {
   private setMode(mode: Mode): void {
     const spot = this.worldManager.currentSpot;
     // 建築できる範囲が無いとき・友だちの作品を見ているとき（見るだけ）は歩行へ
-    if (mode === 'build' && (!spot?.field || SaveStorage.readOnly)) mode = 'walk';
+    if (mode === 'build' && (!spot?.field || SaveStorage.readOnly || this.guide)) mode = 'walk';
     this.mode = mode;
 
     const walkLike = mode === 'walk' || mode === 'build';
@@ -947,7 +1102,7 @@ export class Engine {
     this.restartBtn.classList.toggle('hidden', mode !== 'walk');
 
     // 編集ボタン（建築できる範囲が無い観光地では隠す）
-    this.buildBtn.classList.toggle('hidden', !spot?.field || SaveStorage.readOnly);
+    this.buildBtn.classList.toggle('hidden', !spot?.field || SaveStorage.readOnly || this.guide);
     this.buildBtn.classList.toggle('is-active', building);
     this.buildBtn.querySelector('[data-label="build"]')!.textContent = building ? 'Done' : 'Build';
     this.buildBtn.querySelector('.kc-btn__icon')!.textContent = building ? '✓' : '🧱';
@@ -957,7 +1112,9 @@ export class Engine {
     const hint = this.toolbar.querySelector('[data-role="hint"]')!;
     hint.textContent = building
       ? '🧱 Make your own world here!'
-      : SaveStorage.readOnly
+      : this.guide
+        ? '🎤 Tour Guide: show this place in English!'
+        : SaveStorage.readOnly
         ? `👀 This is ${SaveStorage.viewing}'s world. You can only look.`
         : '👆 Tap a building to learn about it!';
   }
@@ -1050,6 +1207,7 @@ export class Engine {
       // 覚えられなくても続ける
     }
     this.afterWorksChanged();
+    this.chooser.open(this.appMode); // 番号のあとに入口をえらぶ
   }
 
   /** 番号の作品を「見るだけ」で開く（自分の番号なら、自分の作品に戻るだけ） */
@@ -1064,6 +1222,7 @@ export class Engine {
       }
     }
     this.afterWorksChanged();
+    if (!this.worldManager.currentSpot) this.chooser.open(this.appMode); // 番号のあとに入口をえらぶ
   }
 
   /** 友だちの作品を見るのをやめて、自分の作品に戻る（まだ自分の番号を開いていなければ、番号を聞く） */
@@ -1076,7 +1235,7 @@ export class Engine {
 
   /** 開いている作品（自分／友だち）が変わったら、画面を合わせる */
   private afterWorksChanged(): void {
-    this.infoPanel.readOnly = SaveStorage.readOnly;
+    this.infoPanel.readOnly = SaveStorage.readOnly || this.guide;
     this.renderWho();
     // 観光地の中にいたら、その作品で読み込み直す
     const spot = this.worldManager.currentSpot;
@@ -1261,6 +1420,23 @@ export class Engine {
     }
 
     if (e.ctrlKey || e.metaKey) return; // ブラウザの標準操作を邪魔しない
+
+    // 写真を画面いっぱいに出しているときは、X・Esc・F で閉じる（E の読み上げはそのまま使える）
+    if (this.infoPanel.isPhotoOpen && (e.code === 'KeyX' || e.code === 'Escape' || e.code === 'KeyF')) {
+      e.preventDefault();
+      this.infoPanel.closePhoto();
+      return;
+    }
+    // 案内モード：N＝次の見どころ／P＝前の見どころ／F＝写真を大きく
+    if (this.guide && (e.code === 'KeyN' || e.code === 'KeyP')) {
+      e.preventDefault();
+      this.tourGo(e.code === 'KeyN' ? 1 : -1);
+      return;
+    }
+    if (e.code === 'KeyF' && this.walk.enabled) {
+      if (!this.infoPanel.togglePhoto()) this.showToast('Choose a place with a photo');
+      return;
+    }
 
     if (e.code === 'Tab' || e.code === 'KeyN') {
       // N = Next（次の構造物へ）

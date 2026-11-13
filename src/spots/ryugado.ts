@@ -9,8 +9,9 @@ import type { SpotDefinition } from './SpotDefinition';
  * 子どもが「どこに何があるか」すぐ分かるよう、洞窟の中を3つのコーナーに分け、
  * まん中のまっすぐな通路でつなぐ（細かい飾りは置かず、すっきりさせる）：
  *   1. 手前「鍾乳石のコーナー」：天井からぶら下がる鍾乳石・床から立つ石筍・石柱（クリーム色）
- *   2. まん中「地底の川と記念の滝」：洞窟を横切る青い川と、左の白い滝（実物は落差11m）
- *   3. 奥「神の壺」：台の上の古代の壺（弥生土器が鍾乳石と一体化したシンボル）
+ *   2. まん中「地底の川と飛龍の滝」：洞窟を横切る青い川と、左の滝（洞内で二番目に大きな滝）。となりにオレンジ色の鍾乳石の柱
+ *   3. 奥「神の壺」：奥の壁の石灰の岩にうまった、白っぽい古代の壺（弥生土器が鍾乳石と一体化したもの）
+ * 2026-11-13：本物の写真（ウィキメディア・コモンズ）に合わせて、滝と壺の形を直した。
  * 壁と天井は茶色、床はこげ茶、通路は明るい石で、ちがいがはっきり見えるように色を分ける。
  * Map で各コーナーへ行くと、洞窟の中の見やすい場所に立つ（viewFrom）。
  *
@@ -48,12 +49,13 @@ function build(world: World): void {
   const leaves = b.id('leaves'); // 岩山の上の森
   const water = b.id('water');
   const wood = b.id('wood'); // 看板・木の幹
-  const castlewall = b.id('castlewall'); // 白い滝・看板
   const cave = b.id('bridge'); // 洞内の壁と天井（あたたかい茶色）
   const floor = b.id('dirt'); // 洞内の床（こげ茶）
   const path = b.id('stonewall'); // 見学の通路（明るい石）
+  const castlewall = b.id('castlewall'); // 滝つぼの白いしぶき
+  const pot = b.id('castlewall'); // 神の壺（写真に合わせて：石灰に包まれた、白っぽいクリーム色）
+  const flowstone = b.id('brick'); // 飛龍の滝のとなりの、オレンジ色の太い鍾乳石の柱
   const crystal = b.id('lantern'); // 鍾乳石・石筍（クリーム色＝茶色の壁の前でよく目立つ）
-  const pot = b.id('brick'); // 神の壺（素焼きの土器の色）
   const road = b.id('road'); // 外の道
 
   // ===== 地面（フィールド全体・奈落防止） =====
@@ -119,26 +121,29 @@ function build(world: World): void {
   b.box(47, G, 45, 49, G, 46, path); // 通路は小さな橋で川をわたる
   b.box(46, G + 1, 45, 46, G + 1, 46, path); // 橋のふち（低い）
   b.box(50, G + 1, 45, 50, G + 1, 46, path);
-  // 記念の滝（川の左はし。天井から青い水が流れ落ち、下で白いしぶきが立つ）
+  // 飛龍の滝（川の左はし。洞内で二番目に大きな滝。岩の上を青い水が流れ落ち、下で白いしぶきが立つ）
+  // 2026-11-13 本物の写真に合わせて、記念の滝から飛龍の滝に。となりにオレンジ色の太い鍾乳石の柱を足した
   // 鍾乳石（クリーム色）とまちがえないよう、滝は青い水にして、しぶきだけ白くする
   b.box(32, G + 1, 45, 33, TOP, 46, water);
   b.box(31, TOP - 1, 44, 34, TOP, 47, cave); // 水が出てくる岩の口
   b.box(32, TOP - 1, 45, 33, TOP, 46, water);
   b.box(34, G + 1, 44, 35, G + 1, 47, castlewall); // 滝つぼの白いしぶき
   b.box(34, G + 2, 45, 34, G + 2, 46, castlewall);
+  b.box(32, G + 1, 47, 33, G + 3, 48, flowstone); // 鍾乳石の柱（下は太い）
+  b.box(32, G + 4, 47, 32, TOP - 2, 47, flowstone); // まん中は細い
+  b.box(32, TOP - 1, 47, 33, TOP, 48, flowstone); // 天井で広がる
 
-  // ===== 3. 奥：神の壺（台の上。鍾乳石と一体になった古代の壺） =====
-  b.box(46, G + 1, 30, 50, G + 1, 34, path); // 石の台
-  b.set(48, G + 2, 32, pot); // 壺の底（細い）
-  b.box(47, G + 3, 31, 49, G + 4, 33, pot); // 壺のふくらんだ胴
-  b.set(48, G + 5, 32, pot); // 壺の口（細い）
-  b.set(48, TOP, 32, crystal); // 天井からのびた鍾乳石が、壺の口とつながる（石灰に包まれた壺）
-  b.set(47, G + 4, 31, crystal); // 壺の肩にこびりついた石灰
-  b.set(49, G + 3, 33, crystal);
-
-  // ===== 入口の看板 =====
-  b.pillar(55, 60, G + 1, G + 2, wood);
-  b.box(54, G + 3, 60, 56, G + 4, 60, castlewall);
+  // ===== 3. 奥：神の壺（写真に合わせて：奥の壁にもり上がった石灰の岩に、白っぽい壺がうまっている） =====
+  const rock = b.id('sand'); // 石灰の岩（写真の黄色っぽい色。白っぽい壺が目立つように）
+  b.box(45, G + 1, 29, 51, G + 2, 31, rock); // 壁ぎわにもり上がった石灰の岩
+  b.box(46, G + 3, 29, 50, G + 3, 30, rock);
+  b.box(47, G + 4, 29, 49, G + 5, 29, rock);
+  b.set(48, G + 3, 31, pot); // 壺のふくらんだ胴（岩から前へ出ている）
+  b.set(48, G + 4, 31, pot);
+  b.set(47, G + 3, 31, pot);
+  b.set(49, G + 3, 31, pot);
+  b.set(48, G + 5, 30, pot); // 壺の細い首
+  b.set(48, G + 6, 30, pot); // 壺の口
 
   world.setBlocksBatch(b.cells);
 }
@@ -165,52 +170,41 @@ export const ryugado: SpotDefinition = {
       focus: { x: 58, y: 13, z: 50 },
       viewFrom: { x: 50.5, y: G + 1, z: 51.5 },
       image: './photos/ryugado/stalactites.jpg',
+      credit: 'Photo: inunami / CC BY 2.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can see rock spikes from the roof and floor.',
         feature: 'Some go down. Some go up.',
-        about: 'Drip, drip... They grow very, very slowly.',
+        about: 'They grow very slowly.',
       },
     },
     {
       id: 'pot',
       name: 'The Ancient Pot',
       nameJa: '神の壺',
-      region: { min: { x: 46, y: 11, z: 30 }, max: { x: 50, y: 16, z: 33 } },
+      region: { min: { x: 45, y: 11, z: 29 }, max: { x: 51, y: 17, z: 32 } },
       focus: { x: 48, y: 12, z: 32 },
       viewFrom: { x: 48.5, y: G + 1, z: 37.5 },
       image: './photos/ryugado/pot.jpg',
+      credit: 'Photo: Saigen Jiro / CC0 / Wikimedia Commons',
       guide: {
         canDo: 'You can find the famous old pot.',
         feature: 'It is in the rock.',
-        about: 'People made this pot long, long ago. People lived here!',
+        about: 'It is very, very old.',
       },
     },
     {
       id: 'falls',
-      name: 'Cave Waterfall',
-      nameJa: '記念の滝',
-      region: { min: { x: 32, y: 9, z: 44 }, max: { x: 35, y: 16, z: 47 } },
+      name: 'Hiryu Falls',
+      nameJa: '飛龍の滝',
+      region: { min: { x: 32, y: 9, z: 44 }, max: { x: 35, y: 16, z: 48 } },
       focus: { x: 33, y: 13, z: 45 },
       viewFrom: { x: 40.5, y: G + 1, z: 49.5 },
       image: './photos/ryugado/falls.jpg',
+      credit: 'Photo: 京浜にけ / CC BY-SA 3.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can find a waterfall in the cave.',
-        feature: 'The water falls down, down!',
-        about: 'A big cave is behind this water. People went deep into the cave about 100 years ago.',
-      },
-    },
-    {
-      id: 'stream',
-      name: 'Underground Stream',
-      nameJa: '地底の川',
-      region: { min: { x: 36, y: 9, z: 45 }, max: { x: 64, y: 10, z: 46 } },
-      focus: { x: 55, y: 10, z: 45 },
-      viewFrom: { x: 51.5, y: G + 1, z: 48.5 },
-      image: './photos/ryugado/stream.jpg',
-      guide: {
-        canDo: 'You can see a river inside the cave.',
-        feature: 'The water is cold and clean.',
-        about: 'The river is in the cave. Brr, it is cold!',
+        feature: 'It is a big waterfall.',
+        about: 'The water is strong after rain.',
       },
     },
     {
@@ -221,23 +215,11 @@ export const ryugado: SpotDefinition = {
       focus: { x: 48, y: 13, z: 56 },
       viewFrom: { x: 48.5, y: G + 1, z: 64.5 },
       image: './photos/ryugado/cave.jpg',
+      credit: 'Photo: 京浜にけ / CC BY-SA 3.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can walk inside a big cave.',
-        feature: 'It is a famous big cave in Japan.',
-        about: 'Water made this cave. It is very, very old!',
-      },
-    },
-    {
-      id: 'sign',
-      name: 'Information Sign',
-      nameJa: '看板',
-      region: { min: { x: 54, y: 10, z: 59 }, max: { x: 56, y: 15, z: 61 } },
-      focus: { x: 55, y: 12, z: 60 },
-      image: './photos/ryugado/sign.jpg',
-      guide: {
-        canDo: 'You can read about this place.',
-        feature: 'It is about Ryugado Cave.',
-        about: 'Let\'s read the sign!',
+        feature: 'It is a big cave.',
+        about: 'It is very old.',
       },
     },
   ],

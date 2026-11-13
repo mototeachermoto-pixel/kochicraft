@@ -34,6 +34,8 @@ export interface SceneObject {
   image?: string;
   /** 同梱の元の写真（アップロード写真が表示できないときに戻す先） */
   imageDefault?: string;
+  /** 同梱の写真を撮った人と、使ってよい条件（例：Photo: Higa4 / CC0 / Wikimedia Commons）。写真の下に小さく出す */
+  credit?: string;
   /** 英語音声（dataURL。先生が録音/アップロードした音声。あれば読み上げより優先） */
   audio?: string;
   /** 最初から入っている音声（子どもを切りかえたとき、前の子の録音を残さず、ここへ戻す） */

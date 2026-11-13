@@ -16,7 +16,7 @@ import type { SpotDefinition } from './SpotDefinition';
 
 const G = 10; // 園内の地面の上面。立つのは G+1
 
-/** 放飼場の柵（木の杭＋横木）。x0..x1 × z0..z1 のまわりを囲う。 */
+/** 放飼場の柵（低い木の柵）。x0..x1 × z0..z1 のまわりを囲う。中の動物がよく見えるよう、高さは1マス。 */
 function fence(b: Build, x0: number, z0: number, x1: number, z1: number, post: number): void {
   for (let x = x0; x <= x1; x++) {
     b.set(x, G + 1, z0, post);
@@ -26,10 +26,7 @@ function fence(b: Build, x0: number, z0: number, x1: number, z1: number, post: n
     b.set(x0, G + 1, z, post);
     b.set(x1, G + 1, z, post);
   }
-  for (let x = x0; x <= x1; x += 3) {
-    b.set(x, G + 2, z0, post);
-    b.set(x, G + 2, z1, post);
-  }
+  // （2026-11-13：上に出ていた杭はなくした。目の高さに来て、背の低い動物が見えなかったため）
 }
 
 /**
@@ -47,13 +44,22 @@ function shoebill(b: Build, x: number, z: number, grey: number, beak: number, da
   b.set(x, G + 9, z + 1, dark); // 目
 }
 
-/** カピバラ（写真に合わせて：ずんぐりした茶色の体＋四角い大きな頭）。+x を向く。 */
-function capybara(b: Build, x: number, z: number, brown: number, dark: number): void {
+/**
+ * カピバラ（写真に合わせて：ずんぐりした茶色の体、背中が丸く、四角い大きな頭にこげ茶の鼻。+x を向く）。
+ * dark＝鼻・耳・足（こげ茶）、eye＝目（黒）。
+ * 2026-11-13 作り直し（前は茶色の箱にしか見えなかった）。
+ */
+function capybara(b: Build, x: number, z: number, brown: number, dark: number, eye: number): void {
   b.box(x - 2, G + 1, z, x + 1, G + 2, z + 1, brown); // ずんぐりした体
-  b.box(x + 2, G + 1, z, x + 3, G + 2, z + 1, brown); // 四角い大きな頭
-  b.set(x + 3, G + 2, z, dark); // 鼻
-  b.set(x + 2, G + 3, z, dark); // 小さな耳
-  b.set(x + 2, G + 3, z + 1, dark);
+  b.box(x - 1, G + 3, z, x, G + 3, z + 1, brown); // 丸い背中
+  b.set(x + 2, G + 1, z, dark); // 前足
+  b.set(x + 2, G + 1, z + 1, dark);
+  b.box(x + 2, G + 2, z, x + 3, G + 3, z + 1, brown); // 四角い大きな頭（少し高い所）
+  b.box(x + 4, G + 2, z, x + 4, G + 2, z + 1, dark); // こげ茶の鼻
+  b.set(x + 3, G + 3, z, eye); // 目（頭の前の上の、左右のすみ）
+  b.set(x + 3, G + 3, z + 1, eye);
+  b.set(x + 2, G + 4, z, dark); // 小さな耳
+  b.set(x + 2, G + 4, z + 1, dark);
 }
 
 /** チンパンジーの遊び場（木のやぐら）＋上で遊ぶ黒いチンパンジー（肌色の顔）。 */
@@ -202,9 +208,9 @@ function build(world: World): void {
   // カピバラの水辺（右・中ほど。水と笹が大好き）
   fence(b, 56, 56, 84, 84, wood);
   b.box(64, 9, 66, 72, G, 72, water); // 小さな池
-  capybara(b, 61, 62, dirt, tile);
-  capybara(b, 74, 74, dirt, tile);
-  for (const [bx, bz] of [[60, 62], [61, 63], [74, 74], [75, 73]] as const) b.set(bx, G + 1, bz, bamboo); // 大好きな笹
+  capybara(b, 61, 62, dirt, roof, tile);
+  capybara(b, 74, 74, dirt, roof, tile);
+  for (const [bx, bz] of [[58, 62], [58, 64], [72, 74], [73, 76]] as const) b.set(bx, G + 1, bz, bamboo); // 大好きな笹（カピバラの体に重ならない所）
 
   // ===== 通路ぞいの小さな展示（中央） =====
   // ワオキツネザルの島（中央左の池）
@@ -230,9 +236,6 @@ function build(world: World): void {
   b.pine(48, G, 14, 4, 4, 2);
   for (const [x, z] of [[44, 60], [52, 60], [44, 76], [52, 76]] as const) b.set(x, G, z, flower);
 
-  // ===== 看板（入口・右） =====
-  b.pillar(58, 86, G + 1, G + 2, wood);
-  b.box(57, G + 3, 86, 59, G + 4, 86, castlewall);
 
   world.setBlocksBatch(b.cells);
 }
@@ -255,13 +258,15 @@ export const noichi: SpotDefinition = {
       id: 'shoebill',
       name: 'Shoebill',
       nameJa: 'ハシビロコウ',
-      region: { min: { x: 12, y: 10, z: 12 }, max: { x: 40, y: 15, z: 40 } },
-      focus: { x: 30, y: 13, z: 32 },
+      region: { min: { x: 29, y: 11, z: 30 }, max: { x: 32, y: 20, z: 34 } },
+      focus: { x: 30, y: 16, z: 33 },
+      viewFrom: { x: 31.5, y: G + 1, z: 46.5 }, // 通路から、ハシビロコウの正面（背が高いので少しはなれて全身が入るように）
       image: './photos/noichi/shoebill.jpg',
+      credit: 'Photo: pelican / CC BY-SA 2.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can find the quiet gray bird.',
-        feature: 'It has a very big mouth.',
-        about: 'It does not move. It stands and stands!',
+        feature: 'It has a big mouth.',
+        about: 'It does not move.',
       },
     },
     {
@@ -270,37 +275,41 @@ export const noichi: SpotDefinition = {
       nameJa: 'キリンとシマウマ（混合展示）',
       region: { min: { x: 56, y: 10, z: 12 }, max: { x: 84, y: 24, z: 40 } },
       focus: { x: 65, y: 17, z: 28 },
+      viewFrom: { x: 66.5, y: G + 1, z: 47.5 }, // 通路から、キリンとシマウマの全身が入る所
       image: './photos/noichi/giraffe-zebra.jpg',
       guide: {
         canDo: 'You can see giraffes and zebras together.',
-        feature: 'They live in one big place.',
-        about: 'They live together, like in Africa!',
+        feature: 'They live together.',
+        about: 'It is like Africa!',
       },
     },
     {
       id: 'chimp',
       name: 'Chimpanzee',
       nameJa: 'チンパンジー',
-      region: { min: { x: 12, y: 10, z: 56 }, max: { x: 40, y: 18, z: 84 } },
-      focus: { x: 26, y: 16, z: 70 },
+      region: { min: { x: 21, y: 11, z: 65 }, max: { x: 33, y: 19, z: 77 } },
+      focus: { x: 27, y: 15, z: 72 },
+      viewFrom: { x: 27.5, y: G + 1, z: 81.5 }, // 柵の中の、やぐらとチンパンジーが見える所
       image: './photos/noichi/chimp.jpg',
+      credit: 'Photo: pelican / CC BY-SA 2.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can watch the chimpanzee play.',
-        feature: 'It goes up the wood tower.',
-        about: 'It is very smart. It can do many things!',
+        feature: 'It likes the tower.',
+        about: 'It is very smart.',
       },
     },
     {
       id: 'capybara',
       name: 'Capybaras',
       nameJa: 'カピバラ',
-      region: { min: { x: 56, y: 10, z: 56 }, max: { x: 84, y: 14, z: 84 } },
-      focus: { x: 68, y: 12, z: 68 },
+      region: { min: { x: 59, y: 11, z: 61 }, max: { x: 78, y: 13, z: 76 } },
+      focus: { x: 61, y: 12, z: 63 },
+      viewFrom: { x: 69.5, y: G + 1, z: 57.5 }, // 柵の中の、カピバラの顔が見える所（遠くからだと柵にかくれて見えなかった）
       image: './photos/noichi/capybara.jpg',
       guide: {
         canDo: 'You can see capybaras by the water.',
         feature: 'They are big and round.',
-        about: 'They love water. They eat grass!',
+        about: 'They like water.',
       },
     },
     {
@@ -312,8 +321,8 @@ export const noichi: SpotDefinition = {
       image: './photos/noichi/lemur.jpg',
       guide: {
         canDo: 'You can find the lemur on the small island.',
-        feature: 'Its long tail is black and white.',
-        about: 'It walks with its tail up. Cute!',
+        feature: 'It has a long tail.',
+        about: 'Its tail is black and white.',
       },
     },
     {
@@ -321,25 +330,13 @@ export const noichi: SpotDefinition = {
       name: 'Red Panda',
       nameJa: 'レッサーパンダ',
       image: './photos/noichi/redpanda.jpg',
+      credit: 'Photo: Shoichi Masuhara / CC BY 2.0 / Wikimedia Commons',
       region: { min: { x: 52, y: 10, z: 44 }, max: { x: 58, y: 18, z: 50 } },
       focus: { x: 55, y: 15, z: 47 },
       guide: {
         canDo: 'You can see a red panda in the tree.',
-        feature: 'It is red and brown. It has a long tail.',
-        about: 'It likes cool places. It sleeps in trees.',
-      },
-    },
-    {
-      id: 'sign',
-      name: 'Information Sign',
-      nameJa: '看板',
-      region: { min: { x: 57, y: 10, z: 85 }, max: { x: 59, y: 15, z: 87 } },
-      focus: { x: 58, y: 12, z: 86 },
-      image: './photos/noichi/sign.jpg',
-      guide: {
-        canDo: 'You can read about this place.',
-        feature: 'It is about Noichi Zoo.',
-        about: 'Let\'s read the sign!',
+        feature: 'It is red and brown.',
+        about: 'It sleeps in trees.',
       },
     },
   ],

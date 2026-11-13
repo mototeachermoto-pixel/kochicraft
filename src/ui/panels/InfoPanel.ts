@@ -27,8 +27,10 @@ export class InfoPanel {
   /** 写真・音声を保存できなかったときの知らせ（空なら出さない） */
   private notice = '';
   private readonly audioEl = new Audio();
-  /** 見るだけ（友だちの作品を見ているとき）。付け足し・写真・声の追加を出さない */
+  /** 見るだけ（友だちの作品を見ているとき・案内モード）。付け足し・写真・声の追加を出さない */
   readOnly = false;
+  /** 写真を画面いっぱいに出す幕（2026-11-13 追加。案内モードでも練習モードでも使える） */
+  private readonly photoView: HTMLElement;
 
   constructor(
     parent: HTMLElement,
@@ -38,6 +40,61 @@ export class InfoPanel {
     this.root = document.createElement('div');
     this.root.className = 'info-panel hidden';
     parent.appendChild(this.root);
+
+    this.photoView = document.createElement('div');
+    this.photoView.className = 'photo-view hidden';
+    this.photoView.innerHTML = `
+      <img class="photo-view__img" alt="" />
+      <button class="kc-btn photo-view__close" data-role="close">✕ Close <kbd>X</kbd></button>
+      <div class="photo-view__bar">
+        <div class="photo-view__name"></div>
+        <div class="photo-view__credit"></div>
+        <button class="kc-btn photo-view__listen" data-role="listen"><span class="kc-btn__icon">🔊</span>Listen <kbd>E</kbd></button>
+      </div>`;
+    parent.appendChild(this.photoView);
+    // 写真のどこをさわっても閉じる（Listen をのぞく）
+    this.photoView.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('[data-role="listen"]')) return;
+      this.closePhoto();
+    });
+    this.photoView.querySelector('[data-role="listen"]')!.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.listenCurrent();
+    });
+  }
+
+  /** 写真を画面いっぱいに出しているか */
+  get isPhotoOpen(): boolean {
+    return !this.photoView.classList.contains('hidden');
+  }
+
+  /** いま開いている物の写真を、画面いっぱいに出す（写真が無ければ false） */
+  openPhoto(): boolean {
+    const o = this.current;
+    if (!o?.image) return false;
+    const big = this.photoView.querySelector<HTMLImageElement>('.photo-view__img')!;
+    const small = this.root.querySelector<HTMLImageElement>('.info-panel__img');
+    big.alt = o.name;
+    big.removeAttribute('src');
+    if (small?.src) big.src = small.src; // パネルにもう出ている写真をそのまま使う（GAS の写真も取り直さない）
+    else this.setImage(big, o.image);
+    this.photoView.querySelector('.photo-view__name')!.textContent = o.name;
+    this.photoView.querySelector('.photo-view__credit')!.textContent = this.creditOf(o);
+    this.photoView.classList.remove('hidden');
+    return true;
+  }
+
+  closePhoto(): void {
+    this.photoView.classList.add('hidden');
+  }
+
+  /** 写真を出す／閉じる（キーボード用） */
+  togglePhoto(): boolean {
+    if (this.isPhotoOpen) {
+      this.closePhoto();
+      return true;
+    }
+    return this.openPhoto();
   }
 
   show(obj: SceneObject, spotId: string): void {
@@ -51,6 +108,7 @@ export class InfoPanel {
 
   hide(): void {
     this.stopAudio();
+    this.closePhoto();
     this.root.classList.add('hidden');
     this.current = null;
     this.editing = null;
@@ -106,10 +164,10 @@ export class InfoPanel {
       : '';
     return `
       <div class="info-block">
-        <div class="info-block__label">${label}
+        <div class="info-block__label"><button class="info-say" data-say="${field}" title="Listen">🔊 ${label}</button>
           ${this.readOnly ? '' : `<button class="info-add" data-add="${field}" title="Add words">＋</button>`}
         </div>
-        <div class="info-block__text">${this.esc(o.guide[field])}${
+        <div class="info-block__text" data-say="${field}">${this.esc(o.guide[field])}${
           added ? ` <span class="info-added">${this.esc(added)}</span>` : ''
         }</div>
         ${editor}
@@ -127,9 +185,13 @@ export class InfoPanel {
       <div class="info-panel__ja">${this.esc(o.nameJa ?? '')}</div>
       ${
         o.image
-          ? `<img class="info-panel__img" ${isGasPhoto(o.image) ? '' : `src="${o.image}"`} alt="${this.esc(o.name)}" />`
+          ? `<button class="info-panel__photo" data-role="photo-big" title="See a big photo">
+              <img class="info-panel__img" ${isGasPhoto(o.image) ? '' : `src="${o.image}"`} alt="${this.esc(o.name)}" />
+              <span class="info-panel__zoom">🔍 Big photo <kbd>F</kbd></span>
+            </button>`
           : `<div class="info-panel__noimg">📷 No photo yet</div>`
       }
+      ${this.creditOf(o) ? `<div class="info-panel__credit">${this.esc(this.creditOf(o))}</div>` : ''}
       ${this.blockHtml('You can', 'canDo')}
       ${this.blockHtml('Special', 'feature')}
       ${this.blockHtml('About', 'about')}
@@ -152,6 +214,7 @@ export class InfoPanel {
 
     const q = <T extends HTMLElement>(s: string) => this.root.querySelector(s) as T;
     q('[data-role="close"]').addEventListener('click', () => this.handlers.onClose());
+    this.root.querySelector('[data-role="photo-big"]')?.addEventListener('click', () => this.openPhoto());
 
     // アップロード写真が表示できない（壊れている・HEIC など）ときは、同梱の元の写真に戻す
     const img = this.root.querySelector<HTMLImageElement>('.info-panel__img');
@@ -165,6 +228,16 @@ export class InfoPanel {
     q('[data-role="listen"]').addEventListener('click', () => this.listen(o));
 
     // 「＋」＝付け足しの編集を開く／閉じる
+    // You can・Special・About のラベルや文をタップすると、その欄の英語（基本文＋付け足し文）を読み上げる（2026-11-13）
+    this.root.querySelectorAll<HTMLElement>('[data-say]').forEach((el) => {
+      el.addEventListener('click', () => {
+        const f = el.dataset.say as GuideField;
+        this.stopAudio();
+        this.speech.speak(this.fullText(o, f), 'en');
+        el.closest('.info-block')?.classList.add('is-saying');
+        window.setTimeout(() => el.closest('.info-block')?.classList.remove('is-saying'), 1200);
+      });
+    });
     this.root.querySelectorAll<HTMLButtonElement>('[data-add]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const f = btn.dataset.add as GuideField;
@@ -234,6 +307,12 @@ export class InfoPanel {
       .catch(() => {
         // 受け取れなかったときは空欄のまま（次に開いたときにもう一度頼む）
       });
+  }
+
+  /** 同梱の写真を出しているときだけ、撮った人の名前を返す（先生や子どもがのせた写真には出さない） */
+  private creditOf(o: SceneObject): string {
+    if (!o.credit) return '';
+    return !o.imageDefault || o.image === o.imageDefault ? o.credit : '';
   }
 
   private esc(s: string): string {

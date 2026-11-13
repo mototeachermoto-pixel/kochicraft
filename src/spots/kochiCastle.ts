@@ -334,9 +334,6 @@ function build(world: World): void {
   // ===== 山内一豊の騎馬像（実物と同じ、追手門の手前の広場） =====
   kazutoyoStatue(b, 36, 65, stone, stonewall, bronze, bronzeDark, lantern);
 
-  // ===== 看板（入口・右手前） =====
-  b.pillar(55, 66, PARK + 1, PARK + 2, wood);
-  b.box(54, PARK + 3, 66, 56, PARK + 4, 66, castlewall);
 
   world.setBlocksBatch(b.cells);
 }
@@ -364,10 +361,11 @@ export const kochiCastle: SpotDefinition = {
       region: { min: { x: 37, y: 16, z: 31 }, max: { x: 51, y: 39, z: 45 } },
       focus: { x: 44, y: 28, z: 38 },
       image: './photos/kochi-castle/tenshu.jpg',
+      credit: 'Photo: 663highland / CC BY 2.5 / Wikimedia Commons',
       guide: {
         canDo: 'You can look up at the tall castle tower.',
-        feature: 'It is white and has gray roofs.',
-        about: 'It is very old. People in Kochi love it.',
+        feature: 'It is white.',
+        about: 'It is very old.',
       },
     },
     {
@@ -377,10 +375,11 @@ export const kochiCastle: SpotDefinition = {
       region: { min: { x: 50, y: 16, z: 32 }, max: { x: 58, y: 20, z: 45 } },
       focus: { x: 54, y: 18, z: 38 },
       image: './photos/kochi-castle/goten.jpg',
+      credit: 'Photo: Suicasmo / CC BY-SA 4.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can see an old palace next to the tower.',
-        feature: 'It is low and white.',
-        about: 'It is a big old house. The old tower and the old palace are both here. Only Kochi Castle has both!',
+        feature: 'It is an old house.',
+        about: 'It is next to the castle.',
       },
     },
     {
@@ -390,10 +389,11 @@ export const kochiCastle: SpotDefinition = {
       region: { min: { x: 34, y: 11, z: 46 }, max: { x: 62, y: 16, z: 53 } },
       focus: { x: 48, y: 13, z: 52 },
       image: './photos/kochi-castle/stone-walls.jpg',
+      credit: 'Photo: 京浜にけ / CC BY-SA 3.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can find stone pipes on the wall.',
-        feature: 'The wall is high and strong.',
-        about: 'Kochi has a lot of rain. The water comes out here.',
+        feature: 'The wall is high.',
+        about: 'Water comes out of the pipes.',
       },
     },
     {
@@ -405,8 +405,8 @@ export const kochiCastle: SpotDefinition = {
       image: './photos/kochi-castle/otemon.jpg',
       guide: {
         canDo: 'You can walk through the big gate.',
-        feature: 'It is big. It is wood and stone.',
-        about: 'You can see the gate and the castle together. Nice photo!',
+        feature: 'It is a big gate.',
+        about: 'Let\'s take a photo!',
       },
     },
     {
@@ -416,10 +416,11 @@ export const kochiCastle: SpotDefinition = {
       region: { min: { x: 28, y: 11, z: 53 }, max: { x: 68, y: 19, z: 69 } },
       focus: { x: 31, y: 15, z: 61 },
       image: './photos/kochi-castle/cherry.jpg',
+      credit: 'Photo: NevinThompson / CC BY-SA 4.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can see pink flowers in spring.',
-        feature: 'They are pink and pretty.',
-        about: 'In spring, people eat and have fun here.',
+        feature: 'They are pink.',
+        about: 'They are pretty in spring.',
       },
     },
     {
@@ -431,8 +432,8 @@ export const kochiCastle: SpotDefinition = {
       image: './photos/kochi-castle/statue.jpg',
       guide: {
         canDo: 'You can see a bronze statue.',
-        feature: 'He stands up high.',
-        about: 'He is Itagaki Taisuke, a great man from Kochi.',
+        feature: 'He is Itagaki Taisuke.',
+        about: 'He is a great man of Kochi.',
       },
     },
     {
@@ -444,8 +445,8 @@ export const kochiCastle: SpotDefinition = {
       image: './photos/kochi-castle/kazutoyo.jpg',
       guide: {
         canDo: 'You can see a man on a horse.',
-        feature: 'The man and the horse are very big.',
-        about: 'He is Yamauchi Kazutoyo. He made Kochi Castle long ago.',
+        feature: 'He is on a horse.',
+        about: 'He is Yamauchi Kazutoyo.',
       },
     },
     {
@@ -455,23 +456,11 @@ export const kochiCastle: SpotDefinition = {
       region: { min: { x: 44, y: 11, z: 52 }, max: { x: 52, y: 16, z: 56 } },
       focus: { x: 48, y: 14, z: 54 },
       image: './photos/kochi-castle/steps.jpg',
+      credit: 'Photo: z tanuki / CC BY 3.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can walk up the stone steps.',
         feature: 'They are old stones.',
-        about: 'Let\'s go up to the castle!',
-      },
-    },
-    {
-      id: 'sign',
-      name: 'Information Sign',
-      nameJa: '看板',
-      region: { min: { x: 54, y: 11, z: 65 }, max: { x: 56, y: 16, z: 67 } },
-      focus: { x: 55, y: 13, z: 66 },
-      image: './photos/kochi-castle/sign.jpg',
-      guide: {
-        canDo: 'You can read about this place.',
-        feature: 'It is about Kochi Castle.',
-        about: 'Let\'s read the sign!',
+        about: 'Let\'s go to the castle!',
       },
     },
   ],

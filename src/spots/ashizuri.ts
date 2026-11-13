@@ -68,7 +68,10 @@ function lighthouse(
   b.set(cx, by + 16, cz, dark); // 避雷針
 }
 
-/** ジョン万次郎像（写真に合わせて：石を積んだ四角い台座の上に、右手を高く上げて立つ姿）。 */
+/**
+ * ジョン万次郎像（本物の写真に合わせて：つるっとした四角い石の台座に縦長の黒い銘板、
+ * 足もとに黒い台、着物とはかまで両手を下ろしてまっすぐ立つ姿）。2026-11-14 写真に合わせて直した。
+ */
 function statue(
   b: Build,
   x: number,
@@ -79,10 +82,10 @@ function statue(
   bronze: number,
   dark: number,
 ): void {
-  b.box(x - 1, groundY + 1, z - 1, x + 1, groundY + 4, z + 1, stoneW); // 石積みの台座
-  b.set(x, groundY + 3, z - 2, dark); // 銘板（海の側）
-  b.box(x - 1, groundY + 5, z - 1, x + 1, groundY + 5, z + 1, stone); // 台座の上の石
-  kimonoFigure(b, x, groundY + 5, z, -1, bronze, dark, 'wave'); // 海（-z）の方へ手を上げる
+  b.box(x - 1, groundY + 1, z - 1, x + 1, groundY + 4, z + 1, stone); // つるっとした石の台座
+  b.box(x, groundY + 2, z - 2, x, groundY + 3, z - 2, dark); // 縦長の黒い銘板（海の側）
+  b.box(x - 1, groundY + 5, z - 1, x + 1, groundY + 5, z + 1, dark); // 足もとの黒い台
+  kimonoFigure(b, x, groundY + 5, z, -1, bronze, dark, 'stand'); // 海（-z）の方を向いて、両手を下ろして立つ
 }
 
 /** 椿（ツバキ）の木：幹＋緑の茂み＋ピンクの花。groundY＝地面の上面。 */
@@ -207,9 +210,6 @@ function build(world: World): void {
   b.set(40, CLIFF, 58, flower);
   b.set(58, CLIFF, 60, flower);
 
-  // ===== 看板（入口・右） =====
-  b.pillar(60, 64, CLIFF + 1, CLIFF + 2, wood);
-  b.box(59, CLIFF + 3, 64, 61, CLIFF + 4, 64, castlewall);
 
   world.setBlocksBatch(b.cells);
 }
@@ -235,10 +235,11 @@ export const ashizuri: SpotDefinition = {
       region: { min: { x: 28, y: 18, z: 38 }, max: { x: 68, y: 22, z: 40 } },
       focus: { x: 48, y: 20, z: 38 },
       image: './photos/ashizuri/cliffs.jpg',
+      credit: 'Photo: z tanuki / CC BY 3.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can look down from high cliffs.',
-        feature: 'They go straight down to the sea.',
-        about: 'They are very, very high. Wow!',
+        feature: 'They are very high.',
+        about: 'Look down. Wow!',
       },
     },
     {
@@ -248,10 +249,11 @@ export const ashizuri: SpotDefinition = {
       region: { min: { x: 44, y: 20, z: 34 }, max: { x: 52, y: 23, z: 39 } },
       focus: { x: 48, y: 21, z: 36 },
       image: './photos/ashizuri/deck.jpg',
+      credit: 'Photo: Dokudami / CC BY-SA 4.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can stand over the sea.',
-        feature: 'It has glass. You can see down!',
-        about: 'Look far. The sea looks round!',
+        feature: 'It is over the sea.',
+        about: 'The sea is big and round.',
       },
     },
     {
@@ -261,10 +263,11 @@ export const ashizuri: SpotDefinition = {
       region: { min: { x: 55, y: 20, z: 47 }, max: { x: 61, y: 37, z: 53 } },
       focus: { x: 58, y: 29, z: 50 },
       image: './photos/ashizuri/lighthouse.jpg',
+      credit: 'Photo: hashi photo / CC BY 3.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can see the white lighthouse.',
-        feature: 'It is tall, white, and round.',
-        about: 'It is very big. Its light goes very far at night.',
+        feature: 'It is tall and white.',
+        about: 'It is bright at night.',
       },
     },
     {
@@ -274,10 +277,11 @@ export const ashizuri: SpotDefinition = {
       region: { min: { x: 28, y: 7, z: 26 }, max: { x: 68, y: 9, z: 37 } },
       focus: { x: 48, y: 8, z: 32 },
       image: './photos/ashizuri/sea.jpg',
+      credit: 'Photo: z tanuki / CC BY 3.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can look at the big blue ocean.',
-        feature: 'It is far down there.',
-        about: 'The sea goes on and on.',
+        feature: 'It is big and blue.',
+        about: 'Look far away!',
       },
     },
     {
@@ -287,10 +291,11 @@ export const ashizuri: SpotDefinition = {
       region: { min: { x: 30, y: 6, z: 28 }, max: { x: 42, y: 19, z: 34 } },
       focus: { x: 36, y: 11, z: 31 },
       image: './photos/ashizuri/arch.jpg',
+      credit: 'Photo: Dokudami / CC BY-SA 4.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can find a big rock arch in the sea.',
-        feature: 'It has a hole like a big door.',
-        about: 'The sea made this hole. Many, many years!',
+        feature: 'It is like a big door.',
+        about: 'It is a rock in the sea.',
       },
     },
     {
@@ -302,8 +307,8 @@ export const ashizuri: SpotDefinition = {
       image: './photos/ashizuri/manjiro.jpg',
       guide: {
         canDo: 'You can see a bronze statue.',
-        feature: 'He looks at the sea.',
-        about: 'He lived in America. He learned English and helped Japan.',
+        feature: 'He is John Manjiro.',
+        about: 'He is a hero of Kochi.',
       },
     },
     {
@@ -313,10 +318,11 @@ export const ashizuri: SpotDefinition = {
       region: { min: { x: 53, y: 20, z: 61 }, max: { x: 57, y: 25, z: 65 } },
       focus: { x: 55, y: 22, z: 63 },
       image: './photos/ashizuri/monument.jpg',
+      credit: 'Photo: Dokudami / CC BY-SA 4.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can stand at the south end of Shikoku.',
-        feature: 'It is a small stone.',
-        about: 'Shikoku ends here. This is the south end!',
+        feature: 'It is a stone.',
+        about: 'This is the south end of Shikoku.',
       },
     },
     {
@@ -326,23 +332,11 @@ export const ashizuri: SpotDefinition = {
       region: { min: { x: 42, y: 20, z: 44 }, max: { x: 54, y: 26, z: 63 } },
       focus: { x: 48, y: 23, z: 54 },
       image: './photos/ashizuri/camellia.jpg',
+      credit: 'Photo: z tanuki / CC BY 3.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can walk under the flower tunnel.',
-        feature: 'Red flowers are over your head.',
-        about: 'About 60,000 flower trees are here!',
-      },
-    },
-    {
-      id: 'sign',
-      name: 'Information Sign',
-      nameJa: '看板',
-      region: { min: { x: 59, y: 20, z: 63 }, max: { x: 61, y: 25, z: 65 } },
-      focus: { x: 60, y: 22, z: 64 },
-      image: './photos/ashizuri/sign.jpg',
-      guide: {
-        canDo: 'You can read about this place.',
-        feature: 'It is about Cape Ashizuri.',
-        about: 'Let\'s read the sign!',
+        feature: 'It has many red flowers.',
+        about: 'It is pretty in winter.',
       },
     },
   ],

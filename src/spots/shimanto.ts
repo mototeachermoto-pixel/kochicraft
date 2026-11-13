@@ -138,9 +138,6 @@ function build(world: World): void {
   b.set(40, BANK, 56, flower);
   b.set(56, BANK, 58, flower);
 
-  // ===== 看板（入口・右） =====
-  b.pillar(56, 64, BANK + 1, BANK + 2, wood);
-  b.box(55, BANK + 3, 64, 57, BANK + 4, 64, castlewall);
 
   world.setBlocksBatch(b.cells);
 }
@@ -166,10 +163,11 @@ export const shimanto: SpotDefinition = {
       region: { min: { x: 28, y: 9, z: 36 }, max: { x: 68, y: 11, z: 52 } },
       focus: { x: 40, y: 10, z: 44 },
       image: './photos/shimanto/river.jpg',
+      credit: 'Photo: 京浜にけ / CC BY-SA 3.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can see a wide, clear river.',
-        feature: 'The water is very clean.',
-        about: 'It is a famous clean river. People call it "the last clear river."',
+        feature: 'The water is clean.',
+        about: 'It is a famous river.',
       },
     },
     {
@@ -179,10 +177,11 @@ export const shimanto: SpotDefinition = {
       region: { min: { x: 46, y: 11, z: 36 }, max: { x: 50, y: 12, z: 52 } },
       focus: { x: 48, y: 12, z: 44 },
       image: './photos/shimanto/bridge.jpg',
+      credit: 'Photo: 京浜にけ / CC BY-SA 3.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can walk across the low bridge.',
         feature: 'It is low and flat.',
-        about: 'It rains a lot. Then the water goes over the bridge. But the bridge is OK!',
+        about: 'Water goes over it on rainy days.',
       },
     },
     {
@@ -194,8 +193,8 @@ export const shimanto: SpotDefinition = {
       image: './photos/shimanto/canoe.jpg',
       guide: {
         canDo: 'You can see colorful canoes.',
-        feature: 'They are small and colorful.',
-        about: 'Canoes are fun! Splash, splash!',
+        feature: 'They are colorful.',
+        about: 'Canoes are fun!',
       },
     },
     {
@@ -207,8 +206,8 @@ export const shimanto: SpotDefinition = {
       image: './photos/shimanto/houseboat.jpg',
       guide: {
         canDo: 'You can see a boat with a roof.',
-        feature: 'It is long and slow.',
-        about: 'People ride this boat and enjoy the river.',
+        feature: 'It has a roof.',
+        about: 'It is slow.',
       },
     },
     {
@@ -218,23 +217,11 @@ export const shimanto: SpotDefinition = {
       region: { min: { x: 28, y: 12, z: 26 }, max: { x: 68, y: 22, z: 35 } },
       focus: { x: 48, y: 16, z: 30 },
       image: './photos/shimanto/hills.jpg',
+      credit: 'Photo: Ippukucho / CC BY 3.0 / Wikimedia Commons',
       guide: {
         canDo: 'You can see green hills.',
-        feature: 'They are round and green.',
-        about: 'The green hills are by the river. The air is good!',
-      },
-    },
-    {
-      id: 'sign',
-      name: 'Information Sign',
-      nameJa: '看板',
-      region: { min: { x: 55, y: 12, z: 63 }, max: { x: 57, y: 17, z: 65 } },
-      focus: { x: 56, y: 14, z: 64 },
-      image: './photos/shimanto/sign.jpg',
-      guide: {
-        canDo: 'You can read about this place.',
-        feature: 'It is about the Shimanto River.',
-        about: 'Let\'s read the sign!',
+        feature: 'They are green.',
+        about: 'The air is good!',
       },
     },
   ],

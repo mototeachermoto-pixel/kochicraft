@@ -1,6 +1,39 @@
-# KochiCraft 引き継ぎ（GAS公開版・2026-11-08 更新）
+# KochiCraft 引き継ぎ（GAS公開版・2026-11-13 更新）
 
 **KochiCraft の作業を始めるときは、まずこの資料を読む。**
+
+## ★ 次の会話は、ここから（2026-11-13 の終わりの状態）
+**公開版は版13のまま。版13のあとの変更は、ぜんぶ手元だけ（コミットもしていない）。** 先生が「公開版に出して」と言ったら、下の「直したあと、公開版に反映する手順」で出し、そのあと GitHub にも送る（コミット → `git push`）。
+
+### 手元にあって、まだ公開していない変更（くわしくは下の各節）
+1. 入口2つ（🧱 Practice & Build ／ 🎤 Tour Guide）と案内モード（下の案内バー・Next/Back・写真の全画面）
+2. 看板を12か所すべてなくした
+3. 写真を本物（ウィキメディア・コモンズ）に入れかえ：はりまや橋・ひろめ市場6つ・御厨人窟・龍河洞4つ・桂浜の竜王宮。写真の下に撮った人の名前（`credit`）
+4. 本物の写真がない物は3Dごと消した（からくり時計・ひろめ市場の天井の赤ちょうちん など）。龍河洞の滝は「飛龍の滝」、神の壺は本物の形に
+5. ひろめ市場に見どころを3つ足した（カツオのたたき・ウツボのからあげ・貝焼き。今ある屋台に名前をつけただけ）
+6. のいち動物園の柵を低く・動物を見る位置・カピバラの形、室戸岬のアコウの木を大木に
+7. 全部の Special と About を小5レベルの短い英文に。You can・Special・About をタップで読み上げ
+- 公開する前に、`npm run build:gas` で写真のファイル（`gas/photos_*.html`）が作り直されることを確かめる。消した写真（sign.jpg など）は `git rm` 済み。
+
+### 先生の決まり（写真）
+- **本物の写真がない見どころは、3Dの建物ごと消す。ある物だけ残す。**（ただし先生が「ほしい」と言った物は残して、本物の写真を探す）
+- **人や人物（ポスターの人物・人物の絵・手も）が写っている写真は使わない。** 切り取って人が入らなくなるなら使ってよい。
+- **建物や場所を勝手に増やさない。**（先生が頼んだときだけ。そのときも新しい建物は作らず、今ある3Dに名前をつける）
+- 写真は、自由に使ってよいと決まっている所（ウィキメディア・コモンズ）から。CC0・Public domain 以外は、写真の下に「Photo: 撮った人 / 条件 / Wikimedia Commons」を出す（`SceneObject.credit`）。
+- 安兵衛（屋台餃子）は、コモンズに写真がなかったので入れていない。先生の写真か、許可をもらった写真があれば入れる。
+
+### やりかけの仕事：残りの観光地の写真を本物に（先生の頼み「ほかの観光名所の写真も、より良い写真があれば差し替えて」）
+- **2026-11-13（2回目の会話）で、40枚を本物の写真に入れかえた**（下の「本物の写真に入れかえ」の表の後半）。手元のアプリ（Tour Guide・高知城）で写真と撮った人の名前が出ることを確かめた。まだ公開版・GitHub には出していない。
+- **本物の写真が見つからなかった物**（2026-11-14 先生が一覧を見て決めた）：
+  - 消した：坂本龍馬像の Stone Monument（石碑の3Dごと）・にこ淵の Stone Steps（見どころの説明と写真だけ。淵へおりるただ1つの道なので、石段の3Dは残した）
+  - **先生の希望で、絵のまま残す**：坂本龍馬像の Viewing Deck・The Pacific Ocean／のいち動物園の動物（Giraffes and Zebras・Capybaras・Ring-tailed Lemur。「動物系は全部残しといて」）／四万十川の Canoes・River Boat
+  - 足摺岬の Statue of John Manjiro：先生が「残して写真をさがす」→ 英語・日本語で検索し直し、「Nakahama manzirou zou 20260411 1.jpg」（Araiyasushige・CC0。台座に「中浜万次郎像」）が見つかったので入れた。逆光で暗いので明るくし、下の台座を切って像が真ん中に来るようにした。3Dも写真に合わせ、右手を上げた姿→両手を下ろして立つ姿、石積みの台座→つるっとした石の台座＋縦長の黒い銘板＋足もとの黒い台にした（高さは同じ）。
+- **まだしていないこと**：写真とちがう3Dを写真に合わせて直す（40か所。増やさない）。
+- 道具は `写真さがし/` にある：
+  - `fetch_all.sh`：観光地ごとにコモンズを検索して `写真さがし/検索結果/` に保存（12秒ずつ間をあける。間をあけないと「問い合わせが多すぎる（429）」で止められる）。日本語の検索語はうまくいかないことがある（はりまや橋の路面電車は英語「Tosa Electric Railway tram Kochi」で見つかった）。白山洞門・山内一豊像・板垣退助像・高知城の桜も英語の名前で見つかった。
+  - `make_sheets.py`：検索結果を観光地ごとの番号つき一覧 `見た目の比較/候補_<観光地>.html` にする（`python -I 写真さがし/make_sheets.py 写真さがし 見た目の比較`）。手元のサーバー（localhost:5192）で `/見た目の比較/候補_castle.html` のように開いて見る（file:// だと写真が出ないことがある）。
+- 進め方（今までと同じ）：一覧で人が写っていない良い写真を選ぶ → 1280px の縮小版をダウンロード（サムネイルURLの `/400px-` を `/1280px-` に）→ 自分の目で人が写っていないか確かめる（写っていれば切り取るか、やめる）→ `public/photos/<観光地>/<物>.jpg` に保存 → その物に `credit` を書く → 写真とちがう3Dがあれば、写真に合わせて直す（増やさない）。のいち動物園の動物は、**のいち動物公園で撮った写真だけ**使う（よその動物園の写真は使わない）。見つからなければ、先生と相談（消すか残すか）。
+- 今までに選んだ写真と撮った人は、下の「本物の写真に入れかえ」の表。
 
 ## 今の状態（2026-11-08）
 - **完成・公開済み（版13）。学校の iPad で使える。** 子どもはログインなしで開ける。
@@ -155,6 +188,110 @@ NODE_OPTIONS=--use-system-ca clasp update-deployment --user univ AKfycbz_y2f_vQI
   - 四万十川（shimanto-river）：先生の「川っぽく」で作り直し。川が観光地の東西へ曲がりながら続く。両岸に川原、森の山、西に沈下橋をもう1本、手前に家が少し。写真：`見た目の比較/四万十川の外の景色.jpg`。
 - 先生の「室戸岬は現実の風景に寄せて」「中岡慎太郎像は削除」で、室戸岬を専用の景色（muroto-cape）にして像を物の一覧・Map からなくした（版13。2026-11-08 に公開版・GitHub に出し済み）。海を向いて左（-x）が実際の東がわ。森の平らな台地が海近くまで切り立ち、ふもとの平地を国道55号が岬を回りこむ。海岸はハの字に開く。東＝黒い岩とビシャゴ岩、西＝すじの入った明るい岩・低い町並み・小さな港。位置はおおまか。写真 `public/photos/muroto/statue.jpg` は使わなくなったが残してある。
 - 三角形がいちばん多いのは牧野植物園で約6.4万（減らす前は約8.2万）。**iPad では未確認。**
+
+## 案内モード（2026-11-13 手元で作成。**まだ公開版・GitHub に出していない**）
+先生の考え：「新しく作るのではなく、今の3Dの世界・キャラクター・写真・読み上げをそのまま使って、案内に向いた使い方にする」。
+- **入口2つ**（`src/ui/ModeChooser.ts`）：番号と合言葉のあと（手元・GitHub 版は開いたとき）に「What do you want to do?」→ 🧱 Practice & Build（今までどおり）／🎤 Tour Guide。選んだ入口は端末に覚える（`kc.appmode`）。一覧の上に今の入口と「🔄 Change」（`HubScreen.modeBar`）。
+- **案内モードでかくすもの**：Build・ブロックの棚・置く／消す（B キーも効かない）、説明パネルの＋（付け足し）と写真・声の追加。付け足し済みの英文は表示される。
+- **下の案内バー**（`Engine.tourBar`・`tourGo`）：上の行に英文（Welcome to ～! → Look! This is ～. → Thank you!）。タップで読み上げ（表示＝音声）。◀ Back〈P〉・点と「2 / 7」・Next ▶〈N〉（はじめは Start、最後は Finish、そのあと ↺ Again でスタート地点へ）。見どころの順番は観光地の物の一覧の順。Next で Map と同じしくみでキャラクターが移り、いつもの説明パネルが出る。自分で歩いてタップした物にも順番が合う。Next を押したその場で英文を読み上げる（iPad で声が出るように）。
+- **写真を画面いっぱいに**（`InfoPanel.openPhoto`。練習モードでも使える）：説明パネルの写真をタップか F キー。名前と Listen が下に出る。どこかをタップ・X・F で閉じる。
+- 画面の大きさ：説明パネルが開くと、案内バーはパネルの左によせる。iPad たて向き（幅900以下）は、ジャンプボタンの上に出し、点はかくす。
+- 手元で確かめた：入口の画面（矢印と Enter でも選べる）→ Tour Guide → 室戸岬で Start〜Finish〜Again、写真の全画面と X・F、練習モードに切りかえると Build・＋・写真の追加が今までどおり出る、`?cloud=fake` で番号→合言葉→入口の順、1024×768 と 768×1024、エラーなし。**iPad ではまだ試していない。**
+
+## 看板をなくす・写真とちがう物を直す（2026-11-13 手元で作成。**まだ公開版・GitHub に出していない**）
+先生の希望「看板は意味が分からないので全部のけて」「はりまや橋のからくり時計が写真と違いすぎる」「写真と明らかに違う物は直せないか」。
+- **看板**：12か所すべての看板（柱に白い板）と、物の一覧の「Information Sign」をなくした。写真 `public/photos/*/sign.jpg` と、使っていない `muroto/statue.jpg` も外した（git の記録から戻せる）。
+- **からくり時計**（`harimayaBridge.ts` の `karakuriClock`）：写真の櫓（やぐら）に合わせて作り直した。土台7×7・台と屋根9×9・高さ約20。木の板張りの土台、白い帯、張り出した木の台、左右に開いた扉と着物の人形7体、反った屋根、白壁の上の階と文字盤、四すみが反り上がる切妻屋根。
+- 12か所の見どころを、写真とゲームの画面を横に並べて見比べた（`?qa=1` で `window.__kc`）。明らかにちがった物を直した：
+  - **ひろめ市場**：天井いっぱいに赤ちょうちん、店を内側にもう1列（計21店。通路の両がわに店）、カツオのたたきの炎を高く。Red Lanterns はちょうちんの下の通路に、入口は正面の広場に立つ（`viewFrom`）。前はガラス屋根の上に立っていた。
+  - **のいち動物園**：柵の上の杭をなくして低く。ハシビロコウ・キリンとシマウマは通路から、チンパンジー・カピバラは柵の中から見る（`viewFrom`）。前は柵ごしに遠くて動物が見えなかった。カピバラを顔・目・耳・足のある形に作り直した。
+  - **室戸岬のアコウの木**：根が大きく広がる大木に作り直した。
+  - **龍河洞の神の壺**：レンガの赤 → 茶色の土器に、白い石灰を足した。
+- 見比べて、ブロックとしては写真の雰囲気に合っていると判断した所：高知城・桂浜・四万十川・足摺岬・牧野植物園・坂本龍馬像・にこ淵・龍河洞（壺以外）・室戸岬（アコウ以外）。
+- 手元で確かめた：直した物をゲームの画面で写真と並べて見た、型の点検、エラーなし。**iPad ではまだ試していない。**
+
+## 本物の写真に入れかえ（2026-11-13 手元で作成。**まだ公開版・GitHub に出していない**）
+今までの写真は `画像プロンプト.md` から作った「写真のような絵」で、本物ではなかった。先生の方針：
+- **本物の写真がある見どころは入れかえる。ない見どころは、3Dの建物ごと消す。**
+- **人や人物（ポスターの人物の絵も）が写っている写真は使わない。**
+- **建物や場所を勝手に増やさない。**
+ウィキメディア・コモンズの自由に使える写真から選んだ（候補の一覧：`見た目の比較/写真の候補.html`）。
+
+| 見どころ | 写真（コモンズのファイル名） | 撮った人・条件 | 手を加えたこと |
+|---|---|---|---|
+| はりまや橋 | Harimayabashi 02.jpg | Higa4・CC0 | 左はしの人と旗を切り取った |
+| ひろめ市場 Long Tables | Hirome Market 05.jpg | Higa4・CC0 | 人物の立て看板とポスターを切り取った |
+| ひろめ市場 入口 | Hirome Market 06.jpg | Higa4・CC0 | 下のお店のポスターを切り取り、看板が中心 |
+| ひろめ市場 Katsuo no Tataki Stall | Bonito seared to order at a market stall, Kochi, June 2016.jpg | NevinThompson・CC BY-SA 4.0 | 大きさだけ。英文を写真に合わせた（You can buy katsuo here. / They cook it on a fire for you.） |
+| ひろめ市場 Katsuo no Tataki（新） | Katsuo no tataki served in a wooden tub, Kochi, June 2016.jpg | NevinThompson・CC BY-SA 4.0 | 大きさだけ |
+| ひろめ市場 Fried Utsubo（新） | Utsubo Karaage.jpg | Totti・CC BY-SA 4.0 | 大きさだけ |
+| ひろめ市場 Grilled Shellfish（新） | Hirome Market 14.jpg | Higa4・CC0 | 大きさだけ |
+| 龍河洞 The Ancient Pot（神の壺） | Ryuga-do, Kami-no-Tsubo.jpg | Saigen Jiro・CC0 | 大きさだけ |
+| 龍河洞 Hiryu Falls（飛龍の滝） | Kami Kochi Ryugado Inside 2.JPG | 京浜にけ・CC BY-SA 3.0 | 大きさだけ |
+| 桂浜 Ryuogu Shrine（竜王宮・海津見神社） | Katsurahama wadatsumi shrine.jpg | ブルーノ・プラス・CC BY-SA 4.0 | 大きさだけ。お社の3Dを写真に合わせ、白いかべ・朱色の柱と扉・灰色の反った屋根・石の柵に（鳥居は実物にもあるので残す）。英文 You can go up the steps to the small shrine. |
+| 室戸岬 Sea Cave（御厨人窟） | Mikurodo 03.JPG | Reggaeman・CC BY-SA 3.0 | 大きさだけ |
+| 龍河洞 Ryugado Cave（入口） | Kami Kochi Ryugado East Entrance 1.jpg | 京浜にけ・CC BY-SA 3.0 | 大きさだけ |
+| 龍河洞 Stalactites | Ryugado 20190905132657 (49844653106).jpg | inunami・CC BY 2.0 | 大きさだけ |
+| **ここから 2026-11-13（2回目）** | | | |
+| 足摺岬 arch | Hakusandoumon02a.jpg | Dokudami・CC BY-SA 4.0 | 大きさだけ |
+| 足摺岬 camellia | Cape Ashizuri - 足摺岬 - panoramio (1).jpg | z tanuki・CC BY 3.0 | 大きさだけ |
+| 足摺岬 cliffs | Cape Ashizuri - 足摺岬 - panoramio (4).jpg | z tanuki・CC BY 3.0 | 大きさだけ |
+| 足摺岬 deck | Asizuri02.jpg | Dokudami・CC BY-SA 4.0 | 大きさだけ |
+| 足摺岬 lighthouse | Ashizuri Misaki lighthouse Tosashimizu Kochi.JPG | hashi photo・CC BY 3.0 | 大きさだけ |
+| 足摺岬 monument | Asizuri 01.jpg | Dokudami・CC BY-SA 4.0 | 大きさだけ |
+| 足摺岬 sea | Cape Ashizuri - 足摺岬 - panoramio (6).jpg | z tanuki・CC BY 3.0 | 大きさだけ |
+| はりまや橋 tram | Tosa Electric Railway-623.jpg | Rsa・CC BY-SA 3.0 | 大きさだけ |
+| 桂浜 beach | Kochi Katsurahama Daytime 1.JPG | 京浜にけ・CC BY-SA 3.0 | 大きさだけ |
+| 桂浜 cape | 龍王岬 桂浜 Katsurahama - Oct 29, 2008.jpg | Paul Coster・CC BY 2.0 | 大きさだけ |
+| 桂浜 pines | Katsurahama beach through pine trees, Kochi, March 2014.jpg | NevinThompson・CC BY-SA 4.0 | 大きさだけ |
+| 桂浜 sea | Kochi Katsurahama Daytime 3.JPG | 京浜にけ・CC BY-SA 3.0 | 大きさだけ |
+| 高知城 cherry | Kochi Castle keep framed by cherry blossoms, March 2014.jpg | NevinThompson・CC BY-SA 4.0 | 大きさだけ |
+| 高知城 goten | Kochi Castle Keep Tower 20170122-1.jpg | Suicasmo・CC BY-SA 4.0 | 大きさだけ |
+| 高知城 kazutoyo | Statu of Yamanouchi Kazutoyo - 山内一豊像 - panoramio.jpg | Public domain | 大きさだけ |
+| 高知城 otemon | Kochi Castle, Outemon-2.jpg | CC0 | 大きさだけ |
+| 高知城 statue | Statu of Itagaki taisuke - 板垣退助像 - panoramio.jpg | Public domain | 大きさだけ |
+| 高知城 steps | Kochi castle - 高知城 - panoramio (6).jpg | z tanuki・CC BY 3.0 | 大きさだけ |
+| 高知城 stone-walls | Kochi Kochi-Castle Sannomaru Stone Wall 1.JPG | 京浜にけ・CC BY-SA 3.0 | 大きさだけ |
+| 高知城 tenshu | Kochi Castle08s3872.jpg | 663highland・CC BY 2.5 | 大きさだけ |
+| 牧野植物園 greenhouse | 200104 Kochi Prefectural Makino Botanical Garden15s3.jpg | 663highland・CC BY-SA 4.0 | 大きさだけ |
+| 牧野植物園 hall | 200104 Kochi Prefectural Makino Botanical Garden01s5.jpg | 663highland・CC BY-SA 4.0 | 大きさだけ |
+| 牧野植物園 plants | 190429Kochi Prefectural Makino Botanical Garden07s5.jpg | 663highland・CC BY-SA 4.0 | 右の奥の人を切り取った |
+| 牧野植物園 pond | Water lily, Kochi Prefectural Makino Botanical Garden, June 2016.jpg | NevinThompson・CC BY-SA 4.0 | 大きさだけ |
+| 牧野植物園 sueko | Kochi Prefectural Makino Botanical Garden01s3872.jpg | 663highland・CC BY-SA 4.0 | 大きさだけ |
+| 室戸岬 akou | Ficus tree north of Cape Muroto.jpg | inunami・CC BY 2.0 | 大きさだけ |
+| 室戸岬 lighthouse | Cape Muroto, Kochi (17490140355).jpg | Kzaral・CC BY 2.0 | 大きさだけ |
+| 室戸岬 palms | Cape Muroto view 01.jpg | Motokoka・CC BY-SA 4.0 | 大きさだけ |
+| 室戸岬 rocks | Cape Muroto - panoramio.jpg | Nagono・CC BY-SA 3.0 | 大きさだけ |
+| 室戸岬 sea | Cape Muroto view 03.jpg | Motokoka・CC BY-SA 4.0 | 大きさだけ |
+| にこ淵 pond | Nikobuti02.jpg | Dokudami・CC BY-SA 4.0 | 大きさだけ |
+| にこ淵 rocks | Nikobuti 01.jpg | Dokudami・CC BY-SA 4.0 | 大きさだけ |
+| にこ淵 waterfall | Nikobuti03.jpg | Dokudami・CC BY-SA 4.0 | 大きさだけ |
+| のいち動物園 chimp | Noichi zoo10 chimpanzee.jpg | pelican・CC BY-SA 2.0 | 大きさだけ |
+| のいち動物園 redpanda | Noichi zoo5 Lesser panda.jpg | Shoichi Masuhara・CC BY 2.0 | 大きさだけ |
+| のいち動物園 shoebill | Noichi zoo8 Shoebill.jpg | pelican・CC BY-SA 2.0 | 大きさだけ |
+| 坂本龍馬像 statue | Kochi Katsurahama Sakamoto Ryoma Statue 3.jpg | Public domain | 大きさだけ |
+| 四万十川 bridge | Shimanto River and Misato Bridge 1.jpg | 京浜にけ・CC BY-SA 3.0 | 大きさだけ |
+| 四万十川 hills | ShimantoRiverFromNakabaRestarea.JPG | Ippukucho・CC BY 3.0 | 大きさだけ |
+| 四万十川 river | Shimanto River And Iwama Bridge 1.jpg | 京浜にけ・CC BY-SA 3.0 | 大きさだけ |
+
+- 写真の下に「Photo: 撮った人 / 条件 / Wikimedia Commons」を小さく出す（`SceneObject.credit`。先生や子どもがのせた写真のときは出さない）。
+- **先生の希望で増やした・戻したもの**（建物は作らず、今ある3Dの屋台に名前をつけ、品物の色だけ写真に合わせた）：
+  - ひろめ市場：Katsuo no Tataki（奥の列 x42 の屋台・赤い身）、Fried Utsubo（奥の列 x62 の屋台・きつね色）、Grilled Shellfish（左の列 z46 の屋台・白い貝）。見どころは6つに。
+  - **安兵衛（屋台餃子）は、コモンズに写真が1枚もなかったので入れていない**（先生の写真か、許可をもらった写真があれば入れられる）。
+  - 龍河洞：記念の滝と神の壺を戻した。滝は本物の写真に合わせて「飛龍の滝」（洞内で二番目に大きな水の滝。札に「増水したときの水の勢いが大変壮観」）にし、となりにオレンジ色の鍾乳石の柱を足した。神の壺は、黄色っぽい石灰の岩にうまった白っぽい壺の形に（台はなくした）。
+- **消したもの**（本物の写真がない・人が写っている写真しかない）：はりまや橋のからくり時計（3Dごと）・堀川と柳の説明（川と木の3Dは橋の一部なので残す）／ひろめ市場の Red Lanterns（天井の赤ちょうちんの3Dも）・Food Shops の説明（店の3Dは残す）／龍河洞の地底の川の説明（川の3Dは床の一部なので残す）。
+- ひろめ市場の入口の3Dを、実物の写真に合わせて「赤ちょうちん2段＋赤いのれん」から「緑の大きな看板（金のふち・四すみの赤い丸）」に変えた。
+- 2回目で、高知城・桂浜・足摺岬・室戸岬・牧野植物園・にこ淵・のいち動物園・坂本龍馬像・四万十川・路面電車の写真も本物にした（表の後半）。像の写真（板垣退助・山内一豊・坂本龍馬）は、銅像そのものなので使った。人が写っていた写真は、別の写真に替えるか切り取った（高知城の天守・御殿、桂浜の浜辺は人のいない別の写真に替え、牧野植物園の植物は右を切り取った）。CC0・Public domain の写真は名前を出していない。
+- まだ絵のままの物は、上の「やりかけの仕事」の一覧。
+
+## 英文をやさしく・タップで読み上げ（2026-11-13 手元で作成。まだ公開版・GitHub に出していない）
+- 先生の「Special と About の英文のレベルが高すぎる。小5レベルに」で、全部の見どころ（63か所）の Special と About を、小5で習う短い文（This is ～. / It is ～. / They are ～. / You can see ～. / I like ～. / Let's ～.）に書きかえた（例：Long ago, Mr. Hirome lived here. That is the name! → It has many shops.）。過去形はなるべく使わない。You can（canDo）はそのまま。
+- You can・Special・About のラベル（🔊 つき）と、その下の英文をタップすると、その欄の英語（基本文＋子どもの付け足し文）を読み上げる（`InfoPanel` の `data-say`）。読んでいる間、文が黄色くなる。下の「Listen in English」は今までどおり（About か、先生の録音）。
+
+## これからの計画（2026-11-13 先生と決定）
+- 作る順番：①案内モード（済み・上）→ ②留学生ゲーム（①の説明パネルを「紹介タイム」として使い回す）→ ③作成モードの紹介文。
+- **留学生ゲーム**（Practice & Build の中）：今のキャラクターの人形を使い回した留学生（髪・肌・服がちがう数人、名前つき。I'm ～.）。タッチすると自分のキャラが **Where do you want to go?**、留学生がランダムに **I want to go to ～.** → 後ろについてくる（画面のはしに矢印）→ 着いたら紹介タイム（This is ＿＿. You can ＿＿. を声に出す・🔊で確かめる・録音も可）→ 喜ぶ（ジャンプ・ハート・Thank you! I like it!）→ ⭐。声は端末の声で高さを変える。小5の単元の表現。ひっかかったら、そばへすっと移す。⭐を残すには今の保存データに項目を足す（保存のしくみは変えない。作る前に先生に確認）。
+- **作成モード**：今の Build のあと、えらぶ形で This is my [～]. You can [～] here. It is [～]. を作り、案内モード・留学生ゲームの行き先に加える。
 
 ## 作業で気をつけること（先生とのやりとり）
 - **手元の版（localhost:5192）で写真だけ出ないときは、手元のサーバーが止まっている**（3Dはもう読みこんであるので動くが、写真はその都度取りに行くため）。公開版は別物なので影響しない。
