@@ -25,7 +25,7 @@ export function keyWords(target: string): string[] {
 }
 
 /** 2つの言葉が近いか（同じ・前の4文字が同じ・1文字ちがい まで） */
-function close(a: string, b: string): boolean {
+export function close(a: string, b: string): boolean {
   if (a === b) return true;
   if (a.length >= 4 && b.length >= 4 && a.slice(0, 4) === b.slice(0, 4)) return true;
   if (Math.abs(a.length - b.length) > 1 || Math.min(a.length, b.length) < 4) return false;
@@ -62,9 +62,9 @@ export interface CheckResult {
 
 /**
  * 聞き取った文（いくつかの候補）と、お手本をくらべる。
- * 甘めの判定：大事な言葉の 45% 以上が聞き取れたら合格（最低1つ）。
+ * かなり甘めの判定（2026-11-15 先生の希望）：大事な言葉の 30% 以上が聞き取れたら合格（最低1つ）。
  */
-export function check(heard: string[], target: string, pass = 0.45): CheckResult {
+export function check(heard: string[], target: string, pass = 0.3): CheckResult {
   const keys = keyWords(target);
   let best: CheckResult = { ok: false, score: 0, hit: [], miss: keys };
   for (const h of heard) {

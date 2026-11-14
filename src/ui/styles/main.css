@@ -3581,3 +3581,94 @@ canvas.kc-canvas {
   font-size: 12px;
   opacity: 0.85;
 }
+
+/* 紹介カード：大きな🎤ボタン（押すとすぐ入力らんへ） */
+.intro-mic {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 76px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 18px;
+  background: #e2524a;
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #9e2f29;
+  touch-action: manipulation;
+}
+.intro-mic:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #9e2f29;
+}
+.intro-mic__icon {
+  font-size: 30px;
+  line-height: 1;
+}
+.intro-mic__label {
+  font-size: 13px;
+}
+.intro-mic.is-next {
+  animation: kc-mic-pulse 1.2s ease-in-out infinite;
+}
+@keyframes kc-mic-pulse {
+  0%,
+  100% {
+    box-shadow: 0 4px 0 #9e2f29, 0 0 0 0 rgba(255, 211, 107, 0.9);
+  }
+  50% {
+    box-shadow: 0 4px 0 #9e2f29, 0 0 0 9px rgba(255, 211, 107, 0);
+  }
+}
+
+/* 話した文の色分け：お手本にある言葉＝緑、ない言葉＝オレンジ（下線もつけて色だけにたよらない） */
+.intro-live {
+  min-height: 1.5em;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+.intro-live:empty {
+  display: none;
+}
+.intro-live__w {
+  padding: 0 3px;
+  border-radius: 6px;
+}
+.intro-live__w.is-ok {
+  color: #8ef0b8;
+}
+.intro-live__w.is-ng {
+  color: #1b2340;
+  background: #ffb347;
+  text-decoration: underline wavy #b8560f;
+}
+/* お手本の文：言えた言葉に印 */
+.intro-tw {
+  border-radius: 6px;
+  transition: background-color 0.2s, color 0.2s;
+}
+.intro-tw.is-said {
+  background: rgba(142, 240, 184, 0.25);
+  color: #b8ffd6;
+  box-shadow: inset 0 -3px 0 #8ef0b8;
+}
+@media (prefers-reduced-motion: reduce) {
+  .intro-mic.is-next {
+    animation: none;
+    outline: 3px solid #ffd36b;
+    outline-offset: 2px;
+  }
+  .intro-tw {
+    transition: none;
+  }
+}
+
+.intro-type__hint[hidden] {
+  display: none;
+}
