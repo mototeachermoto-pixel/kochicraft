@@ -172,6 +172,11 @@ export class WorldManager {
    * @param viewer  明るさの基準（歩くときはキャラクターの位置、空から見るときはカメラ）
    * @param visible 柱を出すか（作るモードでは出さない）
    */
+  /** 留学生の行き先の名所（その光の柱を目立たせ、ほかを弱くする。null で元に戻す） */
+  setBeaconTarget(id: string | null): void {
+    this.beacons.target = id;
+  }
+
   updateBeacons(dt: number, viewer: THREE.Vector3, visible: boolean): void {
     this.beacons.update(dt, viewer, visible ? this.nearId : null, visible);
   }

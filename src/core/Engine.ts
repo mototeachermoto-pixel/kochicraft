@@ -23,6 +23,8 @@ import { WorldManager } from './WorldManager';
 import { BuildController } from './BuildController';
 import { blockRegistry } from '@/world/BlockRegistry';
 import { WaterEffects } from '@/world/WaterEffects';
+import { Visitors } from '@/features/visitors/Visitors';
+import { IntroCard } from '@/features/visitors/IntroCard';
 
 type Mode = 'walk' | 'orbit' | 'build';
 
@@ -49,6 +51,24 @@ export class Engine {
   private readonly avatar: Avatar;
   /** 水に入ったときの見た目（水の中の青いにごり・水しぶき・波紋） */
   private readonly water: WaterEffects;
+  /** 練習モードの留学生（留学生ゲーム） */
+  private visitors!: Visitors;
+  /** 留学生の行き先（画面の上） */
+  private goalChip!: HTMLElement;
+  /** 留学生からもらった⭐（ページを開いている間だけ数える。保存は先生と相談してから） */
+  private stars = 0;
+  private starChip!: HTMLElement;
+  /** 紹介タイムのカード */
+  private introCard!: IntroCard;
+  /** 行き先の方向を示す、画面のはしの矢印 */
+  private goalArrow!: HTMLElement;
+  private readonly arrowVec = new THREE.Vector3();
+  /** 留学生がよろこぶときのアップ（0＝ふつう、1＝顔の前） */
+  private closeK = 0;
+  private readonly closePos = new THREE.Vector3();
+  private readonly closeLook = new THREE.Vector3();
+  private readonly baseLook = new THREE.Vector3();
+  private letterbox!: HTMLElement;
   private viewBtn!: HTMLButtonElement;
   private skinBtn!: HTMLButtonElement;
   private mapBtn!: HTMLButtonElement;
@@ -157,6 +177,42 @@ export class Engine {
     const hudRoot = document.getElementById('hud');
     if (!hudRoot) throw new Error('HUD要素(#hud)が見つかりません');
     this.hudRoot = hudRoot;
+    this.visitors = new Visitors(this.sceneManager.scene, this.world, hudRoot, this.speech);
+    // 留学生の行き先が決まったら：その名所の光の柱を目立たせ、画面の上に行き先を出す
+    this.goalChip = document.createElement('div');
+    this.goalChip.className = 'goal-chip hidden';
+    hudRoot.appendChild(this.goalChip);
+    // 行き先が画面の外にあるときの、画面のはしの矢印
+    this.goalArrow = document.createElement('div');
+    this.goalArrow.className = 'goal-arrow hidden';
+    this.goalArrow.textContent = '➤';
+    hudRoot.appendChild(this.goalArrow);
+    this.introCard = new IntroCard(hudRoot, this.speech);
+    this.introCard.onDone = () => this.visitors.finish();
+    // ⭐のかず（右上）。もらうと大きな⭐が画面のまん中にぽんと出て、ここへ飛んでくる
+    this.starChip = document.createElement('div');
+    this.starChip.className = 'star-chip hidden';
+    hudRoot.appendChild(this.starChip);
+    this.visitors.onThanks = () => this.giveStar();
+    // アップのときの、映画のような上下の黒い帯
+    this.letterbox = document.createElement('div');
+    this.letterbox.className = 'letterbox';
+    this.letterbox.innerHTML = '<i></i><i></i>';
+    hudRoot.appendChild(this.letterbox);
+    this.visitors.onArrive = (name, obj) => {
+      this.goalChip.innerHTML = `🎉 <b>${name}</b> is at <b>${obj.name}</b>!`;
+      this.goalChip.classList.remove('hidden');
+      this.introCard.open(name, obj); // 紹介タイム
+    };
+    this.visitors.onRequest = (name, obj) => {
+      this.worldManager.setBeaconTarget(obj ? obj.id : null);
+      if (name && obj) {
+        this.goalChip.innerHTML = `🧭 Take <b>${name}</b> to <b>${obj.name}</b>`;
+        this.goalChip.classList.remove('hidden');
+      } else {
+        this.goalChip.classList.add('hidden');
+      }
+    };
 
     // 以前の版で大きいまま保存された写真を、縮めて保存し直す（空き容量を作る）
     void PhotoStore.shrinkSavedPhotos();
@@ -442,6 +498,7 @@ export class Engine {
     this.hub.hide();
     this.toolbar.classList.remove('hidden');
     this.spawnPlayer(spot);
+    this.placeVisitors();
     this.tourIndex = -1;
     this.setMode('walk'); // 歩いて回るのを既定に
     this.tourBar.classList.toggle('hidden', !this.guide);
@@ -551,6 +608,8 @@ export class Engine {
     const obj = objects[index];
     if (!obj) return;
     if (this.mode !== 'walk') this.setMode('walk'); // 編集・俯瞰中でも歩いて見られるように
+    // 留学生を案内中で、行き先へ Map で飛んだときは、着いたあとに「着いた」にする
+    window.setTimeout(() => this.visitors.jumpedTo(obj, this.player.position), 50);
 
     const r = obj.region;
     const lookX = obj.focus?.x ?? (r.min.x + r.max.x + 1) / 2;
@@ -801,6 +860,105 @@ export class Engine {
   }
 
   /** その観光地のスポーン地点へプレイヤーを置く（入場時・スタートに戻る時） */
+  /**
+   * 留学生がよろこんでいる間、カメラを顔の前へなめらかに寄せる（ゲーム用スキル：大事な場面はカメラが寄る・
+   * 上下に黒い帯・終わったらなめらかにもどる）。歩くカメラが毎フレーム決めた位置に、上から重ねる。
+   */
+  private applyCloseup(dt: number): void {
+    const c = this.walk.enabled ? this.visitors.closeup : null;
+    // 寄るときは 0.4 秒ほど、もどるときは終わる 0.5 秒前から
+    const want = c && c.left > 0.5 ? 1 : 0;
+    this.closeK += (want - this.closeK) * (1 - Math.exp(-(want ? 7 : 6) * dt));
+    if (this.closeK < 0.002 && !want) this.closeK = 0;
+    this.letterbox.classList.toggle('letterbox--on', want === 1);
+    if (this.closeK === 0 || !c) return;
+    // 顔の正面 2.2 マス・少し上から、顔を見る
+    const fx = -Math.sin(c.yaw);
+    const fz = -Math.cos(c.yaw);
+    this.closePos.set(c.head.x + fx * 2.4, c.head.y + 0.1, c.head.z + fz * 2.4);
+    this.closeLook.set(c.head.x, c.head.y + 0.05, c.head.z);
+    this.camera.getWorldDirection(this.baseLook).multiplyScalar(6).add(this.camera.position);
+    const k = this.closeK * this.closeK * (3 - 2 * this.closeK); // ゆっくり始まり、ゆっくり止まる
+    this.camera.position.lerp(this.closePos, k);
+    this.baseLook.lerp(this.closeLook, k);
+    this.camera.lookAt(this.baseLook);
+    // アップの間はキャラクター（自分）をかくす（顔の前に入らないように）
+    this.avatar.setFade(1 - k);
+  }
+
+  /** ⭐を1つあげる（大きな⭐がまん中にぽんと出て、右上のかずへ飛ぶ。かずがはずむ） */
+  private giveStar(): void {
+    this.stars++;
+    const big = document.createElement('div');
+    big.className = 'star-pop';
+    big.textContent = '⭐';
+    this.hudRoot.appendChild(big);
+    window.setTimeout(() => {
+      const r = this.starChip.getBoundingClientRect();
+      big.style.left = `${r.left + 18}px`;
+      big.style.top = `${r.top + r.height / 2}px`;
+      big.classList.add('star-pop--fly');
+    }, 650);
+    window.setTimeout(() => {
+      big.remove();
+      this.starChip.textContent = `⭐ ${this.stars}`;
+      this.starChip.classList.remove('hidden', 'star-chip--bump');
+      void this.starChip.offsetWidth;
+      this.starChip.classList.add('star-chip--bump');
+    }, 1150);
+    // はじめての⭐のときは、かずの場所を先に出しておく（飛んでいく先が見えるように）
+    if (this.stars === 1) {
+      this.starChip.textContent = '⭐ 0';
+      this.starChip.classList.remove('hidden');
+    }
+  }
+
+  /**
+   * 案内中の行き先が画面の外（またはうしろ）にあるとき、画面のはしにその方向を向いた矢印を出す。
+   * 画面の中に見えているときは出さない（光の柱が見えるので）。
+   */
+  private updateGoalArrow(): void {
+    const goal = this.walk.enabled ? this.visitors.goal : null;
+    if (!goal) {
+      this.goalArrow.classList.add('hidden');
+      return;
+    }
+    const v = this.arrowVec.set(goal.focus.x + 0.5, goal.focus.y, goal.focus.z + 0.5).project(this.camera);
+    const behind = v.z > 1;
+    let x = behind ? -v.x : v.x;
+    let y = behind ? -v.y : v.y;
+    const inside = !behind && Math.abs(x) < 0.9 && Math.abs(y) < 0.9;
+    if (inside) {
+      this.goalArrow.classList.add('hidden');
+      return;
+    }
+    // 画面のはし（少し内側）にのせる
+    const m = Math.max(Math.abs(x), Math.abs(y), 0.001);
+    x /= m;
+    y /= m;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const px = ((x * 0.88 + 1) / 2) * w;
+    const py = ((1 - y * 0.8) / 2) * h;
+    const ang = Math.atan2(-y, x);
+    this.goalArrow.style.left = `${px}px`;
+    this.goalArrow.style.top = `${py}px`;
+    this.goalArrow.style.transform = `translate(-50%, -50%) rotate(${ang}rad)`;
+    this.goalArrow.classList.remove('hidden');
+  }
+
+  /** 練習モードなら、スタート地点の近くに留学生を立たせる（案内モードでは出さない） */
+  private placeVisitors(): void {
+    this.introCard.close();
+    const spot = this.worldManager.currentSpot;
+    if (!spot || this.guide) {
+      this.visitors.clear();
+      return;
+    }
+    const sp = spot.spawn ?? { pos: { x: spot.center.x, y: 16, z: spot.center.z + 14 }, yaw: 0 };
+    this.visitors.spawn(spot.id, sp.pos, sp.yaw, spot.objects ?? []);
+  }
+
   private spawnPlayer(spot: SpotDefinition): void {
     const sp = spot.spawn ?? {
       pos: { x: spot.center.x, y: 16, z: spot.center.z + 14 },
@@ -814,6 +972,8 @@ export class Engine {
     this.walk.enabled = false;
     this.speech.cancel();
     this.worldManager.unload();
+    this.visitors.clear();
+    this.introCard.close();
     this.infoPanel.hide();
     this.toolbar.classList.add('hidden');
     this.movePad.classList.add('hidden');
@@ -1376,6 +1536,11 @@ export class Engine {
       this.mode !== 'build',
     );
 
+    // 留学生（近づくとこちらを向き、すぐそばであいさつ）
+    this.visitors.update(dt, this.player.position, this.camera, this.walk.enabled && this.mode !== 'build');
+    this.applyCloseup(dt);
+    this.updateGoalArrow();
+
     // 水に入ったときの見た目（カメラが水の中なら青くにごらせる・体のまわりに水しぶきと波紋）
     this.water.update(dt, this.camera, this.player.position, this.walk.enabled && this.walk.moving, this.walk.enabled);
 
@@ -1401,6 +1566,12 @@ export class Engine {
     }
 
     if (!this.walk.enabled && !this.orbit.enabled) return;
+
+    // 紹介タイムのカードが出ている間は、E・R・Enter をカードの操作に使う
+    if (this.introCard.key(e.code)) {
+      e.preventDefault();
+      return;
+    }
 
     // キーは英単語の頭文字に合わせている：
     //   J=Jump / L=Look / B=Build / P=Put / T=Take / W=Walk / H=Home / E=English
@@ -1485,6 +1656,9 @@ export class Engine {
     } else if (e.code === 'KeyM') {
       // M = Map（行ける場所の一覧を開く／閉じる）
       this.places.toggle();
+    } else if (e.code === 'KeyA') {
+      // A = Ask（そばにいる留学生に Where do you want to go? と聞く）
+      if (this.mode === 'walk') this.visitors.askNearest();
     } else if (e.code === 'KeyE') {
       // E = English（選んでいる構造物の英語を聞く）
       this.infoPanel.listenCurrent();

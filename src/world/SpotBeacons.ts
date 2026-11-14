@@ -92,6 +92,8 @@ export class SpotBeacons {
   /** 観光地ごとの「名前を見た名所」（この画面を開いている間だけ覚える） */
   private readonly visited = new Map<string, Set<string>>();
   private spotId = '';
+  /** 留学生の行き先（この柱を目立たせ、ほかを弱くする） */
+  target: string | null = null;
   private time = 0;
   private readonly reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
@@ -119,6 +121,7 @@ export class SpotBeacons {
       b.glow.dispose();
     }
     this.beacons = [];
+    this.target = null;
   }
 
   /** 名前を見た・説明を開いた名所に印をつける（光を弱くする） */
@@ -206,7 +209,10 @@ export class SpotBeacons {
         // 近いほど薄く（すぐそばでも、向き合うまではうっすら残す）
         const t = THREE.MathUtils.smoothstep(d, NEAR_FADE_IN, NEAR_FADE_OUT);
         target = 0.22 + 0.78 * t;
-        if (seen?.has(b.obj.id)) target *= VISITED_DIM;
+        if (this.target) {
+          // 行き先は、近くでも、行ったことがあっても、いちばん明るく。ほかはうすく
+          target = b.obj.id === this.target ? 1.6 : target * 0.25;
+        } else if (seen?.has(b.obj.id)) target *= VISITED_DIM;
       }
       b.shown += (target - b.shown) * k;
       if (b.shown < 0.005 && target === 0) b.shown = 0;

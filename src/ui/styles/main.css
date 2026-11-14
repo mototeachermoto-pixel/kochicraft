@@ -3077,3 +3077,473 @@ canvas.kc-canvas {
     animation: none;
   }
 }
+
+/* ---------- 留学生の吹き出し（Visitors.ts。頭の上に出る） ---------- */
+.visitor-bubble {
+  position: absolute;
+  z-index: 12;
+  transform: translate(-50%, -100%);
+  padding: 8px 14px;
+  border-radius: 14px;
+  background: #fff;
+  color: #1c2a3a;
+  font-size: 18px;
+  font-weight: 800;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+/* 吹き出しのしっぽ */
+.visitor-bubble::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  transform: translateX(-50%);
+  border: 8px solid transparent;
+  border-top-color: #fff;
+  border-bottom: 0;
+}
+.visitor-bubble.hidden {
+  display: none;
+}
+/* ぽんと出る */
+.visitor-bubble--pop {
+  animation: kc-bubble-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes kc-bubble-pop {
+  from {
+    transform: translate(-50%, -100%) scale(0.6);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, -100%) scale(1);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .visitor-bubble--pop {
+    animation: none;
+  }
+}
+
+/* 吹き出しの中：文と「Where do you want to go?」ボタン */
+.visitor-bubble {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.visitor-bubble__ask {
+  pointer-events: auto;
+  padding: 5px 12px;
+  border: none;
+  border-radius: 999px;
+  background: #1d9e75;
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s;
+}
+.visitor-bubble__ask:hover {
+  transform: translateY(-1px);
+  background: #168a65;
+}
+.visitor-bubble__ask:active {
+  transform: translateY(1px);
+}
+.visitor-bubble__ask[hidden] {
+  display: none;
+}
+.visitor-bubble__ask kbd {
+  margin-left: 4px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.25);
+  font-size: 12px;
+}
+
+/* 自分のセリフ（画面の下のまん中） */
+.me-say {
+  position: absolute;
+  left: 50%;
+  bottom: 120px;
+  z-index: 24;
+  transform: translateX(-50%);
+  padding: 10px 20px;
+  border-radius: 16px;
+  background: #3f7fd4;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 800;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: var(--kc-shadow);
+  animation: kc-fadein 0.2s ease;
+}
+.me-say.hidden {
+  display: none;
+}
+
+/* 留学生の行き先（画面の上のまん中。名前のバナーの下） */
+.goal-chip {
+  position: absolute;
+  top: 138px;
+  left: 50%;
+  z-index: 11;
+  transform: translateX(-50%);
+  padding: 7px 16px;
+  border-radius: 999px;
+  background: rgba(10, 16, 36, 0.72);
+  color: #ffe2a0;
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: var(--kc-shadow);
+}
+.goal-chip b {
+  color: #fff;
+}
+.goal-chip.hidden {
+  display: none;
+}
+
+/* 案内中の行き先の方向（画面のはし） */
+.goal-arrow {
+  position: absolute;
+  z-index: 11;
+  font-size: 40px;
+  line-height: 1;
+  color: #ffd36b;
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.6), 0 2px 4px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  animation: kc-arrow-pulse 1s ease-in-out infinite;
+}
+.goal-arrow.hidden {
+  display: none;
+}
+@keyframes kc-arrow-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .goal-arrow {
+    animation: none;
+  }
+}
+
+/* ---------- 紹介タイムのカード（IntroCard.ts。画面の下のまん中） ---------- */
+.intro-card {
+  position: absolute;
+  left: 50%;
+  bottom: 100px;
+  z-index: 26;
+  display: flex;
+  gap: 14px;
+  width: min(640px, calc(100vw - 32px));
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(10, 16, 36, 0.9);
+  color: #fff;
+  box-shadow: var(--kc-shadow);
+  transform: translateX(-50%);
+  pointer-events: auto;
+}
+.intro-card.hidden {
+  display: none;
+}
+.intro-card--in {
+  animation: kc-intro-in 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes kc-intro-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+.intro-card__photo {
+  flex: 0 0 150px;
+  height: 120px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.35);
+}
+.intro-card__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.intro-card__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.intro-card__title {
+  font-size: 16px;
+  color: #ffe2a0;
+  font-weight: 700;
+}
+.intro-card__title b {
+  color: #fff;
+}
+.intro-card__line {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+.intro-card__btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.intro-card__btn {
+  font-size: 15px;
+  padding: 8px 12px;
+}
+.intro-card__btn--done {
+  background: #1d9e75;
+}
+.intro-card__btn--rec {
+  background: #c0392b;
+}
+@media (max-width: 600px) {
+  .intro-card__photo {
+    display: none;
+  }
+  .intro-card__line {
+    font-size: 18px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .intro-card--in {
+    animation: none;
+  }
+}
+
+/* ---------- 留学生が喜ぶ：ハートと⭐ ---------- */
+.visitor-heart {
+  position: absolute;
+  z-index: 13;
+  font-size: 26px;
+  color: #ff5c8a;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation: kc-heart-up 1.4s ease-out forwards;
+}
+@keyframes kc-heart-up {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -80%) scale(1.1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--drift, 0px)), -260%) scale(0.9);
+  }
+}
+.star-chip {
+  position: absolute;
+  top: 70px;
+  right: 18px;
+  z-index: 12;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(10, 16, 36, 0.72);
+  color: #ffd36b;
+  font-size: 20px;
+  font-weight: 800;
+  pointer-events: none;
+  box-shadow: var(--kc-shadow);
+}
+.star-chip.hidden {
+  display: none;
+}
+.star-chip--bump {
+  animation: kc-star-bump 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes kc-star-bump {
+  50% {
+    transform: scale(1.3);
+  }
+}
+.star-pop {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  z-index: 30;
+  font-size: 90px;
+  line-height: 1;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation: kc-star-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: left 0.5s ease-in, top 0.5s ease-in, font-size 0.5s ease-in, opacity 0.5s ease-in;
+}
+.star-pop--fly {
+  font-size: 26px;
+  opacity: 0.6;
+}
+@keyframes kc-star-in {
+  from {
+    transform: translate(-50%, -50%) scale(0.2) rotate(-40deg);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1) rotate(0);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .visitor-heart,
+  .star-chip--bump,
+  .star-pop {
+    animation: none;
+  }
+  .star-pop {
+    transition: none;
+  }
+}
+
+/* 紹介カード：聞き取れた文・判定 */
+.intro-card__heard {
+  min-height: 1.4em;
+  font-size: 15px;
+  color: #cfe3ff;
+}
+.intro-card__heard:empty {
+  display: none;
+}
+.intro-card__heard--ok {
+  color: #8ef0b8;
+}
+.intro-card__heard--ng {
+  color: #ffd36b;
+}
+.intro-card__btn--say {
+  background: #3f7fd4;
+}
+.intro-card__btn[hidden] {
+  display: none;
+}
+
+/* ---------- 紹介カードの段（① 聞く → ② 言う → ③ チェック） ---------- */
+/* 今やる段とそのボタンが大きくなって光る。終わった段は ✓。色だけでなく数字・✓・↺ でも分かる */
+.intro-steps {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.intro-steps__arrow {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 18px;
+  font-weight: 800;
+}
+.intro-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 14px;
+  font-weight: 800;
+  transition: transform 0.2s ease-out, background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+.intro-step__num {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 12px;
+}
+.intro-step.is-now {
+  transform: scale(1.12);
+  background: #ffd36b;
+  color: #1c2a3a;
+  box-shadow: 0 0 0 3px rgba(255, 211, 107, 0.35), 0 0 16px rgba(255, 211, 107, 0.6);
+  animation: kc-step-glow 1.2s ease-in-out infinite;
+}
+.intro-step.is-now .intro-step__num {
+  background: #1c2a3a;
+  color: #ffd36b;
+}
+.intro-step.is-done {
+  background: rgba(29, 158, 117, 0.35);
+  color: #c9f5e2;
+}
+.intro-step.is-done .intro-step__num {
+  background: #1d9e75;
+  color: #fff;
+}
+.intro-step.is-retry {
+  color: #ffd36b;
+}
+@keyframes kc-step-glow {
+  50% {
+    box-shadow: 0 0 0 5px rgba(255, 211, 107, 0.2), 0 0 24px rgba(255, 211, 107, 0.85);
+  }
+}
+/* 今押すボタン：大きく、光の輪がゆっくり脈打つ */
+.intro-card__btn {
+  transition: transform 0.2s ease-out, box-shadow 0.2s, opacity 0.2s;
+}
+.intro-card__btn:not(.is-next) {
+  opacity: 0.75;
+}
+.intro-card__btn.is-next {
+  opacity: 1;
+  transform: scale(1.12);
+  box-shadow: 0 0 0 3px #ffd36b, 0 0 18px rgba(255, 211, 107, 0.7);
+  animation: kc-btn-pulse 1.2s ease-in-out infinite;
+}
+@keyframes kc-btn-pulse {
+  50% {
+    box-shadow: 0 0 0 5px rgba(255, 211, 107, 0.55), 0 0 26px rgba(255, 211, 107, 0.9);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .intro-step.is-now,
+  .intro-card__btn.is-next {
+    animation: none;
+  }
+}
+
+/* 留学生がよろこぶアップのときの、上下の黒い帯（映画のように） */
+.letterbox i {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 9;
+  height: 0;
+  background: #000;
+  pointer-events: none;
+  transition: height 0.35s ease-out;
+}
+.letterbox i:first-child {
+  top: 0;
+}
+.letterbox i:last-child {
+  bottom: 0;
+}
+.letterbox--on i {
+  height: 9vh;
+}

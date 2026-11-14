@@ -19,6 +19,21 @@ export const SKIN_LABEL: Record<SkinKind, string> = {
   robot: 'Robot',
 };
 
+/** 留学生など、ほかの人の見た目（色を自由に決めた子どもの形） */
+export interface KidLook {
+  girl: boolean;
+  skin: number;
+  hair: number;
+  shirt: number;
+  pants: number;
+  /** 帽子（キャップ）の色 */
+  cap?: number;
+  /** うしろで結んだ長い髪 */
+  ponytail?: boolean;
+  /** 頭の上のおだんご */
+  bun?: boolean;
+}
+
 /** 立方体・直方体のパーツを作る */
 function part(w: number, h: number, d: number, color: number): THREE.Mesh {
   const geo = new THREE.BoxGeometry(w, h, d);
@@ -57,6 +72,10 @@ export class Avatar {
   private time = 0;
   /** まばたきする目（と目の光）。数秒に1回、さっと閉じる */
   private eyes: THREE.Mesh[] = [];
+  /** 口（よろこぶと大きな笑顔に） */
+  private mouth: THREE.Mesh | null = null;
+  /** よろこんでいる（にっこり目を細め、口を大きく開け、両手を上げる） */
+  private happy = false;
   private nextBlink = 2.5;
   /**
    * 足もとの丸いかげ。いつも地面にはりつき、ジャンプで高く上がるほど小さく・うすくなる。
@@ -64,7 +83,11 @@ export class Avatar {
    */
   private readonly shadow: THREE.Mesh;
 
-  constructor(scene: THREE.Scene) {
+  /** 色を決めた見た目（留学生）。あれば、その色の子どもの形で作る */
+  private readonly look?: KidLook;
+
+  constructor(scene: THREE.Scene, look?: KidLook) {
+    this.look = look;
     this.root.visible = false;
     scene.add(this.root);
     const mat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3, depthWrite: false });
@@ -74,6 +97,16 @@ export class Avatar {
     this.shadow.visible = false;
     scene.add(this.shadow);
     this.build();
+  }
+
+  /** よろこぶ顔と姿にする／もどす（留学生がお礼を言うとき） */
+  setHappy(on: boolean): void {
+    this.happy = on;
+    if (this.mouth) {
+      // 大きく開けた笑顔（横に広く、縦にも開く）
+      this.mouth.scale.set(on ? 1.5 : 1, on ? 2.6 : 1, 1);
+      this.mouth.position.y = on ? 1.31 : 1.32;
+    }
   }
 
   /** 種類を変える（作り直す） */
@@ -156,12 +189,33 @@ export class Avatar {
       open = 0.15;
       if (this.time > this.nextBlink + 0.12) this.nextBlink = this.time + 2.5 + ((this.time * 7.31) % 2.5);
     }
+    // よろこんでいるときは、にっこり目を細める
+    if (this.happy) open = 0.35;
     for (const e of this.eyes) e.scale.y = open;
 
     const a = Math.sin(this.phase) * this.amp; // 振れ幅
     const { armL, armR, legL, legR } = this.swing;
-    if (armL) armL.rotation.x = a;
-    if (armR) armR.rotation.x = -a;
+    if (this.happy) {
+      // 両手を上げて、ばんざいするように少しふる
+      const wave = Math.sin(this.time * 12) * 0.25;
+      if (armL) {
+        armL.rotation.x = Math.PI;
+        armL.rotation.z = -0.35 + wave;
+      }
+      if (armR) {
+        armR.rotation.x = Math.PI;
+        armR.rotation.z = 0.35 - wave;
+      }
+    } else {
+      if (armL) {
+        armL.rotation.x = a;
+        armL.rotation.z = 0;
+      }
+      if (armR) {
+        armR.rotation.x = -a;
+        armR.rotation.z = 0;
+      }
+    }
     if (legL) legL.rotation.x = -a;
     if (legR) legR.rotation.x = a;
   }
@@ -180,20 +234,22 @@ export class Avatar {
     }
     this.swing = {};
     this.eyes = [];
+    this.mouth = null;
     // 新しいパーツはふつうの濃さで作るので、うすさも 1 に戻す（次の setFade でまた合わせる）
     this.fade = 1;
 
-    if (this.skin === 'pet') this.buildPet();
+    if (this.look) this.buildKid(this.look.girl, this.look);
+    else if (this.skin === 'pet') this.buildPet();
     else if (this.skin === 'robot') this.buildRobot();
     else this.buildKid(this.skin === 'girl');
   }
 
   /** 男の子・女の子（頭が大きい、かわいい比率） */
-  private buildKid(girl: boolean): void {
-    const skinColor = girl ? 0xf3c9a6 : 0xe8b98d;
-    const hair = girl ? 0xb5651d : 0x4a3728;
-    const shirt = girl ? 0x4bbf73 : 0x3f7fd4;
-    const pants = girl ? 0xd94f8a : 0x2f4b8f;
+  private buildKid(girl: boolean, look?: KidLook): void {
+    const skinColor = look?.skin ?? (girl ? 0xf3c9a6 : 0xe8b98d);
+    const hair = look?.hair ?? (girl ? 0xb5651d : 0x4a3728);
+    const shirt = look?.shirt ?? (girl ? 0x4bbf73 : 0x3f7fd4);
+    const pants = look?.pants ?? (girl ? 0xd94f8a : 0x2f4b8f);
     const shoe = 0x30303a;
 
     // 頭（大きめ）＋顔（目）
@@ -219,11 +275,30 @@ export class Avatar {
     const mouth = part(0.16, 0.04, 0.03, 0x8a3b2e);
     mouth.position.set(0, 1.32, -0.375);
     this.root.add(mouth);
+    this.mouth = mouth;
     // 髪（前髪＋女の子は横にも）
     const bang = part(0.76, 0.16, 0.76, hair);
     bang.position.y = 1.76;
     this.root.add(bang);
-    if (girl) {
+    // 留学生の髪型・帽子（見分けやすく）
+    if (look?.cap !== undefined) {
+      const cap = part(0.8, 0.16, 0.8, look.cap);
+      cap.position.y = 1.86;
+      const brim = part(0.6, 0.06, 0.3, look.cap);
+      brim.position.set(0, 1.79, -0.5);
+      this.root.add(cap, brim);
+    }
+    if (look?.ponytail) {
+      const tail = part(0.22, 0.5, 0.2, hair);
+      tail.position.set(0, 1.38, 0.46);
+      this.root.add(tail);
+    }
+    if (look?.bun) {
+      const bun = part(0.34, 0.26, 0.34, hair);
+      bun.position.set(0, 2.0, 0.05);
+      this.root.add(bun);
+    }
+    if (girl && !look?.ponytail && !look?.bun) {
       for (const dx of [-0.42, 0.42]) {
         const side = part(0.1, 0.5, 0.6, hair);
         side.position.set(dx, 1.42, 0.04);

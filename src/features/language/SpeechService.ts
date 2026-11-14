@@ -157,8 +157,9 @@ export class SpeechService {
    * @param text 読み上げる文
    * @param lang 'ja'（日本語）/ 'en'（英語）
    * @param rate 読み上げ速度（任意。未指定なら言語ごとの既定値。ゆっくり再生は 0.5〜0.6 程度）
+   * @param pitch 声の高さ（任意。1.0 がふつう。留学生ごとに声を変えるのに使う）
    */
-  speak(text: string, lang: Lang = 'ja', rate?: number): void {
+  speak(text: string, lang: Lang = 'ja', rate?: number, pitch = 1.0): void {
     const synth = this.synth;
     if (!synth) return;
     const cleaned = this.clean(text);
@@ -198,7 +199,7 @@ export class SpeechService {
         utter.lang = voice.lang;
         utter.voice = voice;
         utter.rate = speakRate;
-        utter.pitch = 1.0;
+        utter.pitch = pitch;
         utter.volume = 1.0;
         const advance = (): void => {
           if (myRun !== this.runId) return;
