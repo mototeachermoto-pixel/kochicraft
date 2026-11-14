@@ -3547,3 +3547,37 @@ canvas.kc-canvas {
 .letterbox--on i {
   height: 9vh;
 }
+
+/* 紹介カード：公開版の入力らん（キーボードの🎤で話す） */
+.intro-type {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.intro-type__input {
+  flex: 1;
+  min-width: 0;
+  font-size: 20px;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 3px solid #ffd36b;
+  background: #fffdf5;
+  color: #1b2340;
+}
+.intro-type__input:focus {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+}
+.intro-type__input::placeholder {
+  color: #8a8fa3;
+  font-weight: 600;
+}
+.intro-type__hint {
+  font-size: 13px;
+  color: #cfe3ff;
+}
+.intro-type__hint small {
+  font-size: 12px;
+  opacity: 0.85;
+}

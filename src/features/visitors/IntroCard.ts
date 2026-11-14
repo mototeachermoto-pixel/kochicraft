@@ -12,16 +12,23 @@ import { check, recognitionCtor, type SpeechRecognitionLike } from './speechChec
  *  - ✅ I said it!（Enter）：音声認識が使えない端末・聞き取りがうまく動かないとき・2回ためして通らなかったときだけ出す
  *    （できない子が先に進めなくならないように）。
  * 音声認識は、iPad の Safari・Edge などが Apple / Microsoft のサーバーで聞き取る（2026-11-14 先生が了承）。
- * 音声認識がない端末では、今までどおり 🎤 Record（録音して聞き返す）と I said it! を出す。
+ * 公開版（GAS）はページが Google の枠の中で動き、その枠はマイクを使わせない（2026-11-14 判明）。
+ * そこで公開版と音声認識がない端末では、入力らん＋端末のキーボードの🎤（音声入力）で話してもらい、
+ * 文字になった英文を同じ甘めの判定でくらべる（キーで打ってもよい）。
  */
+/** Google の枠の中（公開版）か。枠がマイクを止めているので、ページからは聞き取れない */
+const IN_GAS = (() => {
+  const g = (window as unknown as { google?: { script?: { run?: unknown } } }).google;
+  if (g?.script?.run) return true;
+  // 手元で確かめる用：開発中だけ、URL に ?mic=off を付けると公開版と同じ入力らん方式になる
+  const env = (import.meta as unknown as { env?: { DEV?: boolean } }).env;
+  return !!env?.DEV && location.search.includes('mic=off');
+})();
+
 export class IntroCard {
   private readonly el: HTMLDivElement;
   private obj: SceneObject | null = null;
   private lines: string[] = [];
-  private recorder: MediaRecorder | null = null;
-  private chunks: Blob[] = [];
-  private stopTimer = 0;
-  private playBack = true;
   private rec: SpeechRecognitionLike | null = null;
   private tries = 0;
   private finishing = false;
@@ -50,8 +57,11 @@ export class IntroCard {
   }
 
   private get canListen(): boolean {
-    return recognitionCtor() !== null;
+    return !IN_GAS && !this.typeMode && recognitionCtor() !== null;
   }
+
+  /** ページから聞き取れないとわかったとき（マイクが止められている）に true。入力らん方式に切りかえる */
+  private typeMode = false;
 
   open(name: string, obj: SceneObject): void {
     this.obj = obj;
@@ -63,7 +73,7 @@ export class IntroCard {
     this.lines = [first.charAt(0).toUpperCase() + first.slice(1), obj.guide.canDo];
     const sayBtn = this.canListen
       ? `<button class="kc-btn intro-card__btn intro-card__btn--say" data-act="say">🗣 Speak! <kbd>R</kbd></button>`
-      : `<button class="kc-btn intro-card__btn" data-act="record">🎤 Record <kbd>R</kbd></button>`;
+      : '';
     this.el.innerHTML = `
       <div class="intro-card__photo"><img alt="" /></div>
       <div class="intro-card__main">
@@ -71,16 +81,17 @@ export class IntroCard {
         <ol class="intro-steps" aria-label="steps">
           <li class="intro-step" data-step="0"><span class="intro-step__num">1</span>🔊 Listen</li>
           <li class="intro-steps__arrow" aria-hidden="true">›</li>
-          <li class="intro-step" data-step="1"><span class="intro-step__num">2</span>${this.canListen ? '🗣 Speak' : '🎤 Speak'}</li>
+          <li class="intro-step" data-step="1"><span class="intro-step__num">2</span>🗣 Speak</li>
           <li class="intro-steps__arrow" aria-hidden="true">›</li>
           <li class="intro-step" data-step="2"><span class="intro-step__num">3</span>⭐ Check</li>
         </ol>
         <div class="intro-card__lines">${this.lines.map((l) => `<div class="intro-card__line">${l}</div>`).join('')}</div>
+        ${this.canListen ? '' : this.typeBoxHtml()}
         <div class="intro-card__heard" aria-live="polite"></div>
         <div class="intro-card__btns">
           <button class="kc-btn intro-card__btn" data-act="listen">🔊 Listen <kbd>E</kbd></button>
           ${sayBtn}
-          <button class="kc-btn intro-card__btn intro-card__btn--done" data-act="done" ${this.canListen ? 'hidden' : ''}>✅ I said it! <kbd>Enter</kbd></button>
+          <button class="kc-btn intro-card__btn intro-card__btn--done" data-act="done" hidden>✅ I said it! <kbd>Enter</kbd></button>
         </div>
       </div>`;
     const img = this.el.querySelector('img')!;
@@ -91,6 +102,7 @@ export class IntroCard {
     this.el.querySelectorAll<HTMLButtonElement>('[data-act]').forEach((b) =>
       b.addEventListener('click', () => this.act(b.dataset.act ?? '')),
     );
+    this.bindTypeBox();
     this.renderSteps();
     this.el.classList.remove('hidden');
     this.el.classList.remove('intro-card--in');
@@ -100,7 +112,6 @@ export class IntroCard {
 
   close(): void {
     window.clearTimeout(this.listenTimer);
-    this.stopRecording(false);
     this.stopListening();
     this.el.classList.add('hidden');
     this.obj = null;
@@ -110,7 +121,7 @@ export class IntroCard {
   key(code: string): boolean {
     if (!this.isOpen) return false;
     if (code === 'KeyE') this.act('listen');
-    else if (code === 'KeyR') this.act(this.canListen ? 'say' : 'record');
+    else if (code === 'KeyR') this.act(this.canListen ? 'say' : 'type');
     else if (code === 'Enter' || code === 'NumpadEnter') {
       const done = this.el.querySelector<HTMLButtonElement>('[data-act="done"]');
       if (done && !done.hidden) this.act('done');
@@ -134,15 +145,19 @@ export class IntroCard {
     } else if (a === 'say') {
       if (this.rec) this.stopListening();
       else this.startListening();
-    } else if (a === 'record') {
-      if (this.recorder) {
-        this.stopRecording(true);
-        this.done[1] = true;
-        this.setStage(2); // 録音を聞き返したら、自分で「言えた」を押す
-      } else {
-        this.setStage(1);
-        void this.startRecording();
+    } else if (a === 'type') {
+      this.speech.cancel();
+      this.setStage(1);
+      this.typeInput()?.focus();
+    } else if (a === 'check') {
+      const v = this.typeInput()?.value.trim() ?? '';
+      if (!v) {
+        this.heard('Tap the box, then tap 🎤 on the keyboard and speak.', 'ng');
+        this.typeInput()?.focus();
+        return;
       }
+      this.typeInput()?.blur();
+      this.judge([v]);
     } else if (a === 'done') {
       this.close();
       this.onDone?.();
@@ -169,7 +184,7 @@ export class IntroCard {
       if (num) num.textContent = this.done[i] ? '✓' : i === 2 && this.retry && !this.done[2] ? '↺' : String(i + 1);
     });
     // 今やる段のボタンを大きく・光らせる
-    const want = this.stage === 0 ? 'listen' : this.stage === 1 ? (this.canListen ? 'say' : 'record') : 'done';
+    const want = this.stage === 0 ? 'listen' : this.stage === 1 ? (this.canListen ? 'say' : 'check') : 'done';
     this.el.querySelectorAll<HTMLButtonElement>('[data-act]').forEach((b) => {
       b.classList.toggle('is-next', b.dataset.act === want && !this.done[this.stage]);
     });
@@ -202,7 +217,6 @@ export class IntroCard {
     rec.interimResults = true;
     rec.maxAlternatives = 5;
     rec.continuous = false;
-    const target = this.lines.join(' ');
     let finals: string[] = [];
     let latest = '';
     rec.onresult = (e) => {
@@ -220,7 +234,9 @@ export class IntroCard {
     rec.onerror = (e) => {
       // 声が聞こえなかった（no-speech）はもう一度。マイクや通信が使えないときは I said it! を出す
       if (e.error === 'no-speech') this.heard('I can\'t hear you. Try again!', 'ng');
-      else {
+      else if (e.error === 'not-allowed' || e.error === 'service-not-allowed' || e.error === 'audio-capture') {
+        this.toTypeMode(); // マイクが止められている → キーボードの🎤で話す方式へ
+      } else {
         this.heard('🎧 Listening is not working here. Press <b>I said it!</b>', 'ng');
         this.showDone();
       }
@@ -230,7 +246,22 @@ export class IntroCard {
       this.setSayLabel(false);
       const heard = finals.length ? finals : latest ? [latest] : [];
       if (!heard.length) return;
-      const r = check(heard, target);
+      this.judge(heard);
+    };
+    try {
+      rec.start();
+      this.rec = rec;
+      this.setStage(1);
+      this.setSayLabel(true);
+      this.heard('🎧 Listening… Speak now!');
+    } catch {
+      this.toTypeMode();
+    }
+  }
+
+  /** 聞き取れた（打てた）文をお手本とくらべて、合格なら紹介おしまい */
+  private judge(heard: string[]): void {
+      const r = check(heard, this.lines.join(' '));
       this.done[1] = true;
       if (r.ok) {
         this.done[2] = true;
@@ -248,18 +279,8 @@ export class IntroCard {
         const missing = r.miss.slice(0, 3).join(', ');
         this.heard(`Try again! <i>${this.esc(heard[0])}</i>${missing ? `<br><small>Try: <b>${this.esc(missing)}</b></small>` : ''}`, 'ng');
         if (this.tries >= 2) this.showDone();
+        this.typeInput()?.select();
       }
-    };
-    try {
-      rec.start();
-      this.rec = rec;
-      this.setStage(1);
-      this.setSayLabel(true);
-      this.heard('🎧 Listening… Speak now!');
-    } catch {
-      this.heard('🎧 Listening is not working here. Press <b>I said it!</b>', 'ng');
-      this.showDone();
-    }
   }
 
   private stopListening(): void {
@@ -283,60 +304,48 @@ export class IntroCard {
     return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] ?? c);
   }
 
-  // ===== 音声認識がない端末：録音して聞き返す =====
-  private recordBtn(): HTMLButtonElement | null {
-    return this.el.querySelector('[data-act="record"]');
+  // ===== ページから聞き取れないとき：入力らん＋キーボードの🎤（音声入力） =====
+  private typeBoxHtml(): string {
+    return `
+        <div class="intro-type">
+          <input class="intro-type__input" type="text" lang="en" autocomplete="off" autocorrect="off"
+            autocapitalize="sentences" spellcheck="false" enterkeyhint="done" placeholder="🎤 Tap here and speak" aria-label="Say it" />
+          <button class="kc-btn intro-card__btn intro-card__btn--say" data-act="check">⭐ Check <kbd>Enter</kbd></button>
+        </div>
+        <div class="intro-type__hint">Tap the box → tap 🎤 on the keyboard → speak. <small>（キーボードを英語にして、🎤をおして話そう）</small></div>`;
   }
 
-  /** 録音をはじめる（いちばん長くて8秒。もう一度押すと止まる） */
-  private async startRecording(): Promise<void> {
-    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-      const b = this.recordBtn();
-      if (b) b.textContent = '🎤 (not on this device)';
-      return;
-    }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      this.chunks = [];
-      const rec = new MediaRecorder(stream);
-      rec.ondataavailable = (e) => {
-        if (e.data.size > 0) this.chunks.push(e.data);
-      };
-      rec.onstop = () => {
-        stream.getTracks().forEach((t) => t.stop());
-        if (!this.playBack) return;
-        const url = URL.createObjectURL(new Blob(this.chunks, { type: rec.mimeType }));
-        const audio = new Audio(url);
-        audio.onended = () => URL.revokeObjectURL(url);
-        void audio.play().catch(() => undefined);
-      };
-      this.recorder = rec;
-      this.playBack = true;
-      rec.start();
-      const b = this.recordBtn();
-      if (b) {
-        b.innerHTML = '⏹ Stop <kbd>R</kbd>';
-        b.classList.add('intro-card__btn--rec');
-      }
-      this.stopTimer = window.setTimeout(() => this.stopRecording(true), 8000);
-    } catch {
-      const b = this.recordBtn();
-      if (b) b.textContent = '🎤 (mic is off)';
-    }
+  private typeInput(): HTMLInputElement | null {
+    return this.el.querySelector('.intro-type__input');
   }
 
-  private stopRecording(play: boolean): void {
-    window.clearTimeout(this.stopTimer);
-    const rec = this.recorder;
-    this.recorder = null;
-    if (rec && rec.state !== 'inactive') {
-      this.playBack = play;
-      rec.stop();
-    }
-    const b = this.recordBtn();
-    if (b) {
-      b.innerHTML = '🎤 Record <kbd>R</kbd>';
-      b.classList.remove('intro-card__btn--rec');
-    }
+  private bindTypeBox(): void {
+    const box = this.typeInput();
+    if (!box) return;
+    box.addEventListener('focus', () => {
+      this.speech.cancel();
+      if (this.stage === 0) this.setStage(1);
+    });
+    box.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.act('check');
+      } else if (e.key === 'Escape') box.blur();
+    });
+    box.addEventListener('keyup', (e) => e.stopPropagation());
+  }
+
+  /** 聞き取りが止められているとわかったら、カードを入力らん方式で作り直す */
+  private toTypeMode(): void {
+    if (this.typeMode || !this.obj) return;
+    this.typeMode = true;
+    this.rec = null;
+    this.sayBtn()?.remove();
+    this.el.querySelector('.intro-card__heard')?.insertAdjacentHTML('beforebegin', this.typeBoxHtml());
+    this.el.querySelector<HTMLButtonElement>('[data-act="check"]')?.addEventListener('click', () => this.act('check'));
+    this.bindTypeBox();
+    this.heard('');
+    this.setStage(1);
   }
 }
