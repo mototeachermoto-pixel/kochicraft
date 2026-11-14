@@ -101,6 +101,7 @@ export function horseRider(
   body: number,
   dark: number,
   gold: number,
+  spear = false,
 ): void {
   const { put, fill } = placer(b, cx, py, cz, facing);
   // 馬の脚（後ろ脚2本は地面に、前脚の1本は高く上げる）
@@ -134,4 +135,12 @@ export function horseRider(
   put(0, 7, -1, body);
   put(0, 8, -1, dark);
   put(0, 9, -1, gold);
+  // 長いやり（右手から前の上へ、ななめにのびる）。山内一豊の騎馬像の本物の写真に合わせて
+  if (spear) {
+    put(-1, 5, 0, dark);
+    put(-1, 6, 1, dark);
+    put(-1, 7, 2, dark);
+    put(-1, 8, 3, dark);
+    put(-1, 9, 4, dark);
+  }
 }

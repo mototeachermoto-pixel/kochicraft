@@ -86,6 +86,7 @@ function tenshu(
   wood: number,
   shachi: number,
   stoneWall: number,
+  dark: number,
 ): void {
   // ===== 天守台（石垣。下がわずかに広い） =====
   b.box(cx - 6, baseY, cz - 6, cx + 6, baseY + 1, cz + 6, stoneWall);
@@ -131,8 +132,9 @@ function tenshu(
 
   // ===== 4重目（最上階）：木の廻縁と高欄が一周 =====
   const y4 = y3 + 3;
-  b.box(cx - 3, y4, cz - 3, cx + 3, y4, cz + 3, wood); // 廻縁の床
-  woodRing(b, cx - 3, cz - 3, cx + 3, cz + 3, y4 + 1, wood); // 高欄（手すり）
+  // 本物の写真では、廻縁と高欄は黒っぽい（2026-11-14 写真に合わせて、茶色の木から濃い色に）
+  b.box(cx - 3, y4, cz - 3, cx + 3, y4, cz + 3, dark); // 廻縁の床
+  woodRing(b, cx - 3, cz - 3, cx + 3, cz + 3, y4 + 1, dark); // 高欄（手すり）
   b.box(cx - 2, y4 + 1, cz - 2, cx + 2, y4 + 2, cz + 2, white); // 最上階の白い壁
   b.box(cx - 1, y4 + 2, cz + 2, cx + 1, y4 + 2, cz + 2, wood); // 正面の窓
   // 最上階の屋根（入母屋。前後に三角の破風）
@@ -153,10 +155,15 @@ function tenshu(
 function goten(b: Build, white: number, roofTile: number, wood: number): void {
   const y0 = HONMARU + 1; // 床の高さ＝天守1重目と同じ
   // 白漆喰の壁（x51〜57, z33〜43 の外周）
-  b.box(51, y0, 33, 57, y0 + 1, 33, white); // 奥
-  b.box(51, y0, 43, 57, y0 + 1, 43, white); // 手前（正面）
-  b.box(51, y0, 34, 51, y0 + 1, 42, white); // 左
-  b.box(57, y0, 34, 57, y0 + 1, 42, white); // 右
+  // 本物の写真では、下半分が濃い木の板、上が白壁（2026-11-14 写真に合わせた）
+  b.box(51, y0, 33, 57, y0, 33, wood); // 奥
+  b.box(51, y0, 43, 57, y0, 43, wood); // 手前（正面）
+  b.box(51, y0, 34, 51, y0, 42, wood); // 左
+  b.box(57, y0, 34, 57, y0, 42, wood); // 右
+  b.box(51, y0 + 1, 33, 57, y0 + 1, 33, white);
+  b.box(51, y0 + 1, 43, 57, y0 + 1, 43, white);
+  b.box(51, y0 + 1, 34, 51, y0 + 1, 42, white);
+  b.box(57, y0 + 1, 34, 57, y0 + 1, 42, white);
   // 正面の入口（開ける）と連子窓
   b.set(54, y0, 43, AIR);
   b.set(54, y0 + 1, 43, AIR);
@@ -165,6 +172,10 @@ function goten(b: Build, white: number, roofTile: number, wood: number): void {
   // 低い瓦屋根（軒が広く張り出す）＋棟
   b.box(50, y0 + 2, 32, 58, y0 + 2, 44, roofTile);
   b.box(52, y0 + 3, 34, 56, y0 + 3, 42, roofTile);
+  // 本物の写真のように、正面（入口の上）と東の妻に大きな三角の破風、まん中に棟（2026-11-14）
+  gable(b, 'z', 54, y0 + 3, 44, 3, white, roofTile);
+  gable(b, 'x', 38, y0 + 3, 58, 3, white, roofTile);
+  b.box(54, y0 + 4, 35, 54, y0 + 4, 43, roofTile);
   // 天守へ渡る廊下（西へ直結）
   b.box(50, y0, 37, 50, y0 + 1, 39, white);
 }
@@ -184,10 +195,10 @@ function kazutoyoStatue(
   gold: number,
 ): void {
   b.box(x - 3, PARK + 1, z - 3, x + 3, PARK + 1, z + 3, stone); // 台座の土台
-  b.box(x - 2, PARK + 2, z - 3, x + 2, PARK + 4, z + 2, stoneWall); // 台座（四角く大きい）
+  b.box(x - 2, PARK + 2, z - 3, x + 2, PARK + 4, z + 2, stone); // 台座（四角く大きい。本物の写真どおり、つるっとした石）
   b.set(x, PARK + 3, z + 3, dark); // 前の銘板
   b.box(x - 2, PARK + 5, z - 3, x + 2, PARK + 5, z + 2, stone); // 台座の上のふち
-  horseRider(b, x, PARK + 5, z, 1, bronze, dark, gold);
+  horseRider(b, x, PARK + 5, z, 1, bronze, dark, gold, true); // 本物の写真どおり、長いやりを持つ
 }
 
 /** 追手門（櫓門）。cx を中心に、石垣の親柱＋木の門扉＋上に白壁の櫓と瓦屋根。 */
@@ -198,6 +209,7 @@ function otemonGate(
   roofTile: number,
   wood: number,
   stoneWall: number,
+  dark: number,
 ): void {
   // 石垣の親柱（左右）
   b.box(cx - 7, PARK + 1, 58, cx - 5, HONMARU, 60, stoneWall);
@@ -209,8 +221,9 @@ function otemonGate(
   b.box(cx - 4, HONMARU, 58, cx + 4, HONMARU, 60, wood);
   // 門の上の小さな屋根（庇）
   b.box(cx - 5, HONMARU - 1, 61, cx + 5, HONMARU - 1, 61, roofTile);
-  // 櫓（白壁）
-  b.box(cx - 7, HONMARU + 1, 58, cx + 7, HONMARU + 3, 60, white);
+  // 櫓：本物の写真どおり、黒い板張り（下見板）で、軒の下だけ白い漆喰の帯（2026-11-14 白壁から直した）
+  b.box(cx - 7, HONMARU + 1, 58, cx + 7, HONMARU + 2, 60, dark);
+  b.box(cx - 7, HONMARU + 3, 58, cx + 7, HONMARU + 3, 60, white);
   // 写真の大きな木の格子窓（正面のまん中）
   b.box(cx - 2, HONMARU + 2, 60, cx + 2, HONMARU + 2, 60, wood);
   // 櫓の瓦屋根
@@ -218,7 +231,8 @@ function otemonGate(
   b.box(cx - 7, HONMARU + 5, 58, cx + 7, HONMARU + 5, 60, roofTile);
   b.box(cx - 6, HONMARU + 6, 59, cx + 6, HONMARU + 6, 59, roofTile); // 棟
   // 左の高い櫓（写真の左に立つ、三角の破風のある2階）
-  b.box(cx - 8, HONMARU + 5, 57, cx - 4, HONMARU + 8, 61, white);
+  b.box(cx - 8, HONMARU + 5, 57, cx - 4, HONMARU + 7, 61, dark);
+  b.box(cx - 8, HONMARU + 8, 57, cx - 4, HONMARU + 8, 61, white);
   b.set(cx - 7, HONMARU + 7, 61, wood); // 窓
   b.set(cx - 5, HONMARU + 7, 61, wood);
   b.box(cx - 9, HONMARU + 9, 56, cx - 3, HONMARU + 9, 62, roofTile); // 屋根
@@ -228,12 +242,12 @@ function otemonGate(
 }
 
 /**
- * 板垣退助の銅像（写真に合わせて：細長い石の台座の上に、右手を横へのばした着物と袴の立ち姿）。
+ * 板垣退助の銅像（本物の写真に合わせて：細長い石の台座の上に、右手を高く上げた立ち姿。2026-11-14 横から上に直した）。
  * 実物は台座 約4.2m＞像 約2.2m ＝台座の方が高い。石段の方（z+）を向く。
  */
 function bronzeStatue(b: Build, x: number, z: number, stone: number, bronze: number, dark: number): void {
   b.box(x - 1, PARK + 1, z - 1, x + 1, PARK + 6, z + 1, stone); // 細長い台座
-  kimonoFigure(b, x, PARK + 6, z, 1, bronze, dark, 'point');
+  kimonoFigure(b, x, PARK + 6, z, 1, bronze, dark, 'wave');
 }
 
 /** 桜の木（木の幹＋ふっくら丸い花のかたまり。下を広く、上を細く） */
@@ -296,7 +310,7 @@ function build(world: World): void {
   b.box(59, HONMARU + 3, 32, 59, HONMARU + 3, 50, tile);
 
   // ===== 天守（実物と同じく本丸の奥・西寄り。手前＝cz+ 側を正面に） =====
-  tenshu(b, 44, 38, HONMARU + 1, castlewall, tile, wood, tile, stonewall);
+  tenshu(b, 44, 38, HONMARU + 1, castlewall, tile, wood, tile, stonewall, bronzeDark);
 
   // ===== 本丸御殿（懐徳館）＝天守の東どなり。廊下で天守と直結（現存は全国で高知城だけ） =====
   goten(b, castlewall, tile, wood);
@@ -306,7 +320,7 @@ function build(world: World): void {
   b.pine(58, HONMARU, 49, 3, 3, 1);
 
   // ===== 追手門（手前。門と天守を一緒に見られる名物の眺め） =====
-  otemonGate(b, 48, castlewall, tile, wood, stonewall);
+  otemonGate(b, 48, castlewall, tile, wood, stonewall, bronzeDark);
 
   // ===== 参道（石畳）＋ 入口の灯籠（門の前に2つだけ・スッキリ） =====
   b.box(47, PARK, 57, 49, PARK, 69, road);

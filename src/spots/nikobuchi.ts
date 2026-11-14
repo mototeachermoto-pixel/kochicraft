@@ -128,6 +128,7 @@ function build(world: World): void {
   }
 
   // ===== 苔むした丸い岩（写真の淵をかこむ大きな岩） =====
+  // 「Rocks and Forest」の見どころは、合う写真がないのでなくした（2026-11-14 先生の希望）。岩と森の3Dは残す
   b.boulder(43, POND, 33, 2, stone, grass); // 左奥（滝のそば）
   b.boulder(53, POND, 33, 2, stone, grass); // 右奥
   b.boulder(42, POND, 38, 1, stone, grass); // 左
@@ -204,20 +205,6 @@ export const nikobuchi: SpotDefinition = {
         canDo: 'You can watch the falling water.',
         feature: 'It is white.',
         about: 'The water is clean.',
-      },
-    },
-    {
-      id: 'rocks',
-      name: 'Rocks and Forest',
-      nameJa: '岩と森',
-      region: { min: { x: 28, y: 18, z: 31 }, max: { x: 41, y: 23, z: 52 } },
-      focus: { x: 35, y: 20, z: 45 },
-      image: './photos/nikobuchi/rocks.jpg',
-      credit: 'Photo: Dokudami / CC BY-SA 4.0 / Wikimedia Commons',
-      guide: {
-        canDo: 'You can see big rocks and green trees.',
-        feature: 'They are big.',
-        about: 'It is cool and quiet.',
       },
     },
   ],

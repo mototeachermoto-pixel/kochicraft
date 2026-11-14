@@ -26,6 +26,13 @@ export class SceneManager {
   private readonly clouds = new THREE.Group();
   private time = 0;
 
+  /** 水の中の色（にごった青緑）。カメラが水に入ると、霧と背景をこの色にする */
+  private readonly waterColor = new THREE.Color('#1d5f86');
+  /** 背景・霧に実際に使う色（空の色と水の色をまぜたもの） */
+  private readonly mixColor = new THREE.Color();
+  /** 0＝水の外、1＝水の中 */
+  private underwater = 0;
+
   constructor() {
     // 環境光：全体の明るさの底上げ
     this.ambient = new THREE.AmbientLight(0xffffff, 0.5);
@@ -110,6 +117,23 @@ export class SceneManager {
       c.position.x += dt * 1.2;
       if (c.position.x > 48 + 230) c.position.x -= 460;
     }
+  }
+
+  /**
+   * カメラが水の中にいる度合い（0〜1）。水の中では、霧を近く・青緑にして遠くを見えなくし、
+   * 空と雲をかくす（水面の上の空は、水を通して青くかすんで見える）。
+   */
+  setUnderwater(t: number): void {
+    if (t === this.underwater) return;
+    this.underwater = t;
+    this.mixColor.copy(this.bgColor).lerp(this.waterColor, t);
+    this.fog.color.copy(this.mixColor);
+    this.fog.near = THREE.MathUtils.lerp(90, 0.5, t);
+    this.fog.far = THREE.MathUtils.lerp(290, 24, t);
+    this.scene.background = t > 0 ? this.mixColor : this.bgColor;
+    const sky = t < 0.5;
+    this.sky.visible = sky;
+    this.clouds.visible = sky;
   }
 
   /** 表示オブジェクトを追加 */

@@ -197,7 +197,7 @@ export class InfoPanel {
       ${this.blockHtml('About', 'about')}
 
       <button class="kc-btn info-listen" data-role="listen">
-        <span class="kc-btn__icon">🔊</span>Listen in English <kbd>E</kbd> ${voiceTag}
+        Listen in English <kbd>E</kbd> ${voiceTag}
       </button>
       <div class="info-keyhint">Press <kbd>Tab</kbd> to move, <kbd>Enter</kbd> to push a button.</div>
 

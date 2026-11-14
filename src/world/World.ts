@@ -47,6 +47,8 @@ export class World implements VoxelWriter {
       transparent: true,
       opacity: 0.72,
       depthWrite: false, // 半透明の重なりを自然に
+      // 水の中から見上げたときも水面が見えるように、うら側もかく（水に入っている感じを出すため）
+      side: THREE.DoubleSide,
     });
     // ブロックの表面に模様をつける（草のつぶつぶ・木目・レンガ・水のゆらぎ など。blockStyles.ts）
     applyBlockStyles(this.opaqueMaterial);

@@ -52,7 +52,7 @@ function build(world: World): void {
   const flower = b.id('flower');
   const brick = b.id('brick');
   const turf = b.id('turf');
-  const darkRock = b.id('dirt'); // 岬の茶色っぽい黒い岩
+  const darkRock = b.id('stonewall'); // 岬のごつごつした灰色の岩（2026-11-14 本物の写真に合わせ、茶色の土から直した）
   const leaves = b.id('leaves');
 
   // ===== 地面の土台 =====

@@ -97,6 +97,7 @@ function memorialHall(
   roofWood: number,
   concrete: number,
   glass: number,
+  roofTop: number,
 ): void {
   b.box(x0, G, z0, x1, G, z1, concrete); // 床
   // ガラスの壁（前後）と、両端のコンクリートの壁
@@ -115,6 +116,8 @@ function memorialHall(
     const t = (x - (x0 - 2)) / (x1 - x0 + 4);
     const y = G + 5 + Math.round(1.6 * Math.sin(t * Math.PI * 1.6 - 0.4));
     b.box(x, y, z0 - 2, x, y, z1 + 2, roofWood);
+    // 屋根の上は濃い灰色の金属（本物の写真どおり。下から見える軒の裏は木のまま。2026-11-14）
+    b.box(x, y + 1, z0 - 2, x, y + 1, z1 + 2, roofTop);
     // 屋根と壁の間をうめる（すき間ができないように）
     if (x >= x0 && x <= x1 && y > G + 4) b.box(x, G + 4, z0, x, y - 1, z0, glass);
     if (x >= x0 && x <= x1 && y > G + 4) b.box(x, G + 4, z1, x, y - 1, z1, glass);
@@ -178,7 +181,8 @@ function build(world: World): void {
   b.box(46, G, 47, 50, G, 89, road);
 
   // ===== ガラスの大温室（奥・中央＝主役） =====
-  greenhouse(b, 38, 28, 62, 44, glass, stone, wood, leaves, turf, [flower, sakura, lantern, brick, torii], stonewall);
+  // 骨組みは本物の写真どおり白（2026-11-14 灰色から直した）
+  greenhouse(b, 38, 28, 62, 44, glass, castlewall, wood, leaves, turf, [flower, sakura, lantern, brick, torii], stonewall);
 
   // ===== 池と木道（左） =====
   b.box(13, 8, 42, 31, 8, 66, sand);
@@ -196,7 +200,7 @@ function build(world: World): void {
   }
 
   // ===== 記念館（右） =====
-  memorialHall(b, 66, 47, 82, 58, bridgeWood, stone, glass);
+  memorialHall(b, 66, 47, 82, 58, bridgeWood, stone, glass, b.id('tile'));
 
   // ===== スエコザサ（記念館の入口前。博士が亡き妻・壽衛に感謝して名付けた低い笹） =====
   for (const [sx, sz] of [

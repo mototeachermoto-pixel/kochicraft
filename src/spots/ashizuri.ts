@@ -114,7 +114,6 @@ function build(world: World): void {
   const flower = b.id('flower'); // 椿の花（ピンク）
   const bronze = b.id('bronze'); // 銅像
   const bronzeDark = b.id('bronzedark'); // 銅像の濃い所
-  const granite = b.id('lantern'); // 白っぽい花崗岩（白山洞門）
   const road = b.id('road'); // 遊歩道
   const stonewall = b.id('stonewall'); // 白い花崗岩（白山洞門）・碑
 
@@ -136,7 +135,8 @@ function build(world: World): void {
   b.box(45, CLIFF + 1, 35, 45, CLIFF + 2, 38, glass); // 柵（左）
   b.box(51, CLIFF + 1, 35, 51, CLIFF + 2, 38, glass); // 柵（右）
 
-  // ===== 白山洞門（写真に合わせて：白っぽい花崗岩の大きな岩山に、波が空けた大きな穴） =====
+  // ===== 白山洞門（本物の写真に合わせて：上が木々にこんもりおおわれた、黒っぽい岩山。下に波が空けた穴） =====
+  // 2026-11-14 白っぽい花崗岩から直した。岩肌は暗い灰色、上の方は緑の木々
   // 岩山（左右が厚く、上は丸くでこぼこ）
   for (let x = 30; x <= 42; x++) {
     for (let z = 28; z <= 34; z++) {
@@ -144,17 +144,15 @@ function build(world: World): void {
       const dz = z - 31;
       const top = 18 - Math.round(Math.abs(dx) * 0.6 + Math.abs(dz) * 0.9) + ((x * 7 + z * 3) % 2);
       if (top < 9) continue;
-      b.box(x, 6, z, x, top, z, (x + z) % 3 === 0 ? stonewall : granite);
+      b.box(x, 6, z, x, top, z, (x + z) % 3 === 0 ? tile : stone);
+      // 上の2〜3段は木々におおわれている（写真の岩山は、上がこんもり緑）
+      b.box(x, Math.max(9, top - 2 + ((x + z) % 2)), z, x, top, z, leaves);
     }
   }
   // 波が空けた穴（海側から見て、向こうの空が見える）
   b.box(34, 7, 28, 38, 12, 34, 0);
   b.box(35, 13, 28, 37, 13, 34, 0);
   b.box(34, 6, 28, 38, 8, 34, water); // 穴の中の海
-  // 岩のてっぺんの緑
-  b.set(33, 17, 31, leaves);
-  b.set(36, 18, 30, leaves);
-  b.set(39, 17, 32, leaves);
   // 波しぶき
   for (const [x, z] of [
     [30, 35],
@@ -193,9 +191,12 @@ function build(world: World): void {
   statue(b, 41, 63, CLIFF, stone, stonewall, bronze, bronzeDark);
 
   // ===== 四国最南端の碑（入口広場・右） =====
-  b.box(54, CLIFF + 1, 63, 56, CLIFF + 1, 63, stonewall); // 台
-  b.box(55, CLIFF + 2, 63, 55, CLIFF + 4, 63, stonewall); // 石碑
-  b.set(55, CLIFF + 3, 63, tile); // 文字
+  // 本物の写真に合わせて：白い灯台の形の柱（上にかさ）と、柱の前に青い「足摺岬」の看板（2026-11-14）
+  b.box(54, CLIFF + 1, 62, 56, CLIFF + 1, 64, stonewall); // 台
+  b.box(55, CLIFF + 2, 63, 55, CLIFF + 6, 63, castlewall); // 白い柱
+  b.box(54, CLIFF + 7, 62, 56, CLIFF + 7, 64, castlewall); // かさ
+  b.set(55, CLIFF + 8, 63, castlewall); // てっぺん
+  b.box(54, CLIFF + 4, 64, 56, CLIFF + 5, 64, glass); // 青い看板（柱の前）
 
   // ===== 椿のトンネル＝遊歩道の両側の椿が上でつながりアーチになる（つばきの岬） =====
   b.box(46, CLIFF, 44, 50, CLIFF, 64, road); // 遊歩道
@@ -315,7 +316,7 @@ export const ashizuri: SpotDefinition = {
       id: 'monument',
       name: 'Southernmost Point',
       nameJa: '四国最南端の碑',
-      region: { min: { x: 53, y: 20, z: 61 }, max: { x: 57, y: 25, z: 65 } },
+      region: { min: { x: 53, y: 20, z: 61 }, max: { x: 57, y: 28, z: 65 } },
       focus: { x: 55, y: 22, z: 63 },
       image: './photos/ashizuri/monument.jpg',
       credit: 'Photo: Dokudami / CC BY-SA 4.0 / Wikimedia Commons',

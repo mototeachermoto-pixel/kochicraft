@@ -22,6 +22,7 @@ import { WalkController, VIEW_LABEL, VIEW_ORDER, type ViewMode } from './WalkCon
 import { WorldManager } from './WorldManager';
 import { BuildController } from './BuildController';
 import { blockRegistry } from '@/world/BlockRegistry';
+import { WaterEffects } from '@/world/WaterEffects';
 
 type Mode = 'walk' | 'orbit' | 'build';
 
@@ -46,6 +47,8 @@ export class Engine {
   private readonly hudRoot: HTMLElement;
   /** プレイヤーの見た目（4種類のキャラクター） */
   private readonly avatar: Avatar;
+  /** 水に入ったときの見た目（水の中の青いにごり・水しぶき・波紋） */
+  private readonly water: WaterEffects;
   private viewBtn!: HTMLButtonElement;
   private skinBtn!: HTMLButtonElement;
   private mapBtn!: HTMLButtonElement;
@@ -139,6 +142,9 @@ export class Engine {
     // キャラクター（見た目）。選んだ種類と視点は端末に覚えさせる
     this.avatar = new Avatar(this.sceneManager.scene);
     this.avatar.setSkin(this.loadSkin());
+    this.water = new WaterEffects(this.sceneManager.scene, this.world, container, (t) =>
+      this.sceneManager.setUnderwater(t),
+    );
     this.walk.view = this.loadView();
     this.worldManager = new WorldManager(this.world, this.sceneManager.scene, this.camera, this.orbit);
     this.build = new BuildController(this.world, this.sceneManager.scene, this.camera, this.player);
@@ -424,6 +430,7 @@ export class Engine {
       return;
     }
     this.worldManager.loadSpot(spot);
+    this.water.reset();
     this.reachCache = null;
     // 編集の文脈（工作ひろば＋復元済みの編集差分）をセット
     this.build.setContext(spot.id, spot.field, this.worldManager.editCells);
@@ -1359,8 +1366,18 @@ export class Engine {
       this.build.update(dt);
     } else {
       // 近くの対象を判定して英語名バナーを出す
-      this.worldManager.updateNear();
+      this.worldManager.updateNear(this.walk.enabled ? { pos: this.player.position, yaw: this.player.yaw } : undefined);
     }
+
+    // 名所の光の柱（遠くからでも分かる目印。近づくと薄れ、向き合って名前が出たら消える。作るモードでは出さない）
+    this.worldManager.updateBeacons(
+      dt,
+      this.walk.enabled ? this.player.position : this.camera.position,
+      this.mode !== 'build',
+    );
+
+    // 水に入ったときの見た目（カメラが水の中なら青くにごらせる・体のまわりに水しぶきと波紋）
+    this.water.update(dt, this.camera, this.player.position, this.walk.enabled && this.walk.moving, this.walk.enabled);
 
     // 空をカメラについてこさせ、雲を流す
     this.sceneManager.update(dt, this.camera.position);

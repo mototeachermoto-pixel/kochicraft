@@ -1734,10 +1734,13 @@ canvas.kc-canvas {
   opacity: 0.7;
   margin-bottom: 10px;
 }
+/* 写真は、いちばん見せたい所（銅像・建物）が切れないよう、全体を枠の中に入れる。
+   縦長の写真は左右に、横長の写真は上下に、暗い色の余白が出る（2026-11-14 先生：主役が見切れている） */
 .info-panel__img {
   width: 100%;
-  max-height: 170px;
-  object-fit: cover;
+  height: 200px;
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.35);
   border-radius: 12px;
   margin-bottom: 10px;
 }
@@ -2130,8 +2133,11 @@ canvas.kc-canvas {
 }
 .key-guide__body {
   padding: 0 2px 2px;
-  /* 画面が低くても必ず収まるように（はみ出す分はスクロール） */
-  max-height: calc(100vh - 260px);
+  /* 画面が低くても必ず収まるように（はみ出す分はスクロール）。
+     上の端が、画面上のボタン（Back to list など）と案内の帯（上から約110px）にかからない高さまで。
+     下の位置 200px ＋ 上の 110px ＋ 見出し（Keys）の分 約40px を引く（2026-11-14 先生：上のボタンと重なって見づらい） */
+  max-height: calc(100vh - 350px);
+  max-height: calc(100dvh - 350px);
   overflow-y: auto;
   pointer-events: auto;
 }
@@ -3026,4 +3032,48 @@ canvas.kc-canvas {
 .info-block.is-saying .info-block__text {
   color: #ffd24a;
   transition: color 0.15s ease-out;
+}
+
+/* ---------- 水の中（カメラが水に入ったとき。WaterEffects.ts） ---------- */
+/* 3Dの絵の上・ボタンや文字の下に重ねる。上ほど明るい水色、下ほど深い青。光のゆらぎがゆっくり動く */
+.kc-underwater {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;
+  display: none;
+  background:
+    radial-gradient(ellipse at 50% 45%, rgba(0, 0, 0, 0) 45%, rgba(4, 30, 52, 0.45) 100%),
+    linear-gradient(to bottom, rgba(120, 210, 235, 0.28) 0%, rgba(30, 110, 160, 0.22) 45%, rgba(10, 50, 90, 0.38) 100%);
+}
+.kc-underwater--on {
+  display: block;
+}
+/* 水面から差しこむ光のゆらぎ（白っぽいまだら模様が、ゆっくり流れる） */
+.kc-underwater::before {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(ellipse 22% 9% at 25% 18%, rgba(220, 245, 255, 0.16), transparent 70%),
+    radial-gradient(ellipse 18% 7% at 68% 12%, rgba(220, 245, 255, 0.14), transparent 70%),
+    radial-gradient(ellipse 26% 10% at 50% 30%, rgba(220, 245, 255, 0.1), transparent 70%),
+    radial-gradient(ellipse 16% 6% at 85% 26%, rgba(220, 245, 255, 0.12), transparent 70%);
+  background-size: 100% 100%;
+  mix-blend-mode: screen;
+  animation: kc-caustics 7s ease-in-out infinite alternate;
+}
+@keyframes kc-caustics {
+  from {
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    transform: translate(6%, 3%) scale(1.08);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kc-underwater::before {
+    animation: none;
+  }
 }

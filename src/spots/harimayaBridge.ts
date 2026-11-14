@@ -90,7 +90,8 @@ function willow(b: Build, x: number, z: number, trunkH: number, wood: number, le
 
 
 /**
- * 路面電車（写真に合わせて：下が緑、窓のまわりがクリーム色、屋根が緑。屋根の上にパンタグラフ）。
+ * 路面電車（本物の写真（623号）に合わせて：下が赤、窓のまわりがクリーム色、屋根が緑。屋根の上にパンタグラフ。
+ * 2026-11-14 下の色を緑から赤に直した）。
  * x0 から +x 方向へ10ブロック。
  */
 function tram(
@@ -101,11 +102,12 @@ function tram(
   cream: number,
   glassId: number,
   dark: number,
+  red: number,
 ): void {
   const x1 = x0 + 9;
   const z1 = z0 + 1;
   b.box(x0 + 1, GROUND + 1, z0, x1 - 1, GROUND + 1, z1, dark); // 足回り
-  b.box(x0, GROUND + 2, z0, x1, GROUND + 2, z1, green); // 車体（下＝緑）
+  b.box(x0, GROUND + 2, z0, x1, GROUND + 2, z1, red); // 車体（下＝赤）
   b.box(x0, GROUND + 3, z0, x1, GROUND + 4, z1, cream); // 車体（窓のまわり＝クリーム）
   for (let x = x0 + 1; x <= x1 - 1; x++) {
     b.box(x, GROUND + 3, z0, x, GROUND + 4, z0, glassId); // 窓
@@ -138,6 +140,7 @@ function build(world: World): void {
   const bridgeWood = b.id('bridge'); // 橋の床板
   const bamboo = b.id('bamboo'); // 柳の明るい黄緑
   const glass = b.id('glass'); // 電車の窓
+  const castlewall = b.id('castlewall'); // 電車のクリーム色
   const road = b.id('road'); // 電車通り
 
   // ===== 地面（広い平らな公園＝建築スペース） =====
@@ -159,7 +162,7 @@ function build(world: World): void {
   b.box(28, GROUND, 29, 68, GROUND, 31, road); // 道路
   b.box(28, GROUND, 29, 68, GROUND, 29, tile); // レール（2本）
   b.box(28, GROUND, 31, 68, GROUND, 31, tile);
-  tram(b, 54, 29, leaves, lantern, glass, tile);
+  tram(b, 54, 29, leaves, castlewall, glass, tile, torii);
 
   // ===== 朱色の太鼓橋（名物） =====
   taikoBridge(b, 48, 40, torii, lantern, bridgeWood, tile, stonewall);

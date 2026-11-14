@@ -6,6 +6,7 @@ import { prefetchGasPhotos } from '@/data/GasPhotos';
 import { EditStore, type EditCell } from '@/data/EditStore';
 import type { OrbitCameraController } from './OrbitCameraController';
 import { Surroundings, padEdges } from '@/world/Surroundings';
+import { SpotBeacons } from '@/world/SpotBeacons';
 
 /** 「正面で向き合っている」と見なす、対象（領域のふち）までの最大距離（ブロック）。近くにいる時だけ反応する。 */
 const NEAR_FACE_MAX_DIST = 4;
@@ -14,7 +15,9 @@ const NEAR_FACE_CONE = (50 * Math.PI) / 180;
 
 /**
  * ハブと観光地ワールドの切替、および観光地内の「構造物の選択」を管理する。
- * 選択はタップ（レイ）と順送り（Tab/矢印）の両方に対応し、選択中は枠でハイライトする。
+ * 選択はタップ（レイ）と順送り（Tab/矢印）の両方に対応する。
+ * 名所の目印は「光の柱」（SpotBeacons）。前の黄色い枠線（選択中・正面の2種類）は、
+ * 分かりづらく混乱しやすいので 2026-11-14 にやめた（先生の希望）。
  */
 export class WorldManager {
   currentSpot: SpotDefinition | null = null;
@@ -29,14 +32,6 @@ export class WorldManager {
 
   private objects: SceneObject[] = [];
   private nearId: string | null = null;
-  private readonly highlight: THREE.LineSegments;
-  /**
-   * キャラクターが正面で向き合っている（狙っている）対象を示す枠。
-   * 選択中の黄色（#ffd24a・金っぽいベージュ寄り）とはっきり区別できる、
-   * より明るいビビッドレモン色（#fff200）の線だけの大枠（塗りつぶしなし）。
-   */
-  private readonly nearHighlight: THREE.LineSegments;
-  private readonly nearHighlightMat: THREE.LineBasicMaterial;
   private readonly raycaster = new THREE.Raycaster();
   private readonly hitBox = new THREE.Box3();
   private readonly hitPoint = new THREE.Vector3();
@@ -44,6 +39,8 @@ export class WorldManager {
 
   /** 観光地のまわりの景色（ふちの地面を外へ続け、遠くに山を置く。絵だけ） */
   private readonly surroundings = new Surroundings();
+  /** 名所の光の柱 */
+  private readonly beacons: SpotBeacons;
 
   constructor(
     private readonly world: World,
@@ -51,19 +48,8 @@ export class WorldManager {
     private readonly camera: THREE.PerspectiveCamera,
     private readonly orbit: OrbitCameraController,
   ) {
-    const edges = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1));
-    const mat = new THREE.LineBasicMaterial({ color: 0xffd24a, transparent: true, opacity: 0.95 });
-    this.highlight = new THREE.LineSegments(edges, mat);
-    this.highlight.visible = false;
-    this.highlight.renderOrder = 999;
-    scene.add(this.highlight);
-
-    this.nearHighlightMat = new THREE.LineBasicMaterial({ color: 0xfff200, transparent: true, opacity: 0.9 });
-    this.nearHighlight = new THREE.LineSegments(edges, this.nearHighlightMat);
-    this.nearHighlight.visible = false;
-    this.nearHighlight.renderOrder = 998;
-    scene.add(this.nearHighlight);
     scene.add(this.surroundings.group);
+    this.beacons = new SpotBeacons(scene);
   }
 
   /** 観光地ワールドを読み込む */
@@ -94,7 +80,9 @@ export class WorldManager {
     this.currentSpot = spot;
     this.orbit.setTarget(spot.center.x, spot.center.y, spot.center.z, spot.viewDistance);
     this.nearId = null;
-    this.nearHighlight.visible = false;
+    // 前の観光地で出ていた名前を消す（別の観光地に入っても名前が残ってしまっていた）
+    this.onNear?.(null);
+    this.beacons.setObjects(spot.id, this.objects);
     this.clearSelection();
   }
 
@@ -105,7 +93,7 @@ export class WorldManager {
     this.objects = [];
     this.currentSpot = null;
     this.nearId = null;
-    this.nearHighlight.visible = false;
+    this.beacons.clear();
     this.onNear?.(null);
     this.clearSelection();
   }
@@ -122,14 +110,21 @@ export class WorldManager {
    * しまう。それを防ぐため、範囲の中にいる場合だけは、対象の focus（見どころの代表点）までの
    * 実際の距離で測り直す。
    */
-  updateNear(): void {
-    const pos = this.camera.position;
-    this.camera.getWorldDirection(this.forwardVec);
-    this.forwardVec.y = 0;
-    this.forwardVec.normalize();
+  updateNear(viewer?: { pos: THREE.Vector3; yaw: number }): void {
+    // 歩くときは、キャラクターの位置と向きで決める（後ろ・横から見る視点ではカメラが4マスほど離れていて、
+    // カメラで測ると、すぐそばまで来ても名前が出なかったため。光の柱もキャラクターの位置で薄くしている）。
+    // 空から見るときは、カメラの位置と向きで決める
+    const pos = viewer ? viewer.pos : this.camera.position;
+    if (viewer) {
+      this.forwardVec.set(-Math.sin(viewer.yaw), 0, -Math.cos(viewer.yaw));
+    } else {
+      this.camera.getWorldDirection(this.forwardVec);
+      this.forwardVec.y = 0;
+      this.forwardVec.normalize();
+    }
 
     let near: SceneObject | null = null;
-    let bestDist = Infinity;
+    let bestScore = Infinity;
     for (const o of this.objects) {
       const r = o.region;
       const clampX = Math.max(r.min.x, Math.min(pos.x, r.max.x + 1));
@@ -143,7 +138,13 @@ export class WorldManager {
         dz = pos.z - o.focus.z;
         dist = Math.sqrt(dx * dx + dz * dz);
       }
-      if (dist > NEAR_FACE_MAX_DIST || dist >= bestDist) continue; // 遠すぎる／もっと近い候補が既にある
+      if (dist > NEAR_FACE_MAX_DIST) continue; // 遠すぎる
+      // 範囲のふちまでの距離が同じくらいの物が2つあるとき（お社と、その前に広がる海など）は、
+      // 名所の真ん中（focus）が近い方を選ぶ。広い範囲の物（海・森）が、小さな名所を押しのけないように
+      const fx = pos.x - o.focus.x;
+      const fz = pos.z - o.focus.z;
+      const score = dist + 0.15 * Math.sqrt(fx * fx + fz * fz);
+      if (score >= bestScore) continue; // もっと近い候補が既にある
 
       // 正対チェック：向いている方向と、対象（の代表点）への方向のなす角
       if (dist > 0.001) {
@@ -154,22 +155,25 @@ export class WorldManager {
         if (angle > NEAR_FACE_CONE) continue; // 正面から外れすぎ（横・後ろ）は対象外
       }
 
-      bestDist = dist;
+      bestScore = score;
       near = o;
     }
 
     const id = near ? near.id : null;
     if (id !== this.nearId) {
       this.nearId = id;
+      if (near) this.beacons.markVisited(near); // 名前を見た名所は、光の柱を弱くする
       this.onNear?.(near);
-      if (near) this.updateNearHighlight(near);
-      else this.nearHighlight.visible = false;
     }
-    // ふわっと光らせる（点滅ではなく、薄い⇄濃いをゆっくり繰り返す）
-    if (this.nearHighlight.visible) {
-      const t = performance.now() / 1000;
-      this.nearHighlightMat.opacity = 0.65 + 0.3 * Math.sin(t * 2.4);
-    }
+  }
+
+  /**
+   * 光の柱を毎フレーム更新する（どのモードでも呼ぶ）。
+   * @param viewer  明るさの基準（歩くときはキャラクターの位置、空から見るときはカメラ）
+   * @param visible 柱を出すか（作るモードでは出さない）
+   */
+  updateBeacons(dt: number, viewer: THREE.Vector3, visible: boolean): void {
+    this.beacons.update(dt, viewer, visible ? this.nearId : null, visible);
   }
 
   getObjects(): SceneObject[] {
@@ -184,7 +188,7 @@ export class WorldManager {
     }
     this.selectedIndex = i;
     const o = this.objects[i];
-    this.updateHighlight(o);
+    this.beacons.markVisited(o); // 説明を開いた名所も「行った」ことにする
     this.orbit.focusOn(o.focus.x, o.focus.y, o.focus.z);
     this.onSelect?.(o);
   }
@@ -199,7 +203,6 @@ export class WorldManager {
 
   clearSelection(): void {
     this.selectedIndex = -1;
-    this.highlight.visible = false;
     this.onSelect?.(null);
   }
 
@@ -227,33 +230,5 @@ export class WorldManager {
     }
     this.clearSelection();
     return false;
-  }
-
-  private updateHighlight(o: SceneObject): void {
-    const w = o.region.max.x - o.region.min.x + 1;
-    const h = o.region.max.y - o.region.min.y + 1;
-    const d = o.region.max.z - o.region.min.z + 1;
-    this.highlight.scale.set(w, h, d);
-    this.highlight.position.set(
-      o.region.min.x + w / 2,
-      o.region.min.y + h / 2,
-      o.region.min.z + d / 2,
-    );
-    this.highlight.visible = true;
-  }
-
-  /** 「近くにいる」対象の枠（水色・少し大きめ）を更新する */
-  private updateNearHighlight(o: SceneObject): void {
-    const w = o.region.max.x - o.region.min.x + 1;
-    const h = o.region.max.y - o.region.min.y + 1;
-    const d = o.region.max.z - o.region.min.z + 1;
-    // 選択中の黄色い枠とぴったり重なって見えづらくならないよう、一回り大きくする
-    this.nearHighlight.scale.set(w * 1.06, h * 1.06, d * 1.06);
-    this.nearHighlight.position.set(
-      o.region.min.x + w / 2,
-      o.region.min.y + h / 2,
-      o.region.min.z + d / 2,
-    );
-    this.nearHighlight.visible = true;
   }
 }
