@@ -131,6 +131,10 @@ export class Engine {
     const touchDevice = window.matchMedia?.('(pointer: coarse)').matches ?? false;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, touchDevice ? 1.5 : 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+    // 太陽の影。タッチの端末は少し軽い影にする（影の絵はブロックが変わったときだけかき直す）
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = touchDevice ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.autoUpdate = false;
     const canvas = this.renderer.domElement;
     canvas.classList.add('kc-canvas');
     container.prepend(canvas);
@@ -142,7 +146,7 @@ export class Engine {
       CAMERA_FAR,
     );
 
-    this.sceneManager = new SceneManager();
+    this.sceneManager = new SceneManager(this.renderer, touchDevice ? 1024 : 2048);
     this.world = new World();
     this.sceneManager.add(this.world.group);
     this.player = new Player();
@@ -486,6 +490,7 @@ export class Engine {
       return;
     }
     this.worldManager.loadSpot(spot);
+    this.sceneManager.setSpot(spot.id);
     this.water.reset();
     this.reachCache = null;
     // 編集の文脈（工作ひろば＋復元済みの編集差分）をセット
@@ -972,6 +977,7 @@ export class Engine {
     this.walk.enabled = false;
     this.speech.cancel();
     this.worldManager.unload();
+    this.sceneManager.setSpot(null);
     this.visitors.clear();
     this.introCard.close();
     this.infoPanel.hide();

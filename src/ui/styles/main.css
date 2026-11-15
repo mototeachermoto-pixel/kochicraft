@@ -3672,3 +3672,153 @@ canvas.kc-canvas {
 .intro-type__hint[hidden] {
   display: none;
 }
+
+/* =========================================================
+   見た目の改善・第4段階（2026-11-15）：画面の部品を、明るいブロックの世界に合わせる
+   - 色：空の青・草の緑・日ざしの黄・クリーム色の紙。暗い紺の画面をやめる
+   - 文字：丸みのある読みやすい文字（端末に入っているもの。iPad＝丸ゴシック、Windows＝UD ゴシック）
+   - ボタン：下に厚みのある「ブロック」の形。押すとしずむ
+   ここより上の指定を上書きする形で書く（元にもどすときは、このかたまりを消せばよい）
+   ========================================================= */
+:root {
+  --kc-sky: #8fd0f2;
+  --kc-sky-pale: #dff3fb;
+  --kc-grass: #7cc36a;
+  --kc-sun: #ffd36b;
+  --kc-cream: #fffaf0;
+  --kc-ink: #2b3327;
+  --kc-accent-deep: #0b5a45;
+  font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", "Hiragino Kaku Gothic ProN", "Yu Gothic UI",
+    "Noto Sans JP", system-ui, sans-serif;
+}
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+/* ボタン：下に厚みをつけて、ブロックのように。押すとしずむ */
+.kc-btn {
+  box-shadow: 0 4px 0 var(--kc-accent-deep), 0 6px 12px rgba(0, 0, 0, 0.22);
+  transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.15s ease;
+}
+.kc-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--kc-accent-deep), 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+.kc-btn.is-active {
+  box-shadow: 0 0 0 3px #fff, 0 4px 0 var(--kc-accent-deep), 0 6px 12px rgba(0, 0, 0, 0.22);
+}
+
+/* 読みこみ画面・観光地の一覧：晴れた空と草原の色 */
+html,
+body {
+  background: var(--kc-sky);
+}
+.loading,
+.hub-screen {
+  background:
+    radial-gradient(ellipse 60% 26% at 82% 8%, rgba(255, 244, 200, 0.95), rgba(255, 244, 200, 0) 70%),
+    linear-gradient(180deg, #6fbcec 0%, var(--kc-sky) 34%, var(--kc-sky-pale) 62%, #bfe6a4 82%, var(--kc-grass) 100%);
+  color: var(--kc-ink);
+}
+.loading__title,
+.hub-screen__title {
+  color: #fff;
+  text-shadow: 0 3px 0 var(--kc-accent-dark), 0 6px 14px rgba(15, 110, 86, 0.35);
+  -webkit-text-stroke: 1px var(--kc-accent-dark);
+  paint-order: stroke fill;
+}
+.loading__sub,
+.hub-screen__sub {
+  color: var(--kc-ink);
+  opacity: 1;
+  font-weight: 700;
+}
+.loading__bar {
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: inset 0 0 0 2px rgba(15, 110, 86, 0.25);
+}
+
+/* 観光地のカード：クリーム色の紙のブロック */
+.spot-card {
+  background: var(--kc-cream);
+  border: 2px solid #e6dcc4;
+  color: var(--kc-ink);
+  box-shadow: 0 4px 0 #d8cbab, 0 8px 16px rgba(40, 70, 50, 0.18);
+  backdrop-filter: none;
+}
+.spot-card:hover:not(.is-soon),
+.spot-card:focus-visible:not(.is-soon) {
+  background: #fff;
+  border-color: var(--kc-accent);
+  box-shadow: 0 6px 0 var(--kc-accent), 0 10px 18px rgba(40, 70, 50, 0.22);
+  transform: translateY(-2px);
+}
+.spot-card:active:not(.is-soon) {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 var(--kc-accent), 0 4px 8px rgba(40, 70, 50, 0.2);
+}
+.spot-card__ja {
+  opacity: 0.75;
+}
+.spot-card__status {
+  color: var(--kc-accent-dark);
+}
+.spot-card.is-soon .spot-card__status {
+  color: #7a7a72;
+}
+@media (prefers-reduced-motion: reduce) {
+  .kc-btn,
+  .spot-card {
+    transition: none;
+  }
+}
+
+/* 明るい背景の上の文字：白をやめて、こい色に（読みやすさ） */
+.hub-screen__keys {
+  color: var(--kc-ink);
+  font-weight: 700;
+}
+.hub-who__name {
+  color: var(--kc-ink);
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 2px 0 rgba(15, 110, 86, 0.25);
+  font-weight: 700;
+}
+.hub-who__name.is-friend {
+  color: #3a2400;
+  background: #ffc861;
+}
+
+/* 入口をえらぶ画面：暗い紺の幕をやめて、空の色がすける明るい幕に */
+.mode-chooser {
+  background: rgba(214, 240, 250, 0.82);
+  backdrop-filter: blur(3px);
+}
+.mode-chooser__title {
+  color: var(--kc-accent-dark);
+}
+.mode-chooser__sub,
+.mode-chooser__keys {
+  color: var(--kc-ink);
+  opacity: 1;
+  font-weight: 700;
+}
+.mode-card {
+  box-shadow: 0 5px 0 #d8cbab, 0 10px 20px rgba(40, 70, 50, 0.2);
+}
+
+/* 見た目の改善・第5段階：場所を切りかえるときの幕を、暗い紺から、明るい空の色に */
+.kc-fade {
+  background: linear-gradient(180deg, #8fd0f2 0%, #dff3fb 70%, #eaf7df 100%);
+  transition: opacity 0.4s ease-out;
+}
+.kc-fade.is-on {
+  opacity: 1;
+}
+.kc-fade__text {
+  color: var(--kc-accent-dark);
+  font-size: 26px;
+}

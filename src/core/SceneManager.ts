@@ -2,6 +2,15 @@ import * as THREE from 'three';
 import { CAMERA_FAR } from '@/config/constants';
 import type { EnvironmentState } from '@/types';
 import { styleUniforms } from '@/world/blockStyles';
+import { shadowState } from '@/world/shadowState';
+import { AmbientMotes } from '@/world/AmbientMotes';
+import { WORLD_WIDTH, WORLD_DEPTH, SEA_LEVEL } from '@/config/constants';
+
+/**
+ * 太陽の向き（2026-11-15 見た目の改善・第1段階）。ななめ上（+x・+z 側）から当てて、
+ * 建物や木の影が地面に落ちるようにする。ブロックの面の明るさ（ChunkMesher の shadeFor）と同じ向き。
+ */
+const SUN_DIR = new THREE.Vector3(0.52, 0.86, 0.4).normalize();
 
 /**
  * Three.js のシーンとライティング・空・霧の管理。
@@ -25,6 +34,8 @@ export class SceneManager {
   /** ゆっくり流れる、四角い雲 */
   private readonly clouds = new THREE.Group();
   private time = 0;
+  /** 空中を舞う花びら・葉・光のつぶ */
+  private readonly motes: AmbientMotes;
 
   /** 水の中の色（にごった青緑）。カメラが水に入ると、霧と背景をこの色にする */
   private readonly waterColor = new THREE.Color('#1d5f86');
@@ -33,20 +44,48 @@ export class SceneManager {
   /** 0＝水の外、1＝水の中 */
   private underwater = 0;
 
-  constructor() {
-    // 環境光：全体の明るさの底上げ
-    this.ambient = new THREE.AmbientLight(0xffffff, 0.5);
+  /**
+   * @param renderer   影をかき直す合図を送る先（無くても動く）
+   * @param shadowSize 影の絵の細かさ（パソコン 2048・タッチの端末 1024）
+   */
+  constructor(
+    private readonly renderer?: THREE.WebGLRenderer,
+    shadowSize = 2048,
+  ) {
+    // 「南国土佐の晴れた日」の光：日なたは暖かい色、日かげは少し青い色にして、立体と奥行きを出す。
+    // 日なたの明るさの合計は今までとほぼ同じにして、日かげだけを落とす（まぶしすぎない・暗すぎない）。
+    // 環境光：日かげの底の明るさ（空の青みを少し）
+    this.ambient = new THREE.AmbientLight(0xcfdcff, 0.4);
     this.scene.add(this.ambient);
 
-    // 半球光：空（上）と地面（下）からの柔らかい光で立体感を出す
-    this.hemi = new THREE.HemisphereLight(0xbfe3ff, 0x4a6b3a, 0.4);
+    // 半球光：空（上）からの青い光と、地面（下）からの暖かい照り返し
+    this.hemi = new THREE.HemisphereLight(0xbfe0ff, 0x9c8a66, 0.52);
     this.scene.add(this.hemi);
 
-    // 太陽：平行光源（昼夜で位置・色・強さが変わる）
-    this.sun = new THREE.DirectionalLight(0xfff4e0, 1.0);
-    this.sun.position.set(60, 100, 40);
+    // 太陽：暖かい色の平行な光。影を落とす
+    this.sun = new THREE.DirectionalLight(0xffedc8, 1.3);
+    const cx = WORLD_WIDTH / 2;
+    const cz = WORLD_DEPTH / 2;
+    this.sun.target.position.set(cx, SEA_LEVEL, cz);
+    this.sun.position.copy(this.sun.target.position).addScaledVector(SUN_DIR, 150);
+    this.sun.castShadow = true;
+    this.sun.shadow.mapSize.set(shadowSize, shadowSize);
+    // 観光地（96×96マス）と、そのふちの少し外までを影の範囲にする
+    const half = Math.max(WORLD_WIDTH, WORLD_DEPTH) * 0.5 + 24;
+    const cam = this.sun.shadow.camera;
+    cam.left = -half;
+    cam.right = half;
+    cam.top = half;
+    cam.bottom = -half;
+    cam.near = 20;
+    cam.far = 320;
+    cam.updateProjectionMatrix();
+    // 影のしま模様（自分の面に自分の影がうつる）を防ぐ
+    this.sun.shadow.bias = -0.0006;
+    this.sun.shadow.normalBias = 0.06;
     this.scene.add(this.sun);
     this.scene.add(this.sun.target);
+    this.sun.target.updateMatrixWorld();
 
     // 背景色と霧（遠景をなじませる）。観光地のまわりの景色（Surroundings）が、遠くで空にとけこむ距離
     this.scene.background = this.bgColor;
@@ -55,11 +94,17 @@ export class SceneManager {
 
     // 空のドーム：上ほど濃い青、地平線に近いほど白っぽい青（霧と同じ色）
     this.skyMat = new THREE.ShaderMaterial({
-      uniforms: { top: { value: this.zenith }, horizon: { value: this.bgColor } },
+      uniforms: { top: { value: this.zenith }, horizon: { value: this.bgColor }, sunDir: { value: SUN_DIR } },
       vertexShader: `varying vec3 vDir;
         void main() { vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-      fragmentShader: `uniform vec3 top; uniform vec3 horizon; varying vec3 vDir;
-        void main() { float h = clamp(normalize(vDir).y, 0.0, 1.0); gl_FragColor = vec4(mix(horizon, top, pow(h, 0.6)), 1.0);
+      fragmentShader: `uniform vec3 top; uniform vec3 horizon; uniform vec3 sunDir; varying vec3 vDir;
+        void main() { vec3 d = normalize(vDir); float h = clamp(d.y, 0.0, 1.0);
+          vec3 col = mix(horizon, top, pow(h, 0.6));
+          // 太陽：まるい光と、そのまわりのやわらかい明るさ
+          float s = max(dot(d, sunDir), 0.0);
+          col += vec3(1.0, 0.93, 0.74) * (pow(s, 24.0) * 0.22 + pow(s, 300.0) * 0.5);
+          col = mix(col, vec3(1.0, 0.98, 0.9), smoothstep(0.9990, 0.9994, s));
+          gl_FragColor = vec4(col, 1.0);
           #include <colorspace_fragment>
         }`,
       side: THREE.BackSide,
@@ -78,6 +123,9 @@ export class SceneManager {
 
     this.buildClouds();
     this.scene.add(this.clouds);
+
+    this.motes = new AmbientMotes(shadowSize < 2048);
+    this.scene.add(this.motes.points);
   }
 
   /** 四角い雲（平たい白い箱を2〜3こ重ねたもの）を、空のあちこちに置く。毎回同じ並びになる */
@@ -110,7 +158,12 @@ export class SceneManager {
   /** 雲をゆっくり流し、空をカメラについてこさせる（毎フレーム） */
   update(dt: number, cameraPos: THREE.Vector3): void {
     this.time += dt;
-    void cameraPos;
+    this.motes.update(this.time, cameraPos, this.renderer?.domElement.height ?? 720);
+    // ブロックが変わったときだけ、影をかき直す
+    if (shadowState.dirty && this.renderer) {
+      shadowState.dirty = false;
+      this.renderer.shadowMap.needsUpdate = true;
+    }
     // 水のゆらぎ（ブロックの模様）の時間
     styleUniforms.kcTime.value = this.time;
     for (const c of this.clouds.children) {
@@ -134,6 +187,12 @@ export class SceneManager {
     const sky = t < 0.5;
     this.sky.visible = sky;
     this.clouds.visible = sky;
+    this.motes.setHidden(!sky);
+  }
+
+  /** いまの観光地（null＝一覧の画面）。空中を舞うつぶの色と、出す・出さないを決める */
+  setSpot(id: string | null): void {
+    this.motes.setSpot(id);
   }
 
   /** 表示オブジェクトを追加 */

@@ -132,13 +132,14 @@ uniform vec3 kcHaze;
           `{
             float dx = max(max(kcField.x - vKcPos.x, vKcPos.x - kcField.z), 0.0);
             float dz = max(max(kcField.y - vKcPos.z, vKcPos.z - kcField.w), 0.0);
-            float amount = (0.08 + 0.92 * smoothstep(0.0, 90.0, max(dx, dz))) * (vKcPos.y > kcBase + 0.5 ? 0.36 : 0.12);
+            // 淡くしすぎると街や山が灰色にかすんで見えるので、色が残るていどにとどめる（遠くは霧がさらにとかす）
+            float amount = (0.06 + 0.8 * smoothstep(0.0, 120.0, max(dx, dz))) * (vKcPos.y > kcBase + 0.5 ? 0.28 : 0.1);
             outgoingLight = mix(outgoingLight, kcHaze, amount);
           }
           #include <opaque_fragment>`,
         );
     };
-    this.material.customProgramCacheKey = () => 'kc-surroundings-haze-2';
+    this.material.customProgramCacheKey = () => 'kc-surroundings-haze-4';
   }
 
   /** いまの観光地に合わせて作り直す */
@@ -406,18 +407,24 @@ uniform vec3 kcHaze;
       box(x - r, base + th, z - r, x + 1 + r, base + th + lh, z + 1 + r, lc, STYLE_LEAVES, lc, STYLE_LEAVES);
       if (r > 1 && rand() < 0.6) box(x - r + 1, base + th + lh, z - r + 1, x + r, base + th + lh + 2, z + r, lc, STYLE_LEAVES, lc, STYLE_LEAVES);
     };
-    const wallColors = ['#e9e4d6', '#d8d2c4', '#c9c6be', '#b9c4cc', '#e2d6bf', '#a9b5bf', '#d9cfc0', '#c9c2b4', '#cfd6da', '#e4dfd2', '#a8644c'].map(hexColor);
-    const roofGray = hexColor('#7d7f82');
+    // かべの色：灰色ばかりにせず、クリーム・うす黄・うすもも・水色・レンガ色をまぜて、明るい街に見せる
+    // （色の数は変えない。数を変えると、建物の並びが変わってしまう）
+    const wallColors = ['#f1e7d0', '#ead9b8', '#e6cdb4', '#c3d6e2', '#f0deb0', '#b4cbd8', '#e8d2c0', '#d8cdb6', '#d3e0dc', '#f3ecda', '#b9694e'].map(hexColor);
+    const roofGray = hexColor('#8b8c88');
+    // 屋上の色：灰色のほかに、赤茶・青ねず・緑ねずを、かべの色に合わせて決める（乱数は使わない）
+    const roofTints = ['#8b8c88', '#9a6a55', '#6f7f8f', '#7d8b78', '#8b8c88'].map(hexColor);
     /** ビル（窓のならぶ箱）。屋上は灰色 */
     const building = (bx: number, bz: number, w: number, d: number, h: number): void => {
       if (!onLand(bx + w / 2, bz + d / 2, Math.max(w, d) / 2 + 1)) return;
-      const wc = wallColors[Math.floor(rand() * wallColors.length)];
-      box(bx, base, bz, bx + w, base + h, bz + d, roofGray, STYLE_STONE, wc, STYLE_WINDOWS);
+      const wi = Math.floor(rand() * wallColors.length);
+      const wc = wallColors[wi];
+      const rt = roofTints[(wi + Math.round(bx / 10) + Math.round(bz / 10) * 3 + 400) % roofTints.length];
+      box(bx, base, bz, bx + w, base + h, bz + d, rt, STYLE_STONE, wc, STYLE_WINDOWS);
       // ときどき屋上に小さな出っぱり（階段室・看板）
       if (h > 6 && rand() < 0.5) box(bx + 1, base + h, bz + 1, bx + 3, base + h + 2, bz + 3, roofGray, STYLE_STONE, wc, STYLE_PLAIN);
     };
     const plaster = ['#efeadf', '#e6dccb', '#d9d4c8'].map(hexColor);
-    const roofs = ['#4a5560', '#5a4038', '#3f4b5c', '#6b5a4a'].map(hexColor);
+    const roofs = ['#4a5560', '#9a5a42', '#3f4b5c', '#7a5f48'].map(hexColor);
     /** 家（白いかべに、だんだんの屋根） */
     const house = (hx: number, hz: number): void => {
       if (!onLand(hx + 2, hz + 2, 4)) return;
@@ -429,7 +436,7 @@ uniform vec3 kcHaze;
       box(hx - 1, base + 3, hz - 1, hx + w + 1, base + 4, hz + d + 1, rc, STYLE_TILE, rc, STYLE_TILE);
       box(hx, base + 4, hz + 1, hx + w, base + 5, hz + d - 1, rc, STYLE_TILE, rc, STYLE_TILE);
     };
-    const paddy = hexColor('#7fae4a');
+    const paddy = hexColor('#86b84c');
     const paddy2 = hexColor('#9cbf5a');
     /** 田んぼ・畑（平らな四角） */
     const paddyField = (fx: number, fz: number): void => {
@@ -458,8 +465,8 @@ uniform vec3 kcHaze;
     // --- 近くの景色 ---
     if (bd.near === 'city') {
       // 10マスごとの区画（道3マス＋ビル7マス）。近くは低め、遠くほど高いビル
-      const sidewalk = hexColor('#a7a7a2');
-      const parkGreen = hexColor('#6f9a55');
+      const sidewalk = hexColor('#bdb6a6');
+      const parkGreen = hexColor('#78aa56');
       band(12, 100, 10, (x, z, d) => {
         const gx = Math.floor(x / 10) * 10 + 3;
         const gz = Math.floor(z / 10) * 10 + 3;
@@ -996,6 +1003,7 @@ uniform vec3 kcHaze;
     const mesh = new THREE.Mesh(geo, this.material);
     // 観光地の地面と同じ高さで重なっても、ちらつかないように少しだけ下げる
     mesh.position.y = -0.02;
+    mesh.receiveShadow = true; // 観光地のふちの建物や木の影が、外の地面にも続くように
     this.group.add(mesh);
   }
 

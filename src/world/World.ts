@@ -1,3 +1,4 @@
+import { shadowState } from './shadowState';
 import * as THREE from 'three';
 import {
   CHUNK_SIZE,
@@ -219,6 +220,8 @@ export class World implements VoxelWriter {
       const mesh = new THREE.Mesh(opaque, this.opaqueMaterial);
       mesh.position.set(chunk.originX, 0, chunk.originZ);
       mesh.name = `chunk-opaque-${chunk.cx}-${chunk.cz}`;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
       this.group.add(mesh);
       chunk.opaqueMesh = mesh;
     }
@@ -226,10 +229,12 @@ export class World implements VoxelWriter {
       const mesh = new THREE.Mesh(transparent, this.transparentMaterial);
       mesh.position.set(chunk.originX, 0, chunk.originZ);
       mesh.name = `chunk-transparent-${chunk.cx}-${chunk.cz}`;
+      mesh.receiveShadow = true; // 水やガラスは影を受けるだけ（落とさない）
       this.group.add(mesh);
       chunk.transparentMesh = mesh;
     }
     chunk.dirty = false;
+    shadowState.dirty = true; // ブロックが変わったので、影をかき直す
   }
 
   /** ワールド中心付近で立てる地面を探してスポーン地点を決める */
