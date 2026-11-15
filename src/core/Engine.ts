@@ -490,7 +490,6 @@ export class Engine {
       return;
     }
     this.worldManager.loadSpot(spot);
-    this.sceneManager.setSpot(spot.id);
     this.water.reset();
     this.reachCache = null;
     // 編集の文脈（工作ひろば＋復元済みの編集差分）をセット
@@ -977,7 +976,6 @@ export class Engine {
     this.walk.enabled = false;
     this.speech.cancel();
     this.worldManager.unload();
-    this.sceneManager.setSpot(null);
     this.visitors.clear();
     this.introCard.close();
     this.infoPanel.hide();

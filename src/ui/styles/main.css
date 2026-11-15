@@ -3822,3 +3822,15 @@ body {
   color: var(--kc-accent-dark);
   font-size: 26px;
 }
+
+/* 紹介カード（2026-11-16）：出ている間は、右の説明パネルと留学生の吹き出しをかくす（重なって読めなくなるため） */
+body.kc-intro-open .info-panel,
+body.kc-intro-open .visitor-bubble {
+  display: none !important;
+}
+/* 入力中（iPad はキーボードが画面の下半分をかくす）は、カードを画面の上へ */
+.intro-card.intro-card--top {
+  top: 8px;
+  bottom: auto;
+  z-index: 40;
+}

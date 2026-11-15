@@ -107,6 +107,9 @@ export class IntroCard {
     );
     this.bindTypeBox();
     this.renderSteps();
+    // 紹介カードが出ている間は、右の説明パネルと留学生の吹き出しをかくす（重なって読めなくなるため）
+    document.body.classList.add('kc-intro-open');
+    this.el.classList.remove('intro-card--top');
     this.el.classList.remove('hidden');
     this.el.classList.remove('intro-card--in');
     void this.el.offsetWidth;
@@ -118,6 +121,8 @@ export class IntroCard {
     window.clearTimeout(this.autoTimer);
     this.stopListening();
     this.el.classList.add('hidden');
+    this.el.classList.remove('intro-card--top');
+    document.body.classList.remove('kc-intro-open');
     this.obj = null;
   }
 
@@ -384,6 +389,8 @@ export class IntroCard {
     const box = this.typeInput();
     if (!box) return;
     box.addEventListener('focus', () => {
+      // iPad は画面の下半分にキーボードが出るので、入力中はカードを画面の上へ動かす
+      this.el.classList.add('intro-card--top');
       this.speech.cancel();
       if (this.stage === 0) this.setStage(1);
     });
@@ -395,6 +402,7 @@ export class IntroCard {
       } else if (e.key === 'Escape') box.blur();
     });
     box.addEventListener('keyup', (e) => e.stopPropagation());
+    box.addEventListener('blur', () => this.el.classList.remove('intro-card--top'));
     // 音声入力で文字が入るたびに色分けし、文字が止まって合格なら自動で「Great!」にする
     box.addEventListener('input', () => {
       if (this.finishing) return;

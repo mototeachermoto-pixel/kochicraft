@@ -3,7 +3,6 @@ import { CAMERA_FAR } from '@/config/constants';
 import type { EnvironmentState } from '@/types';
 import { styleUniforms } from '@/world/blockStyles';
 import { shadowState } from '@/world/shadowState';
-import { AmbientMotes } from '@/world/AmbientMotes';
 import { WORLD_WIDTH, WORLD_DEPTH, SEA_LEVEL } from '@/config/constants';
 
 /**
@@ -34,8 +33,6 @@ export class SceneManager {
   /** ゆっくり流れる、四角い雲 */
   private readonly clouds = new THREE.Group();
   private time = 0;
-  /** 空中を舞う花びら・葉・光のつぶ */
-  private readonly motes: AmbientMotes;
 
   /** 水の中の色（にごった青緑）。カメラが水に入ると、霧と背景をこの色にする */
   private readonly waterColor = new THREE.Color('#1d5f86');
@@ -123,9 +120,6 @@ export class SceneManager {
 
     this.buildClouds();
     this.scene.add(this.clouds);
-
-    this.motes = new AmbientMotes(shadowSize < 2048);
-    this.scene.add(this.motes.points);
   }
 
   /** 四角い雲（平たい白い箱を2〜3こ重ねたもの）を、空のあちこちに置く。毎回同じ並びになる */
@@ -158,7 +152,7 @@ export class SceneManager {
   /** 雲をゆっくり流し、空をカメラについてこさせる（毎フレーム） */
   update(dt: number, cameraPos: THREE.Vector3): void {
     this.time += dt;
-    this.motes.update(this.time, cameraPos, this.renderer?.domElement.height ?? 720);
+    void cameraPos;
     // ブロックが変わったときだけ、影をかき直す
     if (shadowState.dirty && this.renderer) {
       shadowState.dirty = false;
@@ -187,12 +181,6 @@ export class SceneManager {
     const sky = t < 0.5;
     this.sky.visible = sky;
     this.clouds.visible = sky;
-    this.motes.setHidden(!sky);
-  }
-
-  /** いまの観光地（null＝一覧の画面）。空中を舞うつぶの色と、出す・出さないを決める */
-  setSpot(id: string | null): void {
-    this.motes.setSpot(id);
   }
 
   /** 表示オブジェクトを追加 */
