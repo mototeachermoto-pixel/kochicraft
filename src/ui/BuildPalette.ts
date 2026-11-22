@@ -45,8 +45,29 @@ export class BuildPalette {
     const slots = document.createElement('div');
     slots.className = 'hotbar-slots';
     this.root.appendChild(slots);
+    this.slotsEl = slots;
+    this.fill(PALETTE_KEYS);
 
-    PALETTE_KEYS.forEach((key) => {
+    parent.appendChild(this.root);
+    this.highlight();
+  }
+
+  private readonly slotsEl: HTMLElement;
+
+  /** 選べるブロックを入れかえる（名所の注文で使うブロックを出すため）。なければいつもの10こ */
+  setKeys(keys: string[] | undefined): void {
+    this.fill(keys && keys.length ? keys : PALETTE_KEYS);
+    this.activeIndex = 0;
+    this.highlight();
+    this.onPick(this.getActiveId());
+  }
+
+  private fill(keys: string[]): void {
+    const slots = this.slotsEl;
+    slots.innerHTML = '';
+    this.slotEls.length = 0;
+    this.ids.length = 0;
+    keys.slice(0, 10).forEach((key) => {
       const block = blockRegistry.getByKey(key);
       if (!block) return;
       const idx = this.ids.length;
@@ -64,9 +85,6 @@ export class BuildPalette {
       slots.appendChild(btn);
       this.slotEls.push(btn);
     });
-
-    parent.appendChild(this.root);
-    this.highlight();
   }
 
   /** いま選んでいるブロックID */
@@ -87,6 +105,22 @@ export class BuildPalette {
     this.activeIndex = i;
     this.highlight();
     this.onPick(this.ids[i]);
+  }
+
+  /** ブロックIDで選ぶ（パレットにあれば） */
+  selectId(id: number): void {
+    const i = this.ids.indexOf(id);
+    if (i >= 0 && i !== this.activeIndex) {
+      this.activeIndex = i;
+      this.highlight();
+    }
+  }
+
+  /** ブロックの key で選ぶ */
+  selectKey(key: string): void {
+    const id = blockRegistry.getByKey(key)?.id;
+    const i = id === undefined ? -1 : this.ids.indexOf(id);
+    if (i >= 0) this.selectIndex(i);
   }
 
   /** 数字キーから選ぶ（1〜9 → 0..8番目、0 → 10番目） */

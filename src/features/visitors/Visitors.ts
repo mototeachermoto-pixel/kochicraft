@@ -3,6 +3,8 @@ import { Avatar, type KidLook } from '@/player/Avatar';
 import type { World } from '@/world/World';
 import type { SpeechService } from '@/features/language/SpeechService';
 import type { SceneObject } from '@/spots/SpotDefinition';
+import { SPOT_CHATS, type Like } from './chatLines';
+import { MOVE_SPEED, SPRINT_SPEED } from '@/config/constants';
 
 /**
  * 留学生ゲーム ステップ1「留学生と出会う」（2026-11-14 先生と決めた順番の1つ目）。
@@ -15,7 +17,18 @@ import type { SceneObject } from '@/spots/SpotDefinition';
  *   押すと、自分のセリフが画面の下に出て読み上げ → 留学生が「I want to go to ～.」と答える（行き先は名所からランダム）。
  *   行き先が決まると onRequest で知らせる（Engine が光の柱を目立たせ、画面の上に行き先を出す）。
  *   いちどに頼まれるのは1人だけ。
+ * 道案内の間のおしゃべり（2026-11-22）：案内中、ときどき画面の下のカードに留学生のひとことが出る（chatLines.ts）。
+ *   - 留学生の質問＋「Try:」答えの例 ／「What can I do here?」＋その観光地の You can ～. ／
+ *     「Do you like ～?」を文字で見せ、少しあとに留学生が自動で答える（ボタンなし）。
+ *   - 次のおしゃべりは、時間ではなく歩いた距離（28秒分）で出す。カードは9秒で消える。
+ *   - 紹介カードが出ている間・案内していない間は出さない。
  */
+/** 道案内の間、次のおしゃべりまでの歩く距離（ブロック）＝ふつうに歩いて28秒分（5ブロック/秒×28）。止まっていると出ない */
+const CHAT_WALK = MOVE_SPEED * 28;
+/** はじめの「Let's go!」までの距離（3秒分） */
+const CHAT_FIRST = MOVE_SPEED * 3;
+/** おしゃべりのカードを出しておく秒数（過ぎたら自動で消える） */
+const CHAT_SHOW = 9;
 
 interface VisitorDef {
   name: string;
@@ -45,6 +58,11 @@ const GROUPS: VisitorDef[][] = [
     { name: 'Sam', pitch: 1.05, look: { girl: false, skin: 0xf6d2bd, hair: 0xb5482b, shirt: 0x27ae60, pants: 0x6d4c41 } },
   ],
 ];
+
+/** 名前から留学生の見た目・声の高さをひく（ブロックのモードの注文の人にも使う） */
+export function visitorDef(name: string): { look: KidLook; pitch: number } | undefined {
+  return GROUPS.flat().find((d) => d.name === name);
+}
 
 /** よろこぶ時間（秒）。カメラが顔の前へ寄っている時間 */
 export const JOY_TIME = 3.2;
@@ -103,6 +121,26 @@ export class Visitors {
   private active: Visitor | null = null;
   /** 答えを待っているタイマー */
   private answerTimer = 0;
+  /** いまの観光地の id（おしゃべりの文をえらぶため） */
+  private spotId = '';
+  /** 道案内の間のおしゃべりのカード（画面の下） */
+  private readonly chat: HTMLDivElement;
+  private readonly chatName: HTMLDivElement;
+  private readonly chatLine: HTMLDivElement;
+  private readonly chatHint: HTMLDivElement;
+  private readonly chatAsk: HTMLButtonElement;
+  /** 次のおしゃべりまで／今のおしゃべりを消すまで（秒） */
+  private chatNext = 0;
+  private chatLeft = 0;
+  private chatStep = 0;
+  /** 文字を流すタイマー */
+  private typeTimer = 0;
+  /** 1回の案内で、もう出した文（同じ文を2回出さない） */
+  private readonly chatUsed = new Set<string>();
+  /** 子どもが聞くのを待っている「Do you like ～?」 */
+  private pendingLike: Like | null = null;
+  /** 子どもが聞いてから、留学生が答えるまで */
+  private likeTimer = 0;
 
   /** 行き先に着いたとき */
   onArrive?: (name: string, obj: SceneObject) => void;
@@ -118,6 +156,22 @@ export class Visitors {
     this.meSay = document.createElement('div');
     this.meSay.className = 'me-say hidden';
     hud.appendChild(this.meSay);
+
+    this.chat = document.createElement('div');
+    this.chat.className = 'visitor-chat hidden';
+    this.chat.setAttribute('aria-live', 'polite');
+    this.chatName = document.createElement('div');
+    this.chatName.className = 'visitor-chat__name';
+    this.chatLine = document.createElement('div');
+    this.chatLine.className = 'visitor-chat__line';
+    this.chatHint = document.createElement('div');
+    this.chatHint.className = 'visitor-chat__hint';
+    this.chatAsk = document.createElement('button');
+    this.chatAsk.className = 'kc-btn visitor-chat__ask';
+    this.chat.append(this.chatName, this.chatLine, this.chatHint, this.chatAsk);
+    hud.appendChild(this.chat);
+    for (const ev of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click']) this.chat.addEventListener(ev, (e) => e.stopPropagation());
+    this.chatAsk.hidden = true;
   }
 
   /**
@@ -127,6 +181,7 @@ export class Visitors {
   spawn(spotId: string, start: { x: number; y: number; z: number }, startYaw: number, objects: SceneObject[]): void {
     this.clear();
     this.objects = objects;
+    this.spotId = spotId;
     // 観光地の名前から、誰が来るかを決める（同じ観光地ならいつも同じ3人）
     let h = 0;
     for (const c of spotId) h = (h * 31 + c.charCodeAt(0)) >>> 0;
@@ -215,6 +270,7 @@ export class Visitors {
     if (this.active) this.onRequest?.(null, null);
     this.active = null;
     this.answerTimer = 0;
+    this.hideChat();
   }
 
   get count(): number {
@@ -223,6 +279,7 @@ export class Visitors {
 
   /** A キー：いちばん近くで話している留学生に聞く。聞けたら true */
   askNearest(): boolean {
+    // 道案内の間の「Do you like ～?」が出ていれば、それを聞く
     const v = this.list.find((x) => x.talking && !x.askBtn.hidden);
     if (!v) return false;
     this.ask(v);
@@ -246,7 +303,8 @@ export class Visitors {
         o.bubble.classList.add('hidden');
       }
     }
-    this.answerTimer = 1.9;
+    // 「Where do you want to go?」を最後まで読み上げてから答える（早いと読み上げが途中で切れる）
+    this.answerTimer = 3.2;
   }
 
   /**
@@ -325,6 +383,7 @@ export class Visitors {
     v.arrived = false;
     v.homeYaw = v.yaw;
     this.active = null;
+    this.hideChat();
     this.onRequest?.(null, null);
     this.onThanks?.(v.def.name);
   }
@@ -389,6 +448,150 @@ export class Visitors {
     v.following = true;
     v.arrived = false;
     this.onRequest?.(v.def.name, obj);
+    // 道案内のおしゃべりを、はじめから
+    this.chatUsed.clear();
+    this.chatStep = 0;
+    this.chatNext = CHAT_FIRST;
+    this.hideChat();
+  }
+
+  // ===== 道案内の間のおしゃべり =====
+  private hideChat(): void {
+    window.clearInterval(this.typeTimer);
+    // すっと消してから、かくす
+    if (!this.chat.classList.contains('hidden') && !this.chat.classList.contains('visitor-chat--out')) {
+      this.chat.classList.remove('visitor-chat--pop');
+      this.chat.classList.add('visitor-chat--out');
+      window.setTimeout(() => {
+        if (this.chat.classList.contains('visitor-chat--out')) {
+          this.chat.classList.add('hidden');
+          this.chat.classList.remove('visitor-chat--out');
+        }
+      }, 200);
+    }
+    this.pendingLike = null;
+    this.likeTimer = 0;
+    this.chatLeft = 0;
+  }
+
+  /** まだ出していないものから1つえらぶ（全部出したら、また最初から） */
+  private pick<T>(list: T[], key: (t: T) => string): T | null {
+    if (list.length === 0) return null;
+    let pool = list.filter((t) => !this.chatUsed.has(key(t)));
+    if (pool.length === 0) {
+      for (const t of list) this.chatUsed.delete(key(t));
+      pool = list;
+    }
+    const t = pool[Math.floor(Math.random() * pool.length)];
+    this.chatUsed.add(key(t));
+    return t;
+  }
+
+  /** 文字を1文字ずつ流して出す（ゲームの会話ウィンドウ風） */
+  private typeLine(text: string): void {
+    window.clearInterval(this.typeTimer);
+    const el = this.chatLine;
+    if (!text || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      el.textContent = text;
+      el.classList.remove('is-typing');
+      return;
+    }
+    let n = 0;
+    el.textContent = '';
+    el.classList.add('is-typing');
+    this.typeTimer = window.setInterval(() => {
+      n += 1;
+      el.textContent = text.slice(0, n);
+      if (n >= text.length) {
+        window.clearInterval(this.typeTimer);
+        el.classList.remove('is-typing');
+      }
+    }, 35);
+  }
+
+  /** ウィンドウをはずませて出し、残り時間のバーを最初から */
+  private popChat(seconds: number): void {
+    this.chat.classList.remove('hidden', 'visitor-chat--out', 'visitor-chat--pop');
+    this.chat.style.setProperty('--chat-show', `${seconds}s`);
+    this.chat.classList.add('is-restart');
+    void this.chat.offsetWidth;
+    this.chat.classList.remove('is-restart');
+    this.chat.classList.add('visitor-chat--pop');
+    this.chatLeft = seconds;
+  }
+
+  /** カードを出す（留学生の文と、答えの例1文）。時間がたつと消える */
+  private showChat(v: Visitor, line: string, hint: string[]): void {
+    this.chatName.textContent = line ? v.def.name : `${v.def.name} ✨`;
+    this.chatLine.hidden = !line;
+    this.typeLine(line);
+    // 答えの例は1文だけ（いくつかある時はランダムに1つ）
+    const one = hint.length ? hint[Math.floor(Math.random() * hint.length)] : '';
+    this.chatHint.innerHTML = one ? `<span class="chat-try">💬 Try!</span><b>${this.esc(one)}</b>` : '';
+    this.chatHint.hidden = !one;
+    this.chatAsk.hidden = true;
+    this.chat.classList.remove('visitor-chat--ask');
+    this.popChat(CHAT_SHOW);
+    if (line) this.speech.speak(line, 'en', undefined, v.def.pitch);
+  }
+
+  /**
+   * 次のおしゃべりを1つ出す（2026-11-22 先生の希望で2種類だけ）：
+   *  - You can ～.（その観光地でできること。Try: に1文）
+   *  - 案内する子どもが聞く Do you like ～?（Try: に1文）→ 4秒ほどで留学生が自動で答える
+   * 交互に出す。答えるボタンも録音もなし。
+   */
+  private nextChat(v: Visitor): void {
+    const spot = SPOT_CHATS[this.spotId];
+    if (!spot) return;
+    const kind = this.chatStep++ % 2 === 0 ? 'cando' : 'like';
+    if (kind === 'cando' || spot.likes.length === 0) {
+      const c = this.pick(spot.canDo, (t) => t);
+      if (c) return this.showChat(v, '', [c]);
+    }
+    const l = this.pick(spot.likes, (t) => t.ask);
+    if (l) {
+      this.showChat(v, '', [l.ask]);
+      this.pendingLike = l;
+      this.likeTimer = 4;
+    }
+  }
+
+  private esc(s: string): string {
+    return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] ?? c);
+  }
+
+  /** 毎フレーム：道案内の間だけ、おしゃべりを進める */
+  private updateChat(dt: number, walkMode: boolean, walked: number): void {
+    const v = this.active;
+    const introOpen = document.body.classList.contains('kc-intro-open');
+    if (!v || !v.following || !walkMode || introOpen) {
+      if (!this.chat.classList.contains('hidden')) this.hideChat();
+      return;
+    }
+    // Do you like ～? の少しあと、留学生が答える（カードに答えを足す）
+    if (this.likeTimer > 0) {
+      this.likeTimer -= dt;
+      if (this.likeTimer <= 0 && this.pendingLike) {
+        const ans = this.pendingLike.answer;
+        this.pendingLike = null;
+        this.chatName.textContent = v.def.name;
+        this.chatLine.hidden = false;
+        this.typeLine(ans);
+        this.popChat(Math.max(this.chatLeft, 6));
+        this.speech.speak(ans, 'en', undefined, v.def.pitch);
+      }
+    }
+    if (this.chatLeft > 0) {
+      this.chatLeft -= dt;
+      if (this.chatLeft <= 0) this.hideChat();
+    }
+    // 時間ではなく、歩いた距離で数える
+    this.chatNext -= walked;
+    if (this.chatNext <= 0) {
+      this.chatNext = CHAT_WALK;
+      this.nextChat(v);
+    }
   }
 
   /**
@@ -404,6 +607,10 @@ export class Visitors {
   }
 
   update(dt: number, player: THREE.Vector3, camera: THREE.Camera, active: boolean): void {
+    // 前のフレームからの横方向の移動量（ワープなど大きすぎる動きは数えない）
+    const dx = player.x - this.lastPlayer.x, dz = player.z - this.lastPlayer.z;
+    let walked = Math.hypot(dx, dz);
+    if (walked > SPRINT_SPEED * Math.max(dt, 0.05) * 2) walked = 0;
     this.lastPlayer.copy(player);
     if (this.answerTimer > 0) {
       this.answerTimer -= dt;
@@ -413,6 +620,7 @@ export class Visitors {
       this.meTimer -= dt;
       if (this.meTimer <= 0) this.meSay.classList.add('hidden');
     }
+    this.updateChat(dt, active, walked);
     const w = window.innerWidth;
     const hgt = window.innerHeight;
     for (const v of this.list) {

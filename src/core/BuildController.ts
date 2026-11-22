@@ -30,6 +30,8 @@ export class BuildController {
   private field: Region | null = null;
   private spotId = '';
   private activeId = 1;
+  /** おしている間、お手本のマスを次々にうめている */
+  private snapping = false;
 
   // 連続設置（押しっぱなし）の状態：最初に置いた「向き」へ続けて伸ばす（上に積む/横に並べる）
   private holding = false;
@@ -38,6 +40,14 @@ export class BuildController {
 
   /** 変更が起きたら通知（自動保存トースト用） */
   onChange?: () => void;
+
+  /**
+   * 置くのを手伝う（注文のお手本）。視線（またはタップ）の先に近いお手本のマスと、そのブロックを返す。
+   * あれば、ブロックの面をきっちりねらわなくても、そのマスに正しいブロックが置ける（2026-11-22）。
+   */
+  assist?: (origin: THREE.Vector3, dir: THREE.Vector3) => { x: number; y: number; z: number; id: number } | null;
+  /** 置くのを手伝ったとき（パレットの選択を合わせるため） */
+  onAssistPick?: (id: number) => void;
 
   private readonly dir = new THREE.Vector3();
   private readonly ray = new THREE.Raycaster();
@@ -140,6 +150,16 @@ export class BuildController {
     }
 
     const hit = this.castCenter();
+    const snap = this.snapTarget(this.camera.position, this.dir);
+    if (snap) {
+      this.ghostMat.color.copy(blockRegistry.getColor(snap.id));
+      this.ghostFill.position.set(snap.x + 0.5, snap.y + 0.5, snap.z + 0.5);
+      this.targetBox.position.set(snap.x + 0.5, snap.y + 0.5, snap.z + 0.5);
+      this.setGhost(true);
+      this.removeBox.visible = false;
+      return;
+    }
+    this.ghostMat.color.copy(blockRegistry.getColor(this.activeId));
     if (!hit) {
       this.setGhost(false);
       this.removeBox.visible = false;
@@ -174,7 +194,28 @@ export class BuildController {
 
   /** ブロックを1つ置く（単発：タップ／Eキー）。中央カーソルの面の手前へ。 */
   place(): boolean {
+    this.camera.getWorldDirection(this.dir);
+    if (this.snapPlace(this.camera.position, this.dir)) return true;
     return this.freshPlace() !== null;
+  }
+
+  /** お手本のマスで、置けるものを返す */
+  private snapTarget(origin: THREE.Vector3, dir: THREE.Vector3): { x: number; y: number; z: number; id: number } | null {
+    const t = this.assist?.(origin, dir);
+    if (!t || !this.canPlaceAt(t.x, t.y, t.z)) return null;
+    return t;
+  }
+
+  /** お手本のマスに、そのブロックを置く（置けたら true） */
+  private snapPlace(origin: THREE.Vector3, dir: THREE.Vector3): boolean {
+    const t = this.snapTarget(origin, dir);
+    if (!t) return false;
+    if (t.id !== this.activeId) {
+      this.setActiveBlock(t.id);
+      this.onAssistPick?.(t.id);
+    }
+    this.putBlock(t.x, t.y, t.z);
+    return true;
   }
 
   /**
@@ -182,6 +223,14 @@ export class BuildController {
    * 例：床（上の面）を狙えば向き＝上 → 以降は上へ積んでいく。
    */
   startStack(): boolean {
+    // お手本があるときは、おしている間、視線の先のお手本のマスを次々にうめる（なぞるように置ける）
+    this.camera.getWorldDirection(this.dir);
+    if (this.snapPlace(this.camera.position, this.dir)) {
+      this.holding = true;
+      this.snapping = true;
+      return true;
+    }
+    this.snapping = false;
     const r = this.freshPlace();
     if (!r) {
       this.endPlace();
@@ -198,6 +247,10 @@ export class BuildController {
    * 視線が横の面に当たってもブレないので、まっすぐ積み上げられる。
    */
   placeContinue(): boolean {
+    if (this.holding && this.snapping) {
+      this.camera.getWorldDirection(this.dir);
+      return this.snapPlace(this.camera.position, this.dir);
+    }
     if (!this.holding || !this.lastCell || !this.stackDir) return false;
     const x = this.lastCell.x + this.stackDir.x;
     const y = this.lastCell.y + this.stackDir.y;
@@ -211,13 +264,16 @@ export class BuildController {
   /** 連続設置の終了（ボタンを離した）。次回はまた新しい向きで始める。 */
   endPlace(): void {
     this.holding = false;
+    this.snapping = false;
     this.lastCell = null;
     this.stackDir = null;
   }
 
   /** タップした所（画面の位置。-1〜1）のブロックの面に、1つ置く */
   placeAt(ndcX: number, ndcY: number): boolean {
-    return this.freshPlace(this.castScreen(ndcX, ndcY)) !== null;
+    const hit = this.castScreen(ndcX, ndcY);
+    if (this.snapPlace(this.ray.ray.origin, this.ray.ray.direction)) return true;
+    return this.freshPlace(hit) !== null;
   }
 
   /** 長おしした所（画面の位置。-1〜1）のブロックを消す。自分で置いた物だけ */

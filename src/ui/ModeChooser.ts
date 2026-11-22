@@ -1,9 +1,14 @@
-/** アプリの使い方（入口）。practice＝練習して作る（今までどおり）／guide＝案内する（置く・消すはできない） */
-export type AppMode = 'practice' | 'guide';
+/**
+ * アプリの使い方（入口）。2026-11-22 に3つに分けた。
+ *  - guide＝Tour Guide（見どころを順に英語で案内する。置く・消すはできない）
+ *  - visit＝道案内（留学生を名所へ案内する。置く・消す・説明の追加はできない）
+ *  - build＝ブロック（ブロックを置く・説明に英文や写真や声を足す。留学生は出ない）
+ */
+export type AppMode = 'guide' | 'visit' | 'build';
 
 /**
  * 番号を入れたあとに出す「入口をえらぶ画面」（2026-11-13 追加）。
- * 🧱 Practice & Build と 🎤 Tour Guide の2つから選ぶ。
+ * 🎤 Tour Guide ／ 🧭 Guide a Visitor ／ 🧱 Build の3つから選ぶ。
  * マウス不使用：←→（↑↓）でえらんで Enter。
  */
 export class ModeChooser {
@@ -17,17 +22,23 @@ export class ModeChooser {
         <div class="mode-chooser__title">What do you want to do?</div>
         <div class="mode-chooser__sub">えらんでね</div>
         <div class="mode-chooser__row">
-          <button class="mode-card mode-card--practice" data-mode="practice">
-            <span class="mode-card__icon">🧱</span>
-            <span class="mode-card__name">Practice &amp; Build</span>
-            <span class="mode-card__what">Walk, learn and build.</span>
-            <span class="mode-card__ja">れんしゅうして つくる</span>
-          </button>
           <button class="mode-card mode-card--guide" data-mode="guide">
             <span class="mode-card__icon">🎤</span>
             <span class="mode-card__name">Tour Guide</span>
             <span class="mode-card__what">Show the place in English.</span>
             <span class="mode-card__ja">英語で あんない する</span>
+          </button>
+          <button class="mode-card mode-card--visit" data-mode="visit">
+            <span class="mode-card__icon">🧭</span>
+            <span class="mode-card__name">Guide a Visitor</span>
+            <span class="mode-card__what">Take a visitor to a place.</span>
+            <span class="mode-card__ja">りゅうがくせいを みちあんない</span>
+          </button>
+          <button class="mode-card mode-card--practice" data-mode="build">
+            <span class="mode-card__icon">🧱</span>
+            <span class="mode-card__name">Build</span>
+            <span class="mode-card__what">Build and add English.</span>
+            <span class="mode-card__ja">ブロックで つくる</span>
           </button>
         </div>
         <div class="mode-chooser__keys"><kbd>←</kbd><kbd>→</kbd> choose ・ <kbd>Enter</kbd> go</div>

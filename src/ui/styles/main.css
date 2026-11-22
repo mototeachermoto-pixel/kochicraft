@@ -3834,3 +3834,562 @@ body.kc-intro-open .visitor-bubble {
   bottom: auto;
   z-index: 40;
 }
+
+/* 道案内の間のおしゃべり（2026-11-22）：画面の下のまん中。留学生のひとことと「Try:」答えの例 */
+.visitor-chat {
+  position: absolute;
+  left: 50%;
+  bottom: 180px;
+  z-index: 23;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  max-width: min(560px, calc(100vw - 32px));
+  padding: 10px 18px 12px;
+  border-radius: 18px;
+  background: var(--kc-cream, #fffaf0);
+  border: 3px solid #f2b134;
+  color: var(--kc-ink, #2b3327);
+  box-shadow: 0 4px 0 #d8a42a, 0 8px 16px rgba(0, 0, 0, 0.2);
+  transform: translateX(-50%);
+  pointer-events: auto;
+  text-align: center;
+}
+.visitor-chat.hidden {
+  display: none;
+}
+.visitor-chat--pop {
+  animation: kc-chat-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes kc-chat-pop {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+.visitor-chat__name {
+  font-size: 13px;
+  font-weight: 800;
+  color: #b06d00;
+}
+.visitor-chat__line {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+.visitor-chat__hint {
+  font-size: 15px;
+  color: #3d5a45;
+}
+.visitor-chat__hint b {
+  color: var(--kc-accent-dark, #0f6e56);
+}
+.visitor-chat__line[hidden],
+.visitor-chat__hint[hidden],
+.visitor-chat__ask[hidden] {
+  display: none;
+}
+.visitor-chat__ask {
+  font-size: 18px;
+  background: #3f7fd4;
+}
+@media (prefers-reduced-motion: reduce) {
+  .visitor-chat--pop {
+    animation: none;
+  }
+}
+
+/* =====================================================================
+   会話ウィンドウ（2026-11-22 作り直し）：RPG の会話ウィンドウ風。
+   こん色の板＋二重のふち・名前の札・文字が流れて出る・残り時間のバー。
+   ===================================================================== */
+.visitor-chat {
+  --chat-show: 9s;
+  bottom: calc(150px + var(--kc-safe-b));
+  gap: 8px;
+  min-width: min(380px, calc(100vw - 32px));
+  max-width: min(600px, calc(100vw - 32px));
+  padding: 22px 26px 18px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(28, 44, 78, 0.94), rgba(16, 26, 50, 0.94));
+  border: 3px solid #f4e3b5;
+  box-shadow:
+    inset 0 0 0 2px #2b3f6b,
+    inset 0 0 0 4px rgba(244, 227, 181, 0.35),
+    0 6px 0 rgba(0, 0, 0, 0.25),
+    0 12px 28px rgba(0, 0, 0, 0.35);
+  color: #fff;
+  font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", sans-serif;
+}
+/* 名前の札（左上にはみ出す） */
+.visitor-chat__name {
+  position: absolute;
+  top: -15px;
+  left: 18px;
+  padding: 3px 14px;
+  border-radius: 999px;
+  background: #f2b134;
+  border: 2px solid #fff4d6;
+  color: #3a2500;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  box-shadow: 0 3px 0 #b97f12;
+}
+.visitor-chat__name:empty {
+  display: none;
+}
+/* 留学生の言葉：大きく・白く・影つき */
+.visitor-chat__line {
+  align-self: stretch;
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1.35;
+  text-align: left;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
+  min-height: 1.35em;
+}
+.visitor-chat__line.is-typing::after {
+  content: '▍';
+  margin-left: 2px;
+  color: #f4e3b5;
+  animation: kc-caret 0.6s steps(1) infinite;
+}
+@keyframes kc-caret {
+  50% { opacity: 0; }
+}
+/* 言ってみよう（Try!）：緑の札にして、留学生の言葉と分ける */
+.visitor-chat__hint {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: rgba(29, 158, 117, 0.22);
+  border: 2px dashed rgba(127, 224, 186, 0.7);
+  color: #d9fff0;
+  font-size: 15px;
+  font-weight: 800;
+  text-align: left;
+}
+.visitor-chat__hint b {
+  color: #fff;
+  font-size: 22px;
+  font-weight: 900;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+}
+.visitor-chat__hint .chat-try {
+  flex: none;
+  padding: 2px 9px;
+  border-radius: 8px;
+  background: #1d9e75;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+  box-shadow: 0 2px 0 #0f6e56;
+}
+/* 残り時間のバー（下のふち）。なくなるとウィンドウが消える */
+.visitor-chat::after {
+  content: '';
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 6px;
+  height: 4px;
+  border-radius: 2px;
+  background: #f4e3b5;
+  opacity: 0.7;
+  transform-origin: left center;
+  animation: kc-chat-timer var(--chat-show) linear forwards;
+}
+.visitor-chat.is-restart::after {
+  animation: none;
+}
+@keyframes kc-chat-timer {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+.visitor-chat--pop {
+  animation: kc-chat-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.visitor-chat--out {
+  animation: kc-chat-out 0.2s ease-in forwards;
+}
+@keyframes kc-chat-out {
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(12px) scale(0.96);
+  }
+}
+@media (max-width: 600px) {
+  .visitor-chat { padding: 20px 16px 16px; }
+  .visitor-chat__line { font-size: 21px; }
+  .visitor-chat__hint b { font-size: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .visitor-chat--out,
+  .visitor-chat__line.is-typing::after { animation: none; }
+}
+
+/* 留学生の頭の上の吹き出し：白い板に太いこん色のふち・丸い文字 */
+.visitor-bubble {
+  padding: 10px 18px;
+  border-radius: 18px;
+  background: #fffdf6;
+  border: 3px solid #1c2c4e;
+  color: #1c2c4e;
+  font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", sans-serif;
+  font-size: 20px;
+  font-weight: 900;
+  box-shadow: 0 4px 0 rgba(28, 44, 78, 0.35), 0 8px 18px rgba(0, 0, 0, 0.25);
+}
+.visitor-bubble::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -14px;
+  transform: translateX(-50%);
+  border: 11px solid transparent;
+  border-top-color: #1c2c4e;
+  border-bottom: 0;
+}
+.visitor-bubble::after {
+  bottom: -9px;
+  border-width: 8px;
+  border-bottom: 0;
+  border-top-color: #fffdf6;
+}
+.visitor-bubble__ask {
+  padding: 6px 14px;
+  background: #1d9e75;
+  box-shadow: 0 3px 0 #0f6e56;
+  font-size: 16px;
+}
+.visitor-bubble__ask:active {
+  box-shadow: 0 1px 0 #0f6e56;
+}
+
+/* 自分のセリフ：青い会話ウィンドウ＋「You」の札 */
+.me-say {
+  bottom: calc(110px + var(--kc-safe-b));
+  padding: 16px 24px 12px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #4b8ee6, #2f6cc2);
+  border: 3px solid #e6f0ff;
+  box-shadow: 0 5px 0 #1f4f94, 0 10px 22px rgba(0, 0, 0, 0.3);
+  font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", sans-serif;
+  font-size: 22px;
+  font-weight: 900;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
+  animation: kc-chat-pop-me 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.me-say::before {
+  content: 'You';
+  position: absolute;
+  top: -13px;
+  left: 16px;
+  padding: 1px 12px;
+  border-radius: 999px;
+  background: #fff;
+  color: #2f6cc2;
+  font-size: 13px;
+  text-shadow: none;
+  box-shadow: 0 2px 0 #1f4f94;
+}
+@keyframes kc-chat-pop-me {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px) scale(0.92); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+/* 入口は3つ（2026-11-22）：横に3まい並べる（せまい画面では縦） */
+.mode-chooser__row {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+.mode-card--visit .mode-card__name {
+  color: #2f6cc2;
+}
+.hub-mode__name.is-visit {
+  color: #2f6cc2;
+}
+
+/* =====================================================================
+   ブロックのモードの注文書（2026-11-22）：右がわの、ゲームの依頼書風の板
+   ===================================================================== */
+.order-card {
+  position: absolute;
+  top: 120px;
+  right: 14px;
+  z-index: 22;
+  width: min(300px, calc(100vw - 32px));
+  max-height: calc(100vh - 350px);
+  overflow-y: auto;
+  padding: 26px 16px 14px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(28, 44, 78, 0.95), rgba(16, 26, 50, 0.95));
+  border: 3px solid #f4e3b5;
+  box-shadow: inset 0 0 0 2px #2b3f6b, 0 6px 0 rgba(0, 0, 0, 0.25), 0 12px 28px rgba(0, 0, 0, 0.35);
+  color: #fff;
+  font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", sans-serif;
+  pointer-events: auto;
+}
+.order-card.hidden {
+  display: none;
+}
+.order-card--pop {
+  animation: kc-order-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes kc-order-in {
+  from { opacity: 0; transform: translateX(24px) scale(0.95); }
+  to { opacity: 1; transform: none; }
+}
+.order-card__tag {
+  position: absolute;
+  top: 8px;
+  left: 14px;
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: #f2b134;
+  border: 2px solid #fff4d6;
+  color: #3a2500;
+  font-size: 14px;
+  font-weight: 900;
+  box-shadow: 0 3px 0 #b97f12;
+}
+/* お手本の小窓 */
+.order-card__mini {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 22 / 15;
+  margin: 10px 0 8px;
+  border-radius: 12px;
+  background: radial-gradient(circle at 50% 35%, #8fd0ff, #3d7cc4);
+  border: 2px solid rgba(244, 227, 181, 0.5);
+}
+.order-card__ask {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 10px;
+}
+.order-card__who {
+  font-size: 13px;
+  font-weight: 900;
+  color: #f2b134;
+}
+.order-card__say {
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.3;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
+}
+.order-step {
+  display: flex;
+  gap: 8px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+.order-step b {
+  color: #f4e3b5;
+  margin-right: 4px;
+}
+.order-step.is-now {
+  background: rgba(242, 177, 52, 0.18);
+  border: 2px solid #f2b134;
+  animation: kc-order-now 1.6s ease-in-out infinite;
+}
+@keyframes kc-order-now {
+  50% { box-shadow: 0 0 0 4px rgba(242, 177, 52, 0.25); }
+}
+.order-step.is-done {
+  opacity: 0.6;
+}
+.order-step.is-later {
+  opacity: 0.75;
+}
+.order-step__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.order-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 8px 1px 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 13px;
+  font-weight: 800;
+}
+.order-chip__sw {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+.order-card__count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 900;
+}
+.order-bar {
+  flex: 1;
+  height: 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+.order-bar__fill {
+  height: 100%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #4fd19b, #1d9e75);
+  transition: width 0.25s ease-out;
+}
+.order-card__finish.hidden {
+  display: none;
+}
+.order-finish__head {
+  margin: 4px 0 8px;
+  font-size: 20px;
+  font-weight: 900;
+  color: #ffe08a;
+}
+.order-finish__try {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(29, 158, 117, 0.22);
+  border: 2px dashed rgba(127, 224, 186, 0.7);
+}
+.order-finish__try b {
+  font-size: 20px;
+}
+.order-finish__try .chat-try {
+  align-self: flex-start;
+  padding: 2px 9px;
+  border-radius: 8px;
+  background: #1d9e75;
+  font-size: 13px;
+  box-shadow: 0 2px 0 #0f6e56;
+}
+.order-finish__btn {
+  width: 100%;
+  margin-top: 10px;
+  font-size: 18px;
+}
+@media (max-width: 700px) {
+  .order-card { top: auto; bottom: 150px; width: calc(100vw - 32px); max-height: 40vh; }
+  .order-card__mini { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .order-card--pop,
+  .order-step.is-now { animation: none; }
+}
+
+/* Step ができたときのほめことば（画面のまん中に大きく。操作はさまたげない） */
+.order-cheer {
+  position: absolute;
+  left: 50%;
+  top: 34%;
+  z-index: 30;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+  font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", sans-serif;
+}
+.order-cheer.hidden {
+  display: none;
+}
+.order-cheer__big {
+  font-size: 56px;
+  font-weight: 900;
+  color: #ffe08a;
+  -webkit-text-stroke: 3px #3a2500;
+  paint-order: stroke fill;
+  text-shadow: 0 5px 0 #b97f12, 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+.order-cheer__small {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 4px 16px;
+  border-radius: 999px;
+  background: rgba(28, 44, 78, 0.9);
+  border: 2px solid #f4e3b5;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 900;
+}
+.order-cheer--pop {
+  animation: kc-cheer 2.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+@keyframes kc-cheer {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+  12% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+  20% { transform: translate(-50%, -50%) scale(1); }
+  85% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -60%) scale(0.96); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .order-cheer--pop { animation: none; }
+}
+/* 注文書は、右下の Put / Take ボタンと十字ボタンに重ならない高さまで */
+.order-card {
+  max-height: calc(100vh - 120px - 260px);
+}
+
+.order-card {
+  box-sizing: border-box;
+}
+
+/* Emma のひとこと（注文書の文が少しの間かわる） */
+.order-card__ask.is-talk .order-card__say {
+  color: #ffe08a;
+  animation: kc-talk-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes kc-talk-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .order-card__ask.is-talk .order-card__say { animation: none; }
+}
+
+/* 注文する人の頭の上の名前 */
+.order-nametag {
+  position: absolute;
+  z-index: 11;
+  transform: translate(-50%, -100%);
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: #f2b134;
+  border: 2px solid #fff4d6;
+  color: #3a2500;
+  font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", sans-serif;
+  font-size: 14px;
+  font-weight: 900;
+  box-shadow: 0 3px 0 #b97f12;
+  pointer-events: none;
+}
+.order-nametag::before {
+  content: '📜 ';
+}
+.order-nametag.hidden {
+  display: none;
+}

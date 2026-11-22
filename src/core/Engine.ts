@@ -15,6 +15,8 @@ import { SaveStorage } from '@/data/SaveStorage';
 import { NumberPanel } from '@/ui/NumberPanel';
 import { HowToPlayPanel } from '@/ui/HowToPlayPanel';
 import { ModeChooser, type AppMode } from '@/ui/ModeChooser';
+import { OrderGame } from '@/features/orders/OrderGame';
+import { ORDERS } from '@/features/orders/orders';
 import { Avatar, SKIN_LABEL, type SkinKind } from '@/player/Avatar';
 import { SceneManager } from './SceneManager';
 import { OrbitCameraController } from './OrbitCameraController';
@@ -108,12 +110,16 @@ export class Engine {
   private readonly numberPanel: NumberPanel;
   /** 入口をえらぶ画面（Practice & Build ／ Tour Guide） */
   private readonly chooser: ModeChooser;
+  /** ブロックのモードの注文 */
+  private readonly orders: OrderGame;
   /** いまの入口。guide＝案内モード（置く・消すはできない。見どころを順に案内する） */
   private appMode: AppMode = ((): AppMode => {
     try {
-      return localStorage.getItem('kc.appmode') === 'guide' ? 'guide' : 'practice';
+      const m = localStorage.getItem('kc.appmode');
+      // 前の版の 'practice'（練習＋作る）は、道案内にする
+      return m === 'guide' || m === 'build' ? m : 'visit';
     } catch {
-      return 'practice';
+      return 'visit';
     }
   })();
   /** 案内モードの下のバー（いま何か所目か・Back・Next） */
@@ -176,12 +182,17 @@ export class Engine {
     this.build.onChange = () => {
       this.reachCache = null; // ブロックが変わったので、歩いて行ける場所をしらべ直す
       this.showToast('Saved ✓');
+      this.orders.check(); // 注文のお手本どおりに置けたか
     };
 
     const hudRoot = document.getElementById('hud');
     if (!hudRoot) throw new Error('HUD要素(#hud)が見つかりません');
     this.hudRoot = hudRoot;
     this.visitors = new Visitors(this.sceneManager.scene, this.world, hudRoot, this.speech);
+    // ブロックのモードの注文（英語の注文書・お手本・できたか確かめる）
+    this.orders = new OrderGame(this.sceneManager.scene, this.world, hudRoot, this.speech);
+    this.orders.onComplete = () => this.giveStar();
+    this.build.assist = (o, d) => this.orders.snapCell(o, d);
     // 留学生の行き先が決まったら：その名所の光の柱を目立たせ、画面の上に行き先を出す
     this.goalChip = document.createElement('div');
     this.goalChip.className = 'goal-chip hidden';
@@ -268,7 +279,7 @@ export class Engine {
     this.buildSpotUI();
     this.chooser = new ModeChooser(this.hudRoot, (m) => this.setAppMode(m));
     this.renderModeBar();
-    this.infoPanel.readOnly = this.guide;
+    this.infoPanel.readOnly = this.noBuild;
 
     // GAS 版：子どもの番号ごとに大学の Google へ保存する（Safari を閉じても残るように）
     this.numberPanel = new NumberPanel(this.hudRoot, {
@@ -386,6 +397,9 @@ export class Engine {
 
     // ブロックパレット（編集モード）
     this.palette = new BuildPalette(this.hudRoot, (id) => this.build.setActiveBlock(id));
+    // お手本のマスに置いたら、パレットもそのブロックに／Step がかわったら、その Step のブロックに
+    this.build.onAssistPick = (id) => this.palette.selectId(id);
+    this.orders.onStepBlock = (key) => this.palette.selectKey(key);
 
     // 置く／消すボタン（編集モード・右下、ジャンプの上）。押しっぱなしで連続＝積み上げやすい
     this.buildActions = document.createElement('div');
@@ -503,6 +517,11 @@ export class Engine {
     this.toolbar.classList.remove('hidden');
     this.spawnPlayer(spot);
     this.placeVisitors();
+    // ブロックのモードなら、その名所の注文を出す（使うブロックもその名所用に）
+    const order = this.appMode === 'build' && !SaveStorage.readOnly ? ORDERS[spot.id] : undefined;
+    this.palette.setKeys(order?.palette);
+    const sp0 = spot.spawn?.pos ?? { x: spot.center.x, y: 16, z: spot.center.z + 14 };
+    this.orders.start(order, spot.field, { x: sp0.x, y: sp0.y, z: sp0.z });
     this.tourIndex = -1;
     this.setMode('walk'); // 歩いて回るのを既定に
     this.tourBar.classList.toggle('hidden', !this.guide);
@@ -515,6 +534,11 @@ export class Engine {
     return this.appMode === 'guide';
   }
 
+  /** ブロックのモードではない（Tour Guide・道案内）＝置く・消す・説明の追加はできない */
+  private get noBuild(): boolean {
+    return this.appMode !== 'build';
+  }
+
   /** 入口を決める（入口をえらぶ画面から） */
   private setAppMode(m: AppMode): void {
     this.appMode = m;
@@ -523,7 +547,7 @@ export class Engine {
     } catch {
       // 覚えられなくても続ける
     }
-    this.infoPanel.readOnly = SaveStorage.readOnly || this.guide;
+    this.infoPanel.readOnly = SaveStorage.readOnly || this.noBuild;
     this.renderModeBar();
     if (!this.worldManager.currentSpot) this.hub.show(); // 一覧のカードにフォーカスを当て直す
   }
@@ -533,7 +557,9 @@ export class Engine {
     const bar = this.hub.modeBar;
     bar.innerHTML = this.guide
       ? `<span class="hub-mode__name is-guide">🎤 Tour Guide</span>`
-      : `<span class="hub-mode__name">🧱 Practice &amp; Build</span>`;
+      : this.appMode === 'visit'
+        ? `<span class="hub-mode__name is-visit">🧭 Guide a Visitor</span>`
+        : `<span class="hub-mode__name">🧱 Build</span>`;
     bar.innerHTML += `<button class="kc-btn hub-mode__change" data-role="change">🔄 Change</button>`;
     bar.querySelector('[data-role="change"]')!.addEventListener('click', () => this.chooser.open(this.appMode));
   }
@@ -955,7 +981,8 @@ export class Engine {
   private placeVisitors(): void {
     this.introCard.close();
     const spot = this.worldManager.currentSpot;
-    if (!spot || this.guide) {
+    // 留学生は道案内のモードだけに出す
+    if (!spot || this.appMode !== 'visit') {
       this.visitors.clear();
       return;
     }
@@ -977,6 +1004,7 @@ export class Engine {
     this.speech.cancel();
     this.worldManager.unload();
     this.visitors.clear();
+    this.orders.stop();
     this.introCard.close();
     this.infoPanel.hide();
     this.toolbar.classList.add('hidden');
@@ -1179,7 +1207,7 @@ export class Engine {
           head('Go'),
           row(k('M'), '<b>M</b>ap: go to a place'),
           row(k('L'), '<b>L</b>ook from the sky'),
-          ...(SaveStorage.readOnly ? [] : [row(k('B'), '<b>B</b>uild blocks')]),
+          ...(SaveStorage.readOnly || this.noBuild || !this.worldManager.currentSpot?.field ? [] : [row(k('B'), '<b>B</b>uild blocks')]),
           row(k('H'), '<b>H</b>ome (start)'),
           row(k('X'), 'Back to list'),
         ];
@@ -1194,7 +1222,7 @@ export class Engine {
   private setMode(mode: Mode): void {
     const spot = this.worldManager.currentSpot;
     // 建築できる範囲が無いとき・友だちの作品を見ているとき（見るだけ）は歩行へ
-    if (mode === 'build' && (!spot?.field || SaveStorage.readOnly || this.guide)) mode = 'walk';
+    if (mode === 'build' && (!spot?.field || SaveStorage.readOnly || this.noBuild)) mode = 'walk';
     this.mode = mode;
 
     const walkLike = mode === 'walk' || mode === 'build';
@@ -1242,6 +1270,7 @@ export class Engine {
     this.buildActions.classList.toggle('hidden', !building);
     // 大学の Google に自動で保存する版（GAS）では、ファイルの保存・読み込みは使わない
     this.saveBar.classList.toggle('hidden', !building || SaveStorage.cloud);
+    this.orders.setBuilding(building);
     if (building) {
       this.palette.show();
       this.build.show();
@@ -1273,7 +1302,7 @@ export class Engine {
     this.restartBtn.classList.toggle('hidden', mode !== 'walk');
 
     // 編集ボタン（建築できる範囲が無い観光地では隠す）
-    this.buildBtn.classList.toggle('hidden', !spot?.field || SaveStorage.readOnly || this.guide);
+    this.buildBtn.classList.toggle('hidden', !spot?.field || SaveStorage.readOnly || this.noBuild);
     this.buildBtn.classList.toggle('is-active', building);
     this.buildBtn.querySelector('[data-label="build"]')!.textContent = building ? 'Done' : 'Build';
     this.buildBtn.querySelector('.kc-btn__icon')!.textContent = building ? '✓' : '🧱';
@@ -1285,6 +1314,8 @@ export class Engine {
       ? '🧱 Make your own world here!'
       : this.guide
         ? '🎤 Tour Guide: show this place in English!'
+        : this.appMode === 'visit'
+        ? '🧭 Talk to a visitor and take them to a place!'
         : SaveStorage.readOnly
         ? `👀 This is ${SaveStorage.viewing}'s world. You can only look.`
         : '👆 Tap a building to learn about it!';
@@ -1406,7 +1437,7 @@ export class Engine {
 
   /** 開いている作品（自分／友だち）が変わったら、画面を合わせる */
   private afterWorksChanged(): void {
-    this.infoPanel.readOnly = SaveStorage.readOnly || this.guide;
+    this.infoPanel.readOnly = SaveStorage.readOnly || this.noBuild;
     this.renderWho();
     // 観光地の中にいたら、その作品で読み込み直す
     const spot = this.worldManager.currentSpot;
@@ -1528,7 +1559,9 @@ export class Engine {
     if (this.mode === 'build') {
       // 中央カーソルが指すマスのプレビュー枠を更新
       this.build.update(dt);
-    } else {
+    }
+    this.orders.update(dt, this.player.position, this.camera);
+    if (this.mode !== 'build') {
       // 近くの対象を判定して英語名バナーを出す
       this.worldManager.updateNear(this.walk.enabled ? { pos: this.player.position, yaw: this.player.yaw } : undefined);
     }
@@ -1581,6 +1614,11 @@ export class Engine {
     //   J=Jump / L=Look / B=Build / P=Put / T=Take / W=Walk / H=Home / E=English
     //   C=Change Character / V=View / I=Info / N=Next / K=Keys
     // 編集モード：P=置く / T=消す / 数字=ブロック / W・X・Esc=歩行へ / Ctrl+S・Ctrl+O=保存・読込
+    // 注文ができあがっていれば、Enter で「I said it!」
+    if (e.code === 'Enter' && this.orders.said()) {
+      e.preventDefault();
+      return;
+    }
     if (this.mode === 'build') {
       if (e.ctrlKey || e.metaKey) {
         if (SaveStorage.cloud) return; // GAS 版は自動で保存するので、ファイルは使わない

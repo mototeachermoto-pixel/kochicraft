@@ -64,6 +64,8 @@ export class IntroCard {
   private typeMode = false;
   /** 入力らんの文字が止まってから自動で判定するまでのタイマー */
   private autoTimer = 0;
+  /** 聞き取り中、だまってから止めるまでのタイマー */
+  private listenStop = 0;
 
   open(name: string, obj: SceneObject): void {
     this.obj = obj;
@@ -233,7 +235,7 @@ export class IntroCard {
     rec.lang = 'en-US';
     rec.interimResults = true;
     rec.maxAlternatives = 5;
-    rec.continuous = false;
+    rec.continuous = true; // 息つぎで止めない。⏹ Stop を押すか、話し終わって止まったら判定する
     let finals: string[] = [];
     let latest = '';
     rec.onresult = (e) => {
@@ -248,6 +250,11 @@ export class IntroCard {
       if (alts.length) finals = [text, ...alts];
       this.renderLive(text);
       this.heard('🎧 Listening…');
+      // 話し終わって2.5秒だまったら止めて判定（途中の息つぎでは止めない）
+      window.clearTimeout(this.listenStop);
+      this.listenStop = window.setTimeout(() => {
+        try { rec.stop(); } catch { /* 止まっていればよい */ }
+      }, 2500);
     };
     rec.onerror = (e) => {
       // 声が聞こえなかった（no-speech）はもう一度。マイクや通信が使えないときは I said it! を出す
@@ -261,6 +268,7 @@ export class IntroCard {
     };
     rec.onend = () => {
       this.rec = null;
+      window.clearTimeout(this.listenStop);
       this.setSayLabel(false);
       const heard = finals.length ? finals : latest ? [latest] : [];
       if (!heard.length) return;
@@ -403,17 +411,11 @@ export class IntroCard {
     });
     box.addEventListener('keyup', (e) => e.stopPropagation());
     box.addEventListener('blur', () => this.el.classList.remove('intro-card--top'));
-    // 音声入力で文字が入るたびに色分けし、文字が止まって合格なら自動で「Great!」にする
+    // 音声入力で文字が入るたびに色分けするだけ。判定は、子どもが ⭐ Check（Enter）を押したときだけ
+    // （自動で合格にすると、iPad の音声入力が言い終わる前に「Great!」になってしまうため）
     box.addEventListener('input', () => {
       if (this.finishing) return;
-      const v = box.value;
-      this.renderLive(v);
-      window.clearTimeout(this.autoTimer);
-      if (!v.trim()) return;
-      this.autoTimer = window.setTimeout(() => {
-        if (!this.obj || this.finishing) return;
-        if (check([v], this.lines.join(' ')).ok) this.judge([v]);
-      }, 1200);
+      this.renderLive(box.value);
     });
   }
 
