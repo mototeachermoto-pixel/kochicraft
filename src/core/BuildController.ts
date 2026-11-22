@@ -203,6 +203,18 @@ export class BuildController {
   private snapTarget(origin: THREE.Vector3, dir: THREE.Vector3): { x: number; y: number; z: number; id: number } | null {
     const t = this.assist?.(origin, dir);
     if (!t || !this.canPlaceAt(t.x, t.y, t.z)) return null;
+    // ふつうに置ける場所が、お手本のマスよりはっきり手前にあるときは、そちらを優先する
+    // （お手本の外をねらったのに、お手本の中へ吸いよせられて「置けない」と感じるのを防ぐ。2026-11-22）
+    const hit = VoxelRaycaster.cast(this.world, origin, dir, REACH);
+    if (hit.hit) {
+      const cx = hit.x + hit.nx;
+      const cy = hit.y + hit.ny;
+      const cz = hit.z + hit.nz;
+      if (cx === t.x && cy === t.y && cz === t.z) return t;
+      const dHit = origin.distanceTo(new THREE.Vector3(cx + 0.5, cy + 0.5, cz + 0.5));
+      const dSnap = origin.distanceTo(new THREE.Vector3(t.x + 0.5, t.y + 0.5, t.z + 0.5));
+      if (dHit < dSnap - 0.75 && this.canPlaceAt(cx, cy, cz)) return null;
+    }
     return t;
   }
 

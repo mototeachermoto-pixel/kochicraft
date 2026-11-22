@@ -384,10 +384,12 @@ export class OrderGame {
       for (let y = from; y >= 1; y--) if (blockRegistry.isSolid(this.world.getBlock(x, y, z))) return y;
       return -1;
     };
-    for (const tol of [1, 2, 4, 99]) {
-      const at = this.searchPlace(order, field, near, top, base, tol);
-      if (at) return at;
-    }
+    // スタート地点（キャラ）から、作る場所のふちまで4マス以上はなす（近すぎて置きづらい。先生の希望 2026-11-22）
+    for (const gap of [4, 3, 2])
+      for (const tol of [1, 2, 4, 99]) {
+        const at = this.searchPlace(order, field, near, top, base, tol, gap);
+        if (at) return at;
+      }
     return null;
   }
 
@@ -398,6 +400,7 @@ export class OrderGame {
     top: (x: number, z: number) => number,
     base: number,
     tol: number,
+    gap: number,
   ): THREE.Vector3 | null {
     const { w, d } = order.size;
     // 上に空いていてほしい高さ：作るものの高さ＋1（上の飾りがある名所でも置けるように）
@@ -406,8 +409,11 @@ export class OrderGame {
     let bestDist = Infinity;
     for (let x = field.min.x + 1; x + w + 1 <= field.max.x; x++) {
       for (let z = field.min.z + 1; z + d + 1 <= field.max.z; z++) {
-        const dist = Math.hypot(x + w / 2 - near.x, z + d / 2 - near.z);
-        if (dist >= bestDist || dist < 4) continue; // スタート地点の真上はさける
+        // スタート地点から、作る場所のいちばん近いふちまでの距離
+        const ex = Math.max(x - near.x, 0, near.x - (x + w));
+        const ez = Math.max(z - near.z, 0, near.z - (z + d));
+        const dist = Math.hypot(ex, ez);
+        if (dist >= bestDist || dist < gap) continue;
         const h = top(x, z);
         if (h < 1 || (base > 0 && Math.abs(h - base) > tol)) continue;
         let ok = true;
@@ -491,14 +497,18 @@ export class OrderGame {
     if (!o) return;
     this.card.querySelector('.order-card__who')!.textContent = o.who;
     this.card.querySelector('.order-card__say')!.textContent = o.ask;
-    this.stepsEl.innerHTML = o.steps
-      .map((s, i) => {
-        const state = this.done || i < this.step ? 'is-done' : i === this.step ? 'is-now' : 'is-later';
-        const mark = state === 'is-done' ? '✅' : state === 'is-now' ? '👉' : '⬜';
-        return `<div class="order-step ${state}"><span class="order-step__mark">${mark}</span>
-          <span class="order-step__body"><b>Step ${i + 1}</b> ${s.text}<span class="order-step__chips">${s.blocks.map((k) => this.chip(k)).join('')}</span></span></div>`;
-      })
-      .join('');
+    // 模型と「今の Step」だけをセットで見せる（ほかの Step はかくす。先生の希望 2026-11-22）
+    const n = o.steps.length;
+    if (this.done) {
+      this.stepsEl.innerHTML = '';
+    } else {
+      const s = o.steps[this.step];
+      const dots = o.steps
+        .map((_, i) => `<span class="order-dot ${i < this.step ? 'is-done' : i === this.step ? 'is-now' : ''}"></span>`)
+        .join('');
+      this.stepsEl.innerHTML = `<div class="order-step is-now"><span class="order-step__mark">👉</span>
+          <span class="order-step__body"><b>Step ${this.step + 1}</b><span class="order-step__of">/ ${n}</span><span class="order-dots">${dots}</span><br>${s.text}<span class="order-step__chips">${s.blocks.map((k) => this.chip(k)).join('')}</span></span></div>`;
+    }
     if (this.done) {
       this.countEl.innerHTML = '';
       this.finishEl.classList.remove('hidden');

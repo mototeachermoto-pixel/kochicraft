@@ -4393,3 +4393,14 @@ body.kc-intro-open .visitor-bubble {
 .order-nametag.hidden {
   display: none;
 }
+
+/* 注文書：模型と「今の Step」だけをセットで、スクロールせずに見せる（2026-11-22） */
+.order-card { max-height: calc(100vh - 120px - 250px); }
+.order-card__mini { max-height: 130px; width: auto; max-width: 100%; margin: 8px auto 6px; }
+.order-card__say { font-size: 17px; }
+.order-step__of { font-weight: 900; color: #f4e3b5; opacity: 0.8; margin-right: 6px; }
+.order-dots { display: inline-flex; gap: 4px; vertical-align: middle; }
+.order-dot { width: 9px; height: 9px; border-radius: 50%; border: 2px solid #f4e3b5; box-sizing: border-box; }
+.order-dot.is-done { background: #4fd19b; border-color: #4fd19b; }
+.order-dot.is-now { background: #f2b134; border-color: #f2b134; }
+.order-card__steps .order-step { font-size: 16px; }
